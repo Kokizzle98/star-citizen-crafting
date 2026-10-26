@@ -267,7 +267,7 @@ jobs:
           };
 
           fs.writeFileSync(
-            path.join(dataDir, "_local-mirror-manifest.json"),
+            path.join(dataDir, "local-mirror-manifest.json"),
             JSON.stringify(manifest, null, 2) + "\n",
             "utf8"
           );
@@ -552,7 +552,7 @@ jobs:
             echo '```'
             echo
             echo "Lokales Manifest:"
-            echo "\`data/scmdb/_local-mirror-manifest.json\`"
+            echo "\`data/scmdb/local-mirror-manifest.json\`"
             echo
             echo "Daten geändert:"
             echo "\`${{ steps.changes.outputs.changed }}\`"
