@@ -1,9 +1,12 @@
-SC Group Crafting v1.2.1
+SC Group Crafting v1.2.2
 
-1. Die bestehende blueprints.json im GitHub-Root NICHT löschen.
-2. MIGRATION_v1_2.sql muss nur ausgeführt sein; keine neue Datenbankmigration für 1.2.1 nötig.
-3. Alle Dateien dieser ZIP entpacken und in den Root des bestehenden GitHub-Repositories hochladen/ersetzen.
-4. GitHub Pages bleibt main / (root).
-5. Nach Deployment im Browser Site-Daten/Service Worker bei Bedarf einmal löschen oder Inkognito testen.
+Neu: Generische Quality-Modifier-Berechnung für alle Blueprints, deren Modifier-Metadaten in blueprints.json enthalten sind. Slot-Beiträge gleicher Eigenschaften werden zusammengeführt. Baseline ist Q500. SMART nutzt echte Modifier-Kurven/Schwellen, soweit sie in den Daten eindeutig vorhanden sind. Blueprints ohne auswertbare Modifier zeigen ausdrücklich "keine auswertbaren Quality-Modifier".
 
-Neu: JS-400 Projected Component Stats mit Base/Crafted/Delta und detaillierten Slot-Beiträgen. Für andere Blueprints bleibt Stat-Berechnung gekennzeichnet, bis deren Modifier validiert worden sind.
+Upload:
+1. blueprints.json im GitHub-Root beibehalten.
+2. Keine neue SQL-Migration nötig, wenn MIGRATION_v1_2.sql bereits lief.
+3. Alle Dateien der ZIP in den Repository-Root hochladen/ersetzen.
+4. GitHub Pages main / (root) beibehalten.
+5. Nach Deployment Inkognito testen oder alten Service Worker löschen.
+
+Sicherheit: Reservierung und automatische Lagerabbuchung bleiben deaktiviert.
