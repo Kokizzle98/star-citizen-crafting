@@ -23,3 +23,6 @@ Diese Grundstruktur funktioniert sofort als PWA, speichert Lagerdaten aber absic
 
 ## Lokaler Test
 PWA-Funktionen benötigen HTTP/HTTPS. Im Projektordner z. B. `python -m http.server 8000` starten und `http://localhost:8000` öffnen.
+
+## GitHub-Variante mit flacher Struktur
+Alle Dateien müssen direkt im Stammverzeichnis des Repositorys liegen. Diese Ausgabe verwendet keine Unterordner.
