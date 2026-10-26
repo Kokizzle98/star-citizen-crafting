@@ -1,0 +1,74 @@
+{
+  "source": "KrovaxCode/SCMDB_DATA",
+  "generatedAt": "2026-10-26T18:52:13.803Z",
+  "totalJsonFiles": 23,
+  "datasets": {
+    "craftingBlueprints": {
+      "live": [
+        "crafting_blueprints-4.10.2-live.12913470.json"
+      ],
+      "ptu": [
+        "crafting_blueprints-4.10.3-ptu.12999338.json"
+      ],
+      "other": []
+    },
+    "craftingItems": {
+      "live": [
+        "crafting_items-4.10.2-live.12913470.json"
+      ],
+      "ptu": [
+        "crafting_items-4.10.3-ptu.12999338.json"
+      ],
+      "other": []
+    },
+    "miningData": {
+      "live": [
+        "mining_data-4.10.2-live.12913470.json"
+      ],
+      "ptu": [
+        "mining_data-4.10.3-ptu.12999338.json"
+      ],
+      "other": []
+    },
+    "miningEquipment": {
+      "live": [
+        "mining_equipment-4.10.2-live.12913470.json"
+      ],
+      "ptu": [
+        "mining_equipment-4.10.3-ptu.12999338.json"
+      ],
+      "other": []
+    },
+    "merged": {
+      "live": [
+        "merged-4.10.2-live.12913470.json"
+      ],
+      "ptu": [
+        "merged-4.10.3-ptu.12999338.json"
+      ],
+      "other": []
+    },
+    "missionHistory": {
+      "live": [
+        "mission-history-4.10.2-live.12913470.json"
+      ],
+      "ptu": [
+        "mission-history-4.10.3-ptu.12999338.json"
+      ],
+      "other": []
+    }
+  },
+  "staticFiles": [
+    "changelog.json",
+    "cig_data_issues-4.10.2-live.12913470.json",
+    "cig_data_issues-4.10.3-ptu.12999338.json",
+    "deltas-live.json",
+    "deltas-ptu.json",
+    "game-versions.json",
+    "latest.json",
+    "mema-cache.json",
+    "site-settings.json",
+    "versions.json",
+    "workflow-state.json"
+  ]
+}
