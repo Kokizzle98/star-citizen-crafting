@@ -1,0 +1,10 @@
+export const clamp=(v,a=0,b=1000)=>Math.min(b,Math.max(a,Number(v)||0));
+export const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export const qClass=q=>q===1000?'PERFECT':q>=951?'PRIME':q>=851?'TARGET':q>=751?'CRAFT':q>=501?'STANDARD':'LOW';
+export function category(bp){const s=[bp.gear,bp.type,bp.subtype,bp.category].filter(Boolean).join(' ').toLowerCase();if(/quantum/.test(s))return'Quantum Drive';if(/shield/.test(s))return'Shield Generator';if(/power/.test(s))return'Power Plant';if(/cooler|cooling/.test(s))return'Cooler';if(/magazine|battery|ammo|munition/.test(s))return'Munition';if(/sniper/.test(s))return'FPS Sniper';if(/shotgun/.test(s))return'FPS Shotgun';if(/smg/.test(s))return'FPS SMG';if(/lmg/.test(s))return'FPS LMG';if(/pistol/.test(s))return'FPS Pistol';if(/rifle|weapon/.test(s))return'FPS Waffe';if(/armor|helmet|backpack|undersuit/.test(s))return'Ausrüstung';return [bp.type,bp.subtype,bp.gear].find(Boolean)||'Sonstiges'}
+export function sizeOf(bp){const n=Number(bp.size??bp.itemSize??bp?.tiers?.[0]?.size);return Number.isFinite(n)?n:null}
+export function optionName(o){return o?.resourceName||o?.itemName||o?.name||'Material'}
+export function optionKind(o){return String(o?.type||'').toLowerCase()==='item'||o?.itemName?'COUNT':'VOLUME'}
+export function required(o){const q=Number(o?.quantity??o?.quantity_scu??o?.Quantity??0)||0;return optionKind(o)==='COUNT'?q:Math.round(q*1e6)}
+export function imageFor(bp,item){for(const o of [item,bp])for(const k of ['image','imageUrl','image_url','icon','iconUrl','thumbnail'])if(o?.[k])return o[k];const c=category(bp);if(c==='Quantum Drive')return'quantumdrive.png';if(c==='Shield Generator')return'shield.png';if(c==='Power Plant')return'powerplant.png';if(c==='Cooler')return'cooler.png';if(c.startsWith('FPS')||c==='Munition')return'weapon.png';if(c==='Ausrüstung')return'armor.png';return'utility.png'}
+export const ExternalIdentity={provider:null,entityType:null,externalId:null,externalUuid:null,externalCode:null,externalSlug:null,verified:false,lastVerifiedAt:null};
