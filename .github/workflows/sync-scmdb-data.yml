@@ -1,0 +1,300 @@
+name: SCMDB Data Sync
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scmdb-data-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: SCMDB-Daten synchronisieren
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Zielordner anlegen
+        run: mkdir -p data/scmdb
+
+      - name: SCMDB-Mirror herunterladen und validieren
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          MIRROR_BASE="https://raw.githubusercontent.com/KrovaxCode/SCMDB_DATA/main/data"
+          TARGET_DIR="data/scmdb"
+
+          echo "Lade Manifestdateien..."
+
+          curl --fail --location --retry 3 \
+            "${MIRROR_BASE}/latest.json" \
+            --output "${TARGET_DIR}/latest.json"
+
+          curl --fail --location --retry 3 \
+            "${MIRROR_BASE}/game-versions.json" \
+            --output "${TARGET_DIR}/game-versions.json"
+
+          node <<'NODE'
+          const fs = require("fs");
+
+          const targetDir = "data/scmdb";
+          const latestPath = `${targetDir}/latest.json`;
+          const versionsPath = `${targetDir}/game-versions.json`;
+
+          const latest = JSON.parse(fs.readFileSync(latestPath, "utf8"));
+          const versions = JSON.parse(fs.readFileSync(versionsPath, "utf8"));
+
+          function collectStrings(value, result = []) {
+            if (typeof value === "string") {
+              result.push(value);
+              return result;
+            }
+
+            if (Array.isArray(value)) {
+              for (const child of value) {
+                collectStrings(child, result);
+              }
+              return result;
+            }
+
+            if (value && typeof value === "object") {
+              for (const child of Object.values(value)) {
+                collectStrings(child, result);
+              }
+            }
+
+            return result;
+          }
+
+          const candidates = [
+            ...collectStrings(latest),
+            ...collectStrings(versions)
+          ];
+
+          const liveVersions = candidates
+            .map(value => {
+              const match = value.match(/\d+\.\d+\.\d+-live\.\d+/i);
+              return match ? match[0].toLowerCase() : null;
+            })
+            .filter(Boolean);
+
+          const version = liveVersions[0];
+
+          if (!version) {
+            console.error("Keine LIVE-Version in latest.json oder game-versions.json gefunden.");
+            console.error("latest.json:", JSON.stringify(latest, null, 2));
+            process.exit(1);
+          }
+
+          fs.writeFileSync(
+            `${targetDir}/resolved-version.txt`,
+            `${version}\n`,
+            "utf8"
+          );
+
+          console.log(`Erkannte LIVE-Version: ${version}`);
+          NODE
+
+          VERSION="$(tr -d '\r\n' < "${TARGET_DIR}/resolved-version.txt")"
+
+          BLUEPRINT_SOURCE="${MIRROR_BASE}/crafting_blueprints-${VERSION}.json"
+          ITEMS_SOURCE="${MIRROR_BASE}/crafting_items-${VERSION}.json"
+
+          echo "Lade Blueprint-Daten für ${VERSION}..."
+
+          curl --fail --location --retry 3 \
+            "${BLUEPRINT_SOURCE}" \
+            --output "${TARGET_DIR}/crafting_blueprints.json"
+
+          echo "Lade Item- und Recoil-Daten für ${VERSION}..."
+
+          curl --fail --location --retry 3 \
+            "${ITEMS_SOURCE}" \
+            --output "${TARGET_DIR}/crafting_items.json"
+
+          node <<'NODE'
+          const fs = require("fs");
+
+          const targetDir = "data/scmdb";
+
+          const blueprints = JSON.parse(
+            fs.readFileSync(
+              `${targetDir}/crafting_blueprints.json`,
+              "utf8"
+            )
+          );
+
+          const items = JSON.parse(
+            fs.readFileSync(
+              `${targetDir}/crafting_items.json`,
+              "utf8"
+            )
+          );
+
+          const version = fs
+            .readFileSync(`${targetDir}/resolved-version.txt`, "utf8")
+            .trim();
+
+          const blueprintCollection =
+            blueprints.blueprints ??
+            blueprints.items ??
+            blueprints.data ??
+            blueprints;
+
+          if (
+            !Array.isArray(blueprintCollection) ||
+            blueprintCollection.length < 100
+          ) {
+            throw new Error(
+              "Die Blueprint-Datei enthält keine plausible Blueprint-Sammlung."
+            );
+          }
+
+          if (!Array.isArray(items.items) || items.items.length < 100) {
+            throw new Error(
+              "Die Item-Datei enthält keine plausible items-Sammlung."
+            );
+          }
+
+          if (
+            !Array.isArray(items.fireModesPools) ||
+            items.fireModesPools.length === 0
+          ) {
+            throw new Error(
+              "Die Item-Datei enthält keine fireModesPools."
+            );
+          }
+
+          const requiredItems = [
+            "CQ7 Rifle",
+            "FR-66",
+            "JS-400"
+          ];
+
+          const availableNames = new Set(
+            items.items
+              .map(item => item?.name)
+              .filter(Boolean)
+          );
+
+          const missingItems = requiredItems.filter(
+            name => !availableNames.has(name)
+          );
+
+          if (missingItems.length > 0) {
+            console.warn(
+              `Hinweis: Nicht alle Smoke-Test-Items wurden gefunden: ${missingItems.join(", ")}`
+            );
+          }
+
+          const recoilWeaponCount = items.items.filter(item => {
+            const index = item?.fireModesIndex;
+
+            if (!Number.isInteger(index)) {
+              return false;
+            }
+
+            const modes = items.fireModesPools[index];
+
+            if (!Array.isArray(modes)) {
+              return false;
+            }
+
+            return modes.some(mode => {
+              if (mode?.recoil) {
+                return true;
+              }
+
+              return Array.isArray(mode?.sequenceEntries) &&
+                mode.sequenceEntries.some(entry => entry?.recoil);
+            });
+          }).length;
+
+          if (recoilWeaponCount === 0) {
+            throw new Error(
+              "Es wurden keine Waffen mit Recoil-Daten gefunden."
+            );
+          }
+
+          const active = {
+            source: "KrovaxCode/SCMDB_DATA",
+            channel: "live",
+            version,
+            updatedAt: new Date().toISOString(),
+            files: {
+              blueprints: "crafting_blueprints.json",
+              items: "crafting_items.json"
+            },
+            validation: {
+              blueprintCount: blueprintCollection.length,
+              itemCount: items.items.length,
+              fireModePoolCount: items.fireModesPools.length,
+              recoilWeaponCount
+            }
+          };
+
+          fs.writeFileSync(
+            `${targetDir}/active.json`,
+            JSON.stringify(active, null, 2) + "\n",
+            "utf8"
+          );
+
+          console.log("SCMDB-Daten erfolgreich validiert.");
+          console.log(active.validation);
+          NODE
+
+          rm -f "${TARGET_DIR}/resolved-version.txt"
+
+      - name: Änderungen prüfen
+        id: changes
+        shell: bash
+        run: |
+          if git diff --quiet -- data/scmdb && \
+             [ -z "$(git status --porcelain -- data/scmdb)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Keine Änderungen gefunden."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Neue oder geänderte SCMDB-Daten gefunden."
+          fi
+
+      - name: Änderungen committen
+        if: steps.changes.outputs.changed == 'true'
+        shell: bash
+        run: |
+          git config user.name "SCMDB Sync Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add data/scmdb
+          git commit -m "chore: update SCMDB reference data"
+          git push
+
+      - name: Zusammenfassung
+        shell: bash
+        run: |
+          echo "## SCMDB Data Sync" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -f data/scmdb/active.json ]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            cat data/scmdb/active.json >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if [ "${{ steps.changes.outputs.changed }}" = "true" ]; then
+            echo "Die validierten Daten wurden in das Repository übernommen." \
+              >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Der vorhandene Datenbestand war bereits aktuell." \
+              >> "$GITHUB_STEP_SUMMARY"
+          fi
