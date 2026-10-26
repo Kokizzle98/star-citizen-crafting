@@ -1,0 +1,6 @@
+In .github/workflows/sync-scmdb-data.yml replace BOTH occurrences of:
+_local-mirror-manifest.json
+with:
+local-mirror-manifest.json
+
+Then run the SCMDB Full Data Mirror workflow manually once.
