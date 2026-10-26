@@ -1,8 +1,7 @@
 {
-  "name": "Star Citizen Group Crafting Terminal",
+  "name": "SC Group Crafting",
   "short_name": "SC Crafting",
   "start_url": "./",
-  "scope": "./",
   "display": "standalone",
   "background_color": "#050b11",
   "theme_color": "#07141d",
