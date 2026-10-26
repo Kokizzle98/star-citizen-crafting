@@ -1,300 +1,559 @@
-name: SCMDB Data Sync
+name: SCMDB Full Data Mirror
 
 on:
   workflow_dispatch:
+
+  schedule:
+    # Einmal täglich automatische Aktualisierung
+    - cron: "17 3 * * *"
 
 permissions:
   contents: write
 
 concurrency:
-  group: scmdb-data-sync
+  group: scmdb-full-data-sync
   cancel-in-progress: false
 
 jobs:
   sync:
-    name: SCMDB-Daten synchronisieren
+    name: SCMDB Full Mirror synchronisieren
     runs-on: ubuntu-latest
 
     steps:
-      - name: Repository auschecken
+
+      # ------------------------------------------------------------
+      # 1. Eigenes Repository laden
+      # ------------------------------------------------------------
+
+      - name: Eigenes Repository auschecken
         uses: actions/checkout@v4
+
+
+      # ------------------------------------------------------------
+      # 2. Node.js bereitstellen
+      # ------------------------------------------------------------
 
       - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      - name: Zielordner anlegen
-        run: mkdir -p data/scmdb
 
-      - name: SCMDB-Mirror herunterladen und validieren
+      # ------------------------------------------------------------
+      # 3. SCMDB_DATA Mirror laden
+      # ------------------------------------------------------------
+
+      - name: Öffentlichen SCMDB_DATA Mirror herunterladen
         shell: bash
         run: |
           set -euo pipefail
 
-          MIRROR_BASE="https://raw.githubusercontent.com/KrovaxCode/SCMDB_DATA/main/data"
-          TARGET_DIR="data/scmdb"
+          echo "Lade SCMDB_DATA..."
 
-          echo "Lade Manifestdateien..."
+          rm -rf /tmp/SCMDB_DATA
 
-          curl --fail --location --retry 3 \
-            "${MIRROR_BASE}/latest.json" \
-            --output "${TARGET_DIR}/latest.json"
+          git clone \
+            --depth 1 \
+            https://github.com/KrovaxCode/SCMDB_DATA.git \
+            /tmp/SCMDB_DATA
 
-          curl --fail --location --retry 3 \
-            "${MIRROR_BASE}/game-versions.json" \
-            --output "${TARGET_DIR}/game-versions.json"
+          if [ ! -d "/tmp/SCMDB_DATA/data" ]; then
+            echo "FEHLER: data-Verzeichnis wurde nicht gefunden."
+            exit 1
+          fi
+
+          echo "SCMDB_DATA erfolgreich heruntergeladen."
+
+
+      # ------------------------------------------------------------
+      # 4. Grundlegende Validierung der Quelle
+      # ------------------------------------------------------------
+
+      - name: SCMDB Quelldaten validieren
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          SOURCE="/tmp/SCMDB_DATA/data"
+
+          echo "Prüfe zentrale SCMDB-Dateien..."
+
+          test -f "$SOURCE/latest.json"
+          test -f "$SOURCE/game-versions.json"
+          test -f "$SOURCE/versions.json"
+          test -f "$SOURCE/changelog.json"
 
           node <<'NODE'
+
           const fs = require("fs");
+          const path = require("path");
 
-          const targetDir = "data/scmdb";
-          const latestPath = `${targetDir}/latest.json`;
-          const versionsPath = `${targetDir}/game-versions.json`;
+          const source = "/tmp/SCMDB_DATA/data";
 
-          const latest = JSON.parse(fs.readFileSync(latestPath, "utf8"));
-          const versions = JSON.parse(fs.readFileSync(versionsPath, "utf8"));
-
-          function collectStrings(value, result = []) {
-            if (typeof value === "string") {
-              result.push(value);
-              return result;
-            }
-
-            if (Array.isArray(value)) {
-              for (const child of value) {
-                collectStrings(child, result);
-              }
-              return result;
-            }
-
-            if (value && typeof value === "object") {
-              for (const child of Object.values(value)) {
-                collectStrings(child, result);
-              }
-            }
-
-            return result;
-          }
-
-          const candidates = [
-            ...collectStrings(latest),
-            ...collectStrings(versions)
+          const requiredJsonFiles = [
+            "latest.json",
+            "game-versions.json",
+            "versions.json",
+            "changelog.json"
           ];
 
-          const liveVersions = candidates
-            .map(value => {
-              const match = value.match(/\d+\.\d+\.\d+-live\.\d+/i);
-              return match ? match[0].toLowerCase() : null;
-            })
-            .filter(Boolean);
+          for (const file of requiredJsonFiles) {
 
-          const version = liveVersions[0];
+            const fullPath = path.join(source, file);
 
-          if (!version) {
-            console.error("Keine LIVE-Version in latest.json oder game-versions.json gefunden.");
-            console.error("latest.json:", JSON.stringify(latest, null, 2));
-            process.exit(1);
+            try {
+
+              const raw = fs.readFileSync(fullPath, "utf8");
+
+              JSON.parse(raw);
+
+              console.log(`OK: ${file}`);
+
+            }
+            catch (error) {
+
+              console.error(`Ungültige JSON-Datei: ${file}`);
+              console.error(error);
+
+              process.exit(1);
+
+            }
+
           }
 
-          fs.writeFileSync(
-            `${targetDir}/resolved-version.txt`,
-            `${version}\n`,
-            "utf8"
-          );
+          console.log("Grundlegende SCMDB-JSON-Validierung erfolgreich.");
 
-          console.log(`Erkannte LIVE-Version: ${version}`);
           NODE
 
-          VERSION="$(tr -d '\r\n' < "${TARGET_DIR}/resolved-version.txt")"
 
-          BLUEPRINT_SOURCE="${MIRROR_BASE}/crafting_blueprints-${VERSION}.json"
-          ITEMS_SOURCE="${MIRROR_BASE}/crafting_items-${VERSION}.json"
+      # ------------------------------------------------------------
+      # 5. Gesamten data-Ordner spiegeln
+      # ------------------------------------------------------------
 
-          echo "Lade Blueprint-Daten für ${VERSION}..."
+      - name: Vollständigen SCMDB Data Mirror übernehmen
+        shell: bash
+        run: |
+          set -euo pipefail
 
-          curl --fail --location --retry 3 \
-            "${BLUEPRINT_SOURCE}" \
-            --output "${TARGET_DIR}/crafting_blueprints.json"
+          SOURCE="/tmp/SCMDB_DATA/data/"
+          TARGET="data/scmdb/"
 
-          echo "Lade Item- und Recoil-Daten für ${VERSION}..."
+          mkdir -p "$TARGET"
 
-          curl --fail --location --retry 3 \
-            "${ITEMS_SOURCE}" \
-            --output "${TARGET_DIR}/crafting_items.json"
+          echo "Synchronisiere vollständigen SCMDB-Datenbestand..."
+
+          rsync \
+            -av \
+            --delete \
+            "$SOURCE" \
+            "$TARGET"
+
+          echo "Mirror synchronisiert."
+
+
+      # ------------------------------------------------------------
+      # 6. Eigenes Mirror-Metadata erzeugen
+      # ------------------------------------------------------------
+
+      - name: Lokales Mirror-Metadata erzeugen
+        shell: bash
+        run: |
+          set -euo pipefail
 
           node <<'NODE'
+
           const fs = require("fs");
+          const path = require("path");
 
-          const targetDir = "data/scmdb";
+          const dataDir = "data/scmdb";
 
-          const blueprints = JSON.parse(
-            fs.readFileSync(
-              `${targetDir}/crafting_blueprints.json`,
-              "utf8"
-            )
+          const files = fs
+            .readdirSync(dataDir)
+            .filter(file => file.endsWith(".json"))
+            .sort();
+
+          const craftingBlueprints = files.filter(
+            file => file.startsWith("crafting_blueprints-")
           );
 
-          const items = JSON.parse(
-            fs.readFileSync(
-              `${targetDir}/crafting_items.json`,
-              "utf8"
-            )
+          const craftingItems = files.filter(
+            file => file.startsWith("crafting_items-")
           );
 
-          const version = fs
-            .readFileSync(`${targetDir}/resolved-version.txt`, "utf8")
-            .trim();
-
-          const blueprintCollection =
-            blueprints.blueprints ??
-            blueprints.items ??
-            blueprints.data ??
-            blueprints;
-
-          if (
-            !Array.isArray(blueprintCollection) ||
-            blueprintCollection.length < 100
-          ) {
-            throw new Error(
-              "Die Blueprint-Datei enthält keine plausible Blueprint-Sammlung."
-            );
-          }
-
-          if (!Array.isArray(items.items) || items.items.length < 100) {
-            throw new Error(
-              "Die Item-Datei enthält keine plausible items-Sammlung."
-            );
-          }
-
-          if (
-            !Array.isArray(items.fireModesPools) ||
-            items.fireModesPools.length === 0
-          ) {
-            throw new Error(
-              "Die Item-Datei enthält keine fireModesPools."
-            );
-          }
-
-          const requiredItems = [
-            "CQ7 Rifle",
-            "FR-66",
-            "JS-400"
-          ];
-
-          const availableNames = new Set(
-            items.items
-              .map(item => item?.name)
-              .filter(Boolean)
+          const miningData = files.filter(
+            file => file.startsWith("mining_data-")
           );
 
-          const missingItems = requiredItems.filter(
-            name => !availableNames.has(name)
+          const miningEquipment = files.filter(
+            file => file.startsWith("mining_equipment-")
           );
 
-          if (missingItems.length > 0) {
-            console.warn(
-              `Hinweis: Nicht alle Smoke-Test-Items wurden gefunden: ${missingItems.join(", ")}`
-            );
+          const merged = files.filter(
+            file => file.startsWith("merged-")
+          );
+
+          const missions = files.filter(
+            file => file.startsWith("mission-history-")
+          );
+
+          function classify(files) {
+
+            return {
+
+              live: files.filter(
+                file => file.toLowerCase().includes("-live.")
+              ),
+
+              ptu: files.filter(
+                file => file.toLowerCase().includes("-ptu.")
+              ),
+
+              other: files.filter(file => {
+
+                const value = file.toLowerCase();
+
+                return (
+                  !value.includes("-live.") &&
+                  !value.includes("-ptu.")
+                );
+
+              })
+
+            };
+
           }
 
-          const recoilWeaponCount = items.items.filter(item => {
-            const index = item?.fireModesIndex;
+          const manifest = {
 
-            if (!Number.isInteger(index)) {
-              return false;
-            }
-
-            const modes = items.fireModesPools[index];
-
-            if (!Array.isArray(modes)) {
-              return false;
-            }
-
-            return modes.some(mode => {
-              if (mode?.recoil) {
-                return true;
-              }
-
-              return Array.isArray(mode?.sequenceEntries) &&
-                mode.sequenceEntries.some(entry => entry?.recoil);
-            });
-          }).length;
-
-          if (recoilWeaponCount === 0) {
-            throw new Error(
-              "Es wurden keine Waffen mit Recoil-Daten gefunden."
-            );
-          }
-
-          const active = {
             source: "KrovaxCode/SCMDB_DATA",
-            channel: "live",
-            version,
-            updatedAt: new Date().toISOString(),
-            files: {
-              blueprints: "crafting_blueprints.json",
-              items: "crafting_items.json"
+
+            generatedAt: new Date().toISOString(),
+
+            totalJsonFiles: files.length,
+
+            datasets: {
+
+              craftingBlueprints:
+                classify(craftingBlueprints),
+
+              craftingItems:
+                classify(craftingItems),
+
+              miningData:
+                classify(miningData),
+
+              miningEquipment:
+                classify(miningEquipment),
+
+              merged:
+                classify(merged),
+
+              missionHistory:
+                classify(missions)
+
             },
-            validation: {
-              blueprintCount: blueprintCollection.length,
-              itemCount: items.items.length,
-              fireModePoolCount: items.fireModesPools.length,
-              recoilWeaponCount
-            }
+
+            staticFiles: files.filter(file =>
+
+              !file.startsWith("crafting_blueprints-") &&
+              !file.startsWith("crafting_items-") &&
+              !file.startsWith("mining_data-") &&
+              !file.startsWith("mining_equipment-") &&
+              !file.startsWith("merged-") &&
+              !file.startsWith("mission-history-")
+
+            )
+
           };
 
           fs.writeFileSync(
-            `${targetDir}/active.json`,
-            JSON.stringify(active, null, 2) + "\n",
+            path.join(dataDir, "_local-mirror-manifest.json"),
+            JSON.stringify(manifest, null, 2) + "\n",
             "utf8"
           );
 
-          console.log("SCMDB-Daten erfolgreich validiert.");
-          console.log(active.validation);
+          console.log(
+            `Mirror-Manifest erstellt: ${files.length} JSON-Dateien`
+          );
+
           NODE
 
-          rm -f "${TARGET_DIR}/resolved-version.txt"
+
+      # ------------------------------------------------------------
+      # 7. Crafting-Datensätze prüfen
+      # ------------------------------------------------------------
+
+      - name: Crafting-Datensätze prüfen
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node <<'NODE'
+
+          const fs = require("fs");
+          const path = require("path");
+
+          const directory = "data/scmdb";
+
+          const files = fs.readdirSync(directory);
+
+          const blueprintFiles = files.filter(
+            file => file.startsWith("crafting_blueprints-")
+          );
+
+          const itemFiles = files.filter(
+            file => file.startsWith("crafting_items-")
+          );
+
+          if (blueprintFiles.length === 0) {
+
+            throw new Error(
+              "Keine crafting_blueprints-Datei gefunden."
+            );
+
+          }
+
+          if (itemFiles.length === 0) {
+
+            throw new Error(
+              "Keine crafting_items-Datei gefunden."
+            );
+
+          }
+
+          console.log(
+            `Blueprint-Datensätze: ${blueprintFiles.length}`
+          );
+
+          console.log(
+            `Item-Datensätze: ${itemFiles.length}`
+          );
+
+
+          // --------------------------------------------------------
+          // Item-Datensätze prüfen
+          // --------------------------------------------------------
+
+          for (const file of itemFiles) {
+
+            const fullPath = path.join(directory, file);
+
+            const data = JSON.parse(
+              fs.readFileSync(fullPath, "utf8")
+            );
+
+            if (!Array.isArray(data.items)) {
+
+              throw new Error(
+                `${file}: items[] fehlt`
+              );
+
+            }
+
+            if (data.items.length < 100) {
+
+              throw new Error(
+                `${file}: ungewöhnlich wenige Items`
+              );
+
+            }
+
+            if (!Array.isArray(data.fireModesPools)) {
+
+              throw new Error(
+                `${file}: fireModesPools[] fehlt`
+              );
+
+            }
+
+
+            // ------------------------------------------------------
+            // Recoil prüfen
+            // ------------------------------------------------------
+
+            let recoilWeapons = 0;
+
+            for (const item of data.items) {
+
+              const index = item.fireModesIndex;
+
+              if (!Number.isInteger(index)) {
+                continue;
+              }
+
+              const modes = data.fireModesPools[index];
+
+              if (!Array.isArray(modes)) {
+                continue;
+              }
+
+              const hasRecoil = modes.some(mode => {
+
+                if (mode?.recoil) {
+                  return true;
+                }
+
+                if (Array.isArray(mode?.sequenceEntries)) {
+
+                  return mode.sequenceEntries.some(
+                    entry => entry?.recoil
+                  );
+
+                }
+
+                return false;
+
+              });
+
+              if (hasRecoil) {
+                recoilWeapons++;
+              }
+
+            }
+
+            console.log(
+              `${file}: ` +
+              `${data.items.length} Items, ` +
+              `${data.fireModesPools.length} FireMode-Pools, ` +
+              `${recoilWeapons} Waffen mit Recoil`
+            );
+
+
+            if (recoilWeapons === 0) {
+
+              throw new Error(
+                `${file}: keine Recoil-Daten gefunden`
+              );
+
+            }
+
+          }
+
+
+          // --------------------------------------------------------
+          // Blueprint-Datensätze prüfen
+          // --------------------------------------------------------
+
+          for (const file of blueprintFiles) {
+
+            const fullPath = path.join(directory, file);
+
+            const data = JSON.parse(
+              fs.readFileSync(fullPath, "utf8")
+            );
+
+            const collection =
+              data.blueprints ??
+              data.items ??
+              data.data ??
+              data;
+
+            if (!Array.isArray(collection)) {
+
+              throw new Error(
+                `${file}: Blueprint-Sammlung nicht erkannt`
+              );
+
+            }
+
+            if (collection.length < 100) {
+
+              throw new Error(
+                `${file}: ungewöhnlich wenige Blueprints`
+              );
+
+            }
+
+            console.log(
+              `${file}: ${collection.length} Blueprints`
+            );
+
+          }
+
+          console.log(
+            "Crafting-Datensätze erfolgreich geprüft."
+          );
+
+          NODE
+
+
+      # ------------------------------------------------------------
+      # 8. Änderungen feststellen
+      # ------------------------------------------------------------
 
       - name: Änderungen prüfen
         id: changes
         shell: bash
         run: |
+          set -euo pipefail
+
           if git diff --quiet -- data/scmdb && \
              [ -z "$(git status --porcelain -- data/scmdb)" ]; then
+
             echo "changed=false" >> "$GITHUB_OUTPUT"
+
             echo "Keine Änderungen gefunden."
+
           else
+
             echo "changed=true" >> "$GITHUB_OUTPUT"
+
             echo "Neue oder geänderte SCMDB-Daten gefunden."
+
           fi
 
-      - name: Änderungen committen
+
+      # ------------------------------------------------------------
+      # 9. Nur bei Datenänderung committen
+      # ------------------------------------------------------------
+
+      - name: SCMDB-Daten committen
         if: steps.changes.outputs.changed == 'true'
         shell: bash
         run: |
+          set -euo pipefail
+
           git config user.name "SCMDB Sync Bot"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git config \
+            user.email \
+            "github-actions[bot]@users.noreply.github.com"
 
           git add data/scmdb
-          git commit -m "chore: update SCMDB reference data"
+
+          git commit \
+            -m "chore: sync complete SCMDB data mirror"
+
           git push
 
-      - name: Zusammenfassung
+
+      # ------------------------------------------------------------
+      # 10. Workflow-Zusammenfassung
+      # ------------------------------------------------------------
+
+      - name: Zusammenfassung erstellen
         shell: bash
         run: |
-          echo "## SCMDB Data Sync" >> "$GITHUB_STEP_SUMMARY"
-
-          if [ -f data/scmdb/active.json ]; then
-            echo '```json' >> "$GITHUB_STEP_SUMMARY"
-            cat data/scmdb/active.json >> "$GITHUB_STEP_SUMMARY"
-            echo '```' >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          if [ "${{ steps.changes.outputs.changed }}" = "true" ]; then
-            echo "Die validierten Daten wurden in das Repository übernommen." \
-              >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "Der vorhandene Datenbestand war bereits aktuell." \
-              >> "$GITHUB_STEP_SUMMARY"
-          fi
+          {
+            echo "# SCMDB Full Data Mirror"
+            echo
+            echo "Quelle:"
+            echo "\`KrovaxCode/SCMDB_DATA\`"
+            echo
+            echo "Gespiegelte JSON-Dateien:"
+            echo
+            echo '```'
+            find data/scmdb \
+              -maxdepth 1 \
+              -type f \
+              -name "*.json" \
+              -printf "%f\n" \
+              | sort
+            echo '```'
+            echo
+            echo "Lokales Manifest:"
+            echo "\`data/scmdb/_local-mirror-manifest.json\`"
+            echo
+            echo "Daten geändert:"
+            echo "\`${{ steps.changes.outputs.changed }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
