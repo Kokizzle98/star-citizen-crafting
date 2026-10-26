@@ -1,1 +1,7 @@
-
+const clamp=(v,a=0,b=1000)=>Math.min(b,Math.max(a,Number(v)||0));
+const n=v=>Number.isFinite(Number(v))?Number(v):null;
+export function normalizeModifiers(slot){const mods=slot?.modifiers||[];const grouped=new Map();for(const m of mods){const k=m.propertyKey||m.propertyName;if(!k)continue;if(!grouped.has(k))grouped.set(k,[]);grouped.get(k).push(m)}return grouped}
+export function activeModifier(mods,q){q=clamp(q);const exact=mods.find(m=>q>=Number(m.startQuality??0)&&q<=Number(m.endQuality??1000));return exact||null}
+export function modifierValue(m,q){if(!m)return null;const q0=n(m.startQuality)??0,q1=n(m.endQuality)??1000,v0=n(m.modifierAtStart),v1=n(m.modifierAtEnd);if(v0==null||v1==null)return null;if(q1===q0||v0===v1)return v0;const t=(clamp(q,q0,q1)-q0)/(q1-q0);return v0+(v1-v0)*t}
+export function analyzeBlueprint(bp,qualities){const tier=bp?.tiers?.[0]||{},slots=tier.slots||[];return slots.map((slot,i)=>{const option=slot.options?.[0]||{},id=`s${i}`,q=clamp(qualities[id]??500),groups=normalizeModifiers(slot);const active=[];for(const [key,mods] of groups){const m=activeModifier(mods,q);if(m)active.push({key,label:m.propertyName||key,modifier:m,value:modifierValue(m,q),range:[m.startQuality,m.endQuality]})}return{id,name:slot.name||`Slot ${i+1}`,option,quality:q,active}})}
+export function calc(base,contribs,key){if(base==null)return null;const additive=/powergeneration|pip/i.test(key);if(additive)return base+contribs.reduce((s,c)=>s+c.value,0);return base*(1+contribs.reduce((s,c)=>s+(c.value-1),0))}
