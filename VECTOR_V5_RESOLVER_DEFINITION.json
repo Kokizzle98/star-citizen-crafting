@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "resolverVersion": "5-scmdb-path-profiler",
+  "policy": {
+    "missingValue": "SOURCE_DATA_MISSING",
+    "multipleCandidates": "REVIEW_REQUIRED",
+    "singleVerifiedCandidate": "RESOLVED",
+    "zeroFallback": false,
+    "preserveStructuredValues": true
+  },
+  "resolverFamilies": [
+    {
+      "id": "ARMOR_ENVIRONMENT",
+      "properties": ["armor_temperaturemin", "armor_temperaturemax", "armor_radiationdissipation", "armor_radiationcapacity"],
+      "scope": {"itemType": ["armor"], "pathTokens": ["environment", "temperature", "radiation", "resistance", "protection"]},
+      "pairRules": [["armor_temperaturemin", "armor_temperaturemax"]],
+      "candidateLeaves": {
+        "armor_temperaturemin": ["min", "minimum", "temperatureMin", "minTemperature", "minOperatingTemperature"],
+        "armor_temperaturemax": ["max", "maximum", "temperatureMax", "maxTemperature", "maxOperatingTemperature"],
+        "armor_radiationdissipation": ["dissipation", "dissipationRate", "radiationDissipation"],
+        "armor_radiationcapacity": ["capacity", "maxCapacity", "radiationCapacity"]
+      },
+      "acceptance": "Accept only candidates in an armor environment/temperature/radiation container; min/max must share the same parent container and numeric unit family.",
+      "output": "scalar"
+    },
+    {
+      "id": "SHIP_RESOURCE_COOLANT",
+      "properties": ["itemresource_coolantgeneration"],
+      "scope": {"itemType": ["shipcomponents"], "pathTokens": ["resource", "coolant", "cooling", "generation", "production"]},
+      "candidateLeaves": {"itemresource_coolantgeneration": ["generation", "generationRate", "production", "productionRate", "coolingRate"]},
+      "discriminator": {"resourceType": ["coolant", "cooling"]},
+      "acceptance": "A generation-like leaf is valid only inside a resource entry whose type/name identifies coolant; reject capacity, demand and consumption.",
+      "output": "scalar"
+    },
+    {
+      "id": "QUANTUM_DRIVE_TRAVEL",
+      "properties": ["quantum_speed", "quantum_fuelrequirement"],
+      "scope": {"attachType": ["QuantumDrive"], "pathTokens": ["quantum", "travel", "drive", "speed", "fuel"]},
+      "candidateLeaves": {
+        "quantum_speed": ["speed", "maxSpeed", "driveSpeed", "travelSpeed"],
+        "quantum_fuelrequirement": ["fuelRequirement", "fuelBurn", "fuelConsumption"]
+      },
+      "anchorProperty": "quantum_fuelrequirement",
+      "acceptance": "Locate the verified fuel-requirement container first, then profile numeric siblings and parent containers for an explicit speed field. Do not derive speed from acceleration or spool time.",
+      "output": "scalar_with_unit"
+    },
+    {
+      "id": "RADAR_AIM_ASSIST",
+      "properties": ["radar_minaimassistdistance", "radar_maxaimassistdistance"],
+      "scope": {"pathTokens": ["radar", "target", "targeting", "assist", "distance", "range"]},
+      "pairRules": [["radar_minaimassistdistance", "radar_maxaimassistdistance"]],
+      "candidateLeaves": {
+        "radar_minaimassistdistance": ["min", "minimum", "minDistance", "minRange"],
+        "radar_maxaimassistdistance": ["max", "maximum", "maxDistance", "maxRange"]
+      },
+      "acceptance": "Min and max must be numeric siblings below an aim-assist/targeting container or a referenced radar profile; generic radar range is not sufficient.",
+      "output": "scalar_pair"
+    },
+    {
+      "id": "SALVAGE_SCRAPER",
+      "properties": ["weapon_hullscraping_speed", "weapon_hullscraping_efficiency", "weapon_hullscraping_radius"],
+      "scope": {"pathTokens": ["salvage", "scrape", "scraper", "hull", "beam", "extraction"]},
+      "candidateLeaves": {
+        "weapon_hullscraping_speed": ["speed", "rate", "scrapingSpeed", "extractionRate"],
+        "weapon_hullscraping_efficiency": ["efficiency", "yield", "scrapingEfficiency"],
+        "weapon_hullscraping_radius": ["radius", "beamRadius", "scrapingRadius"]
+      },
+      "acceptance": "Accept only within a salvage/scraper/hull-scraping container. Resolve the three properties as one family and reject generic weapon speed/radius.",
+      "output": "scalar_family"
+    },
+    {
+      "id": "TRACTOR_FORCE",
+      "properties": ["weapon_tractor_force"],
+      "scope": {"pathTokens": ["tractor", "beam", "force", "strength"]},
+      "anchors": ["weapon_tractor_fullstrengthdist", "weapon_tractor_maxdist", "weapon_tractor_maxvolume"],
+      "candidateLeaves": {"weapon_tractor_force": ["force", "maxForce", "pullForce", "beamForce", "beamStrength", "strength"]},
+      "acceptance": "Start from the container that already resolved tractor distance/volume and inspect numeric siblings only. Never accept a global unscoped force field.",
+      "output": "scalar"
+    }
+  ],
+  "profiler": {
+    "emit": ["property_key", "entity_class", "product_name", "item_type", "attach_type", "attach_subtype", "candidate_path", "candidate_value", "parent_path", "scope_score", "reason", "decision"],
+    "candidateDecisions": ["ACCEPTED", "REJECTED_SCOPE", "REJECTED_SEMANTICS", "AMBIGUOUS", "NO_CANDIDATE"],
+    "files": ["path_candidates.csv", "path_frequency.csv", "resolver_coverage.csv"]
+  }
+}
