@@ -1,4 +1,5 @@
-name: VECTOR SCMDB Path Profiler V5
+name: VECTOR Multi-Source Item Data Audit V6
+
 on:
   workflow_dispatch:
   push:
@@ -7,83 +8,65 @@ on:
       - 'data/scmdb/**'
       - 'vector_item_data_audit_v4_universal.py'
       - 'vector_item_data_audit_v5_profiler.py'
+      - 'vector_item_data_audit_v6_multisource.py'
       - 'VECTOR_V5_RESOLVER_DEFINITION.json'
       - '.github/workflows/vector-item-data-audit.yml'
+
 permissions:
   contents: write
+
 concurrency:
-  group: vector-item-data-audit-v5-${{ github.ref }}
-  cancel-in-progress: true
+  group: vector-item-data-audit-v6
+  cancel-in-progress: false
+
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-      - name: Apply ARMOR_ENVIRONMENT resolver
-        run: |
-          python apply_armor_environment_patch.py    
+
       - name: Validate inputs
         run: |
+          test -f data/scmdb/latest.json
           test -f vector_item_data_audit_v4_universal.py
           test -f vector_item_data_audit_v5_profiler.py
+          test -f vector_item_data_audit_v6_multisource.py
           test -f VECTOR_V5_RESOLVER_DEFINITION.json
-          test -f data/scmdb/latest.json
-          python -m py_compile vector_item_data_audit_v4_universal.py vector_item_data_audit_v5_profiler.py
-      - name: Run V5 profiler and resolver
+
+      - name: Run V6 multi-source resolver
         run: |
-          rm -rf vector-item-audit-v5
-          python vector_item_data_audit_v5_profiler.py data/scmdb --config VECTOR_V5_RESOLVER_DEFINITION.json --out vector-item-audit-v5
-      - name: Validate outputs
+          rm -rf vector-item-audit-v6-multisource
+          python vector_item_data_audit_v6_multisource.py data/scmdb \
+            --config VECTOR_V5_RESOLVER_DEFINITION.json \
+            --out vector-item-audit-v6-multisource
+
+      - name: Validate V6 outputs
         run: |
-          test -s vector-item-audit-v5/summary.json
-          for channel in live ptu; do
-            test -s vector-item-audit-v5/$channel/summary.json
-            test -s vector-item-audit-v5/$channel/path_candidates.csv
-            test -s vector-item-audit-v5/$channel/path_frequency.csv
-            test -s vector-item-audit-v5/$channel/resolver_coverage.csv
-          done
-      - name: Write summary
-        if: always()
+          test -f vector-item-audit-v6-multisource/summary.json
+          test -f vector-item-audit-v6-multisource/live/resolver_coverage.csv
+          test -f vector-item-audit-v6-multisource/live/multisource_candidates.csv
+          test -f vector-item-audit-v6-multisource/ptu/resolver_coverage.csv
+
+      - name: Publish audit results
         run: |
-          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
-          import csv,json
-          from pathlib import Path
-          root=Path('vector-item-audit-v5'); print('# VECTOR SCMDB Path Profiler V5\n')
-          if not (root/'summary.json').exists(): print('No V5 output created.'); raise SystemExit()
-          data=json.loads((root/'summary.json').read_text())
-          for channel in ('live','ptu'):
-              s=data.get(channel,{}); print(f'## {channel.upper()}\n')
-              print(f'- Resolver: `{s.get("resolverVersion")}`')
-              print(f'- Missing baselines: {s.get("issues_by_code",{}).get("CRAFT_STAT_BASELINE_MISSING",0)}')
-              print(f'- Review baselines: {s.get("issues_by_code",{}).get("CRAFT_STAT_BASELINE_REVIEW",0)}')
-              print(f'- Profiler candidates: {s.get("profiler_candidates",0)}\n')
-              print('| Property | Used | Resolved | Missing | Coverage |\n|---|---:|---:|---:|---:|')
-              for r in csv.DictReader((root/channel/'resolver_coverage.csv').open(encoding='utf-8-sig')):
-                  if int(r['modifier_usage_count']): print(f'| `{r["property_key"]}` | {r["modifier_usage_count"]} | {r["resolved_count"]} | {r["missing_count"]} | {r["coverage_percent"]}% |')
-              print()
-          PY
-      - name: Publish results
-        if: success() && github.ref == 'refs/heads/main'
-        run: |
-          rm -rf data/audit-v5
-          mkdir -p data/audit-v5
-          cp -R vector-item-audit-v5/. data/audit-v5/
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/audit-v5
-          if ! git diff --cached --quiet; then
-            git commit -m "chore(audit): update VECTOR V5 profiler [skip ci]"
-            git push origin HEAD:main
+          rm -rf data/audit-v6
+          cp -R vector-item-audit-v6-multisource data/audit-v6
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add data/audit-v6
+          if git diff --cached --quiet; then
+            echo 'No V6 audit changes to commit.'
+          else
+            git commit -m 'chore(audit): update VECTOR V6 multi-source audit [skip ci]'
+            git push
           fi
-      - name: Upload artifact
-        if: always()
+
+      - name: Upload V6 artifact
         uses: actions/upload-artifact@v7
         with:
-          name: vector-item-audit-v5-${{ github.run_number }}
-          path: vector-item-audit-v5/
-          if-no-files-found: warn
-          retention-days: 30
+          name: vector-item-audit-v6-multisource
+          path: vector-item-audit-v6-multisource/
