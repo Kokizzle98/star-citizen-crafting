@@ -1,0 +1,77 @@
+﻿entity_class,product_name,item_type,attach_type,attach_subtype,property_key,source_file,record_path,candidate_path,candidate_value,parent_path,scope_score,required_hits,forbidden_hits,decision
+67b6c401-1017-4c39-93f6-8305c4c67f69,AbsoluteZero,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1206],coolingRate,46.0,,12,cooling,,ACCEPTED
+115aaff9-c8c5-4b93-bc14-9f22524fe8a8,Algid,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1211],coolingRate,69.0,,12,cooling,,ACCEPTED
+e41f4682-381a-453e-802b-521ce84a26b6,Arctic,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1219],coolingRate,46.0,,12,cooling,,ACCEPTED
+d98450a2-605a-47b6-a8cd-f43df14ddf0e,ArcticStorm,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1220],coolingRate,26.0,,12,cooling,,ACCEPTED
+308a2992-585b-40ba-9cfb-51251a3e0683,Aufeis,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1227],coolingRate,39.0,,12,cooling,,ACCEPTED
+a52245d7-a95e-46d5-a933-32267371e156,Avalanche,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1228],coolingRate,50.0,,12,cooling,,ACCEPTED
+f68e5fb2-2388-43d1-9aab-bed82da648c8,Berian,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1241],coolingRate,26.0,,12,cooling,,ACCEPTED
+94ea5bb5-070c-4c75-b90d-66c26c38bb2a,BlastChill,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1242],coolingRate,23.0,,12,cooling,,ACCEPTED
+2c93a027-3b9a-4c8b-b5b0-b03676b35e2d,Blizzard,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1243],coolingRate,60.0,,12,cooling,,ACCEPTED
+62f0d8cc-ed06-47d6-9522-bd3950faa19d,Boreal,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1247],coolingRate,41.0,,12,cooling,,ACCEPTED
+4ec3037b-4b6f-4837-b00d-cd9b4836a82a,Bracer,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1248],coolingRate,34.0,,12,cooling,,ACCEPTED
+98180be7-076c-4621-994a-284d1c17a366,Chill-Max,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1266],coolingRate,58.0,,12,cooling,,ACCEPTED
+b5543ea6-b332-47d7-a02c-5f25620d2fd1,ColdSnap,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1273],coolingRate,34.0,,12,cooling,,ACCEPTED
+771caf70-effc-49c2-aaf4-c240065db14d,ColdSurge,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1274],coolingRate,41.0,,12,cooling,,ACCEPTED
+553f7473-1d24-41b5-bd53-baa4190464d0,CoolCore,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1277],coolingRate,41.0,,12,cooling,,ACCEPTED
+0a190bad-bbb1-4988-9622-61b7af717d6f,Cryo-Star,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1280],coolingRate,26.0,,12,cooling,,ACCEPTED
+b3e803cc-f907-494d-8e35-51703eae4b6f,Cryo-Star EX,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1281],coolingRate,34.0,,12,cooling,,ACCEPTED
+7db13b34-c8b1-4e1a-9aba-3dcd7087e995,Cryo-Star SL,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1282],coolingRate,16.0,,12,cooling,,ACCEPTED
+d36feefd-7377-4188-9271-355709039a39,Cryo-Star XL,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1283],coolingRate,45.0,,12,cooling,,ACCEPTED
+16dc5148-59f5-497b-a2b1-8f6f66513a8f,Draug,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1297],coolingRate,49.0,,12,cooling,,ACCEPTED
+b2279e37-c5fb-49ab-b008-b32f3c528706,Eco-Flow,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1305],coolingRate,32.0,,12,cooling,,ACCEPTED
+c0f30e06-78e9-4df9-846a-8ff0716111f5,Elsen,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1307],coolingRate,49.0,,12,cooling,,ACCEPTED
+f6ab217a-2506-42ad-b6f2-90bdf939c0af,Endo,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1308],coolingRate,26.0,,12,cooling,,ACCEPTED
+45c6aee2-f38c-4d59-88a8-8cbbc395e938,Exotherm,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1314],coolingRate,102.0,,12,cooling,,ACCEPTED
+96860a78-4b34-4888-93a5-12efb259a5ff,FlashFreeze,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1329],coolingRate,26.0,,12,cooling,,ACCEPTED
+97bf2cfe-efb8-469b-9d43-6e4a88130417,Fridan,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1336],coolingRate,16.0,,12,cooling,,ACCEPTED
+d8059126-352a-4be5-bfc9-15cf4fb05439,Frost-Star,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1338],coolingRate,26.0,,12,cooling,,ACCEPTED
+59a37716-f4d3-4dcb-a41e-0f2c3064e169,Frost-Star EX,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1339],coolingRate,34.0,,12,cooling,,ACCEPTED
+387da568-31d2-4479-81da-21dd015db668,Frost-Star SL,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1340],coolingRate,16.0,,12,cooling,,ACCEPTED
+bea66e66-0d30-4f9c-8eaa-b15002fb2299,Frost-Star XL,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1341],coolingRate,45.0,,12,cooling,,ACCEPTED
+65c269cf-5094-4984-9dbf-d6675a4a785b,FrostBite,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1342],coolingRate,45.0,,12,cooling,,ACCEPTED
+4f61e805-f5f4-49b2-a834-cfda713f48db,FrostBurn,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1343],coolingRate,45.0,,12,cooling,,ACCEPTED
+572580a2-c164-4f99-beaa-d71cd1bd99a7,FullFrost,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1348],coolingRate,34.0,,12,cooling,,ACCEPTED
+7751572b-05ba-4a0c-816e-fdbd6bc68e6b,Galinstan,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1355],coolingRate,50.0,,12,cooling,,ACCEPTED
+5e5e363e-2ae2-455f-8062-49189906fdc9,Gelid,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1358],coolingRate,29.0,,12,cooling,,ACCEPTED
+5748cdbc-5a26-477a-a4ad-b20a593bde59,Glacier,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1361],coolingRate,38.0,,12,cooling,,ACCEPTED
+8d2c7d2d-7359-474b-90cd-c0ba9c31ac7f,Graupel,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1364],coolingRate,34.0,,12,cooling,,ACCEPTED
+b4be7e39-8cd9-4d38-af89-61ace9c67796,HeatSafe,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1371],coolingRate,22.0,,12,cooling,,ACCEPTED
+4df4557d-6c24-421a-9db6-36d731dcffe4,HeatSink,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1372],coolingRate,32.0,,12,cooling,,ACCEPTED
+866c76c0-8c22-44ad-b1dc-167ee5fbe347,HydroJet,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1381],coolingRate,38.0,,12,cooling,,ACCEPTED
+a5107834-61e1-481d-b836-7ed6c08b14d5,Hydrocel,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1382],coolingRate,29.0,,12,cooling,,ACCEPTED
+3127738f-d2ba-44bb-913c-eb380182bef8,Hydropulse,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1383],coolingRate,48.0,,12,cooling,,ACCEPTED
+41ac4e69-f4f8-4efe-b499-0257bdf1aba3,Ice-Flush,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1387],coolingRate,52.0,,12,cooling,,ACCEPTED
+e6ad7280-57d0-4222-942e-6c2a23e78bf6,IceBox,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1388],coolingRate,32.0,,12,cooling,,ACCEPTED
+c5b36e51-f6ea-4823-be8b-f3dd12fbda3c,IceDive,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1389],coolingRate,46.0,,12,cooling,,ACCEPTED
+f59a0b33-5bbe-439e-8bd5-111db00b5ff6,IcePlunge,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1390],coolingRate,34.0,,12,cooling,,ACCEPTED
+c9eecfff-8ab2-4cd1-b7f8-1ea6aa86fd5a,Kelvid,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1405],coolingRate,16.0,,12,cooling,,ACCEPTED
+3c5a56d9-ff6e-426c-a0dd-6fe0d64037f7,Kragen,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1410],coolingRate,49.0,,12,cooling,,ACCEPTED
+335e94ef-d8e9-4ac3-8966-655881c1ea14,Mercury,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1430],coolingRate,56.0,,12,cooling,,ACCEPTED
+acb949b6-488a-4d10-b0f3-6597ef22925e,NightFall,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1436],coolingRate,34.0,,12,cooling,,ACCEPTED
+5e8af166-4930-4fbc-be29-881fc605f067,Permafrost,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1456],coolingRate,46.0,,12,cooling,,ACCEPTED
+9afd1cd3-ce6b-4b0a-abdd-cd7d479ec360,Polar,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1458],coolingRate,34.0,,12,cooling,,ACCEPTED
+34334a56-0045-40e5-b573-5891e8e2dbbf,QuikCool,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1473],coolingRate,32.0,,12,cooling,,ACCEPTED
+8db577f4-7874-4c0d-950f-1722015b6f5f,RapidCool,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1482],coolingRate,43.0,,12,cooling,,ACCEPTED
+18600693-df8b-4898-a9a6-e91291e69dd4,Serac,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1507],coolingRate,65.0,,12,cooling,,ACCEPTED
+18600693-df8b-4898-a9a6-e91291e69dd4,Serac,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1508],coolingRate,65.0,,12,cooling,,ACCEPTED
+d0b4ce5b-c8ba-4a9f-90b1-c9567a6c90e9,Serac,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1508],coolingRate,65.0,,12,cooling,,ACCEPTED
+d0b4ce5b-c8ba-4a9f-90b1-c9567a6c90e9,Serac,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1507],coolingRate,65.0,,12,cooling,,ACCEPTED
+f50cc3fd-dd83-4aec-b74a-270428f22797,SnowBlind,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1515],coolingRate,24.0,,12,cooling,,ACCEPTED
+f0429b13-6f0d-4ffb-9160-6ae0df03b5cb,Snowfall,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1516],coolingRate,41.0,,12,cooling,,ACCEPTED
+04285ce3-561f-4377-b0db-c641e3fad1de,Snowpack,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1517],coolingRate,46.0,,12,cooling,,ACCEPTED
+576b939f-1596-42ee-95b4-d5c871542d8c,Taiga,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1556],coolingRate,34.0,,12,cooling,,ACCEPTED
+3a5723b0-17f6-4741-b421-43ed7cb7dd29,Tempest,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1558],coolingRate,56.0,,12,cooling,,ACCEPTED
+9bfb25e0-b507-4d6f-b8e5-d7d2d91f9670,Tepilo,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1559],coolingRate,17.0,,12,cooling,,ACCEPTED
+fd9f41c7-f60b-4ac8-95be-cb501fc5dd5d,ThermalCore,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1560],coolingRate,52.0,,12,cooling,,ACCEPTED
+bba050c3-1348-45a8-91c6-73e4ecf5082f,Thermax,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1561],coolingRate,32.0,,12,cooling,,ACCEPTED
+30ffee03-ee0a-47c5-9b4c-b24203c148d7,Tundra,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1571],coolingRate,32.0,,12,cooling,,ACCEPTED
+5ffb1abc-c4ed-4413-b882-ccd848ca09a2,Ultra-Flow,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1574],coolingRate,34.0,,12,cooling,,ACCEPTED
+5f474dec-75e8-4626-9c0a-f5a48f841f33,VaporBlock,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1582],coolingRate,22.0,,12,cooling,,ACCEPTED
+29026bad-ef1d-4a72-8059-f1fe2c397603,WhiteOut,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1598],coolingRate,32.0,,12,cooling,,ACCEPTED
+ec636cbd-21c6-4b9c-a095-c8ef04f1a9fa,Winter-Star,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1600],coolingRate,23.0,,12,cooling,,ACCEPTED
+5800c752-938f-4b6a-b39b-7f770c6fa060,Winter-Star EX,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1601],coolingRate,32.0,,12,cooling,,ACCEPTED
+26f6ac67-8c44-4160-8be2-d64d07d3ec3a,Winter-Star SL,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1602],coolingRate,14.0,,12,cooling,,ACCEPTED
+71df1f43-b44d-47e7-9d29-2a4e090aee07,Winter-Star XL,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1603],coolingRate,41.0,,12,cooling,,ACCEPTED
+d1790ef8-ec9e-4193-887c-e92d0889e326,ZeroRush,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1611],coolingRate,34.0,,12,cooling,,ACCEPTED
+1f5be5de-b5ea-42c7-879f-289c4bf64f19,,shipcomponent,Cooler,UNDEFINED,itemresource_coolantgeneration,crafting_items-4.10.2-live.12913470.json,items[1612],coolingRate,74.0,,12,cooling,,ACCEPTED
