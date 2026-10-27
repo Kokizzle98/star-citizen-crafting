@@ -1,8 +1,8 @@
 {
-  "name": "vector-craft-calculation-engine",
+  "name": "star-citizen-crafting",
   "private": true,
   "type": "module",
   "scripts": {
-    "test:calculation": "node craft-calculation-engine.test.mjs"
+    "test:calculation": "node tests/craft-calculation-engine.test.mjs"
   }
 }
