@@ -1,0 +1,8 @@
+{
+  "name": "vector-craft-calculation-engine",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:calculation": "node craft-calculation-engine.test.mjs"
+  }
+}
