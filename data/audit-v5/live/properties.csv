@@ -1,0 +1,30 @@
+﻿channel,version,property_key,name,unit,category,modifier_usage_count,resolved_count,missing_count,status
+live,4.10.2-live.12913470,weapon_recoil_handling,Recoil Handling,%+.2f %%,weapon,247,206,41,USED
+live,4.10.2-live.12913470,weapon_reloadspeed,Reload Speed,,weapon,0,0,0,UNUSED
+live,4.10.2-live.12913470,weapon_recoil_smoothness,Recoil Smoothness,%+.2f %%,weapon,247,206,41,USED
+live,4.10.2-live.12913470,weapon_tractor_fullstrengthdist,Full Strength Dist.,%.2f M,weapon,24,24,0,USED
+live,4.10.2-live.12913470,weapon_tractor_maxvolume,Max. Volume,Rating,weapon,12,12,0,USED
+live,4.10.2-live.12913470,weapon_tractor_maxdist,Max. Distance,%.2f M,weapon,24,24,0,USED
+live,4.10.2-live.12913470,weapon_hullscraping_speed,Speed,,weapon,15,0,15,USED
+live,4.10.2-live.12913470,itemresource_coolantgeneration,Coolant Rating,,other,300,0,300,USED
+live,4.10.2-live.12913470,weapon_firerate,Fire Rate,%.2f RPM,weapon,134,110,24,USED
+live,4.10.2-live.12913470,armor_radiationdissipation,Radiation Dissipation,%.2f mRem/s,armor,3,2,1,USED
+live,4.10.2-live.12913470,armor_temperaturemin,Min Temp,%+.2f ºC,armor,904,893,11,USED
+live,4.10.2-live.12913470,armor_temperaturemax,Max Temp,%+.2f ºC,armor,904,893,11,USED
+live,4.10.2-live.12913470,quantum_speed,Quantum Speed,%.2f Mm/s,other,114,114,0,USED
+live,4.10.2-live.12913470,weapon_spread,Spread,,weapon,0,0,0,UNUSED
+live,4.10.2-live.12913470,armor_damagemitigation,Damage Mitigation,,armor,876,863,13,USED
+live,4.10.2-live.12913470,weapon_hullscraping_efficiency,Efficiency,,weapon,5,0,5,USED
+live,4.10.2-live.12913470,health_maxhealth,Integrity,,other,799,701,98,USED
+live,4.10.2-live.12913470,weapon_hullscraping_radius,Radius,,weapon,15,0,15,USED
+live,4.10.2-live.12913470,radar_minaimassistdistance,Min. Assist Distance,%.2f M,other,120,0,120,USED
+live,4.10.2-live.12913470,weapon_damage,Impact Force,%+.2f %%,weapon,474,440,34,USED
+live,4.10.2-live.12913470,itemresource_powergeneration,Power Pips,,other,598,598,0,USED
+live,4.10.2-live.12913470,shield_maxhealth,Max. Shield Strength,,other,248,248,0,USED
+live,4.10.2-live.12913470,weapon_tractor_force,Beam Force,,weapon,12,12,0,USED
+live,4.10.2-live.12913470,quantum_fuelrequirement,Quantum Fuel Burn,%.2f per Km,other,114,114,0,USED
+live,4.10.2-live.12913470,crafter_craftspeed,Craft Speed,,crafter,0,0,0,UNUSED
+live,4.10.2-live.12913470,radar_maxaimassistdistance,Max. Assist Distance,%.2f M,other,120,0,120,USED
+live,4.10.2-live.12913470,weapon_recoil_kick,Recoil Kick,%+.2f %%,weapon,247,206,41,USED
+live,4.10.2-live.12913470,crafter_dismantleefficiency,Dismantle Efficiency,,crafter,0,0,0,UNUSED
+live,4.10.2-live.12913470,armor_radiationcapacity,Radiation Capacity,%.2f mRem,armor,0,0,0,UNUSED

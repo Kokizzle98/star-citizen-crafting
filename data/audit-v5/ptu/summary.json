@@ -1,0 +1,114 @@
+{
+  "channel": "ptu",
+  "version": "4.10.3-ptu.12999338",
+  "resolverVersion": "5-scmdb-path-profiler",
+  "items": 1616,
+  "blueprints": 1618,
+  "properties": 29,
+  "modifier_rows": 6556,
+  "family_candidates": 46,
+  "issues_by_code": {
+    "CRAFT_STAT_BASELINE_MISSING": 890,
+    "BLUEPRINT_OUTPUT_UNRESOLVED": 1,
+    "CRAFT_STAT_BASELINE_REVIEW": 618
+  },
+  "property_resolution": {
+    "weapon_recoil_handling": {
+      "REVIEW_REQUIRED": 206,
+      "SOURCE_DATA_MISSING": 41
+    },
+    "weapon_reloadspeed": {},
+    "weapon_recoil_smoothness": {
+      "REVIEW_REQUIRED": 206,
+      "SOURCE_DATA_MISSING": 41
+    },
+    "weapon_tractor_fullstrengthdist": {
+      "RESOLVED": 24
+    },
+    "weapon_tractor_maxvolume": {
+      "RESOLVED": 12
+    },
+    "weapon_tractor_maxdist": {
+      "RESOLVED": 24
+    },
+    "weapon_hullscraping_speed": {
+      "SOURCE_DATA_MISSING": 15
+    },
+    "itemresource_coolantgeneration": {
+      "SOURCE_DATA_MISSING": 300
+    },
+    "weapon_firerate": {
+      "RESOLVED": 110,
+      "SOURCE_DATA_MISSING": 24
+    },
+    "armor_radiationdissipation": {
+      "RESOLVED": 2,
+      "SOURCE_DATA_MISSING": 1
+    },
+    "armor_temperaturemin": {
+      "RESOLVED": 893,
+      "SOURCE_DATA_MISSING": 11
+    },
+    "armor_temperaturemax": {
+      "RESOLVED": 893,
+      "SOURCE_DATA_MISSING": 11
+    },
+    "quantum_speed": {
+      "RESOLVED": 114
+    },
+    "weapon_spread": {},
+    "armor_damagemitigation": {
+      "RESOLVED": 863,
+      "SOURCE_DATA_MISSING": 13
+    },
+    "weapon_hullscraping_efficiency": {
+      "SOURCE_DATA_MISSING": 5
+    },
+    "health_maxhealth": {
+      "RESOLVED": 701,
+      "SOURCE_DATA_MISSING": 98
+    },
+    "weapon_hullscraping_radius": {
+      "SOURCE_DATA_MISSING": 15
+    },
+    "radar_minaimassistdistance": {
+      "SOURCE_DATA_MISSING": 120
+    },
+    "weapon_damage": {
+      "SOURCE_DATA_MISSING": 34,
+      "RESOLVED": 440
+    },
+    "itemresource_powergeneration": {
+      "RESOLVED": 598
+    },
+    "shield_maxhealth": {
+      "RESOLVED": 248
+    },
+    "weapon_tractor_force": {
+      "RESOLVED": 12
+    },
+    "quantum_fuelrequirement": {
+      "RESOLVED": 114
+    },
+    "crafter_craftspeed": {},
+    "radar_maxaimassistdistance": {
+      "SOURCE_DATA_MISSING": 120
+    },
+    "weapon_recoil_kick": {
+      "REVIEW_REQUIRED": 206,
+      "SOURCE_DATA_MISSING": 41
+    },
+    "crafter_dismantleefficiency": {},
+    "armor_radiationcapacity": {}
+  },
+  "source_files": {
+    "cig_data_issues": "cig_data_issues-4.10.3-ptu.12999338.json",
+    "crafting_blueprints": "crafting_blueprints-4.10.3-ptu.12999338.json",
+    "crafting_items": "crafting_items-4.10.3-ptu.12999338.json",
+    "merged": "merged-4.10.3-ptu.12999338.json",
+    "mining_data": "mining_data-4.10.3-ptu.12999338.json",
+    "mining_equipment": "mining_equipment-4.10.3-ptu.12999338.json",
+    "mission_history": "mission-history-4.10.3-ptu.12999338.json"
+  },
+  "profiler_candidates": 7204
+}
