@@ -1,4 +1,4 @@
-name: VECTOR Item Data Audit
+name: VECTOR Universal Item Data Audit V4
 
 on:
   workflow_dispatch:
@@ -7,19 +7,19 @@ on:
       - main
     paths:
       - 'data/scmdb/**'
-      - 'vector_item_data_audit_v2.py'
+      - 'vector_item_data_audit_v4_universal.py'
       - '.github/workflows/vector-item-data-audit.yml'
 
 permissions:
   contents: write
 
 concurrency:
-  group: vector-item-data-audit-${{ github.ref }}
+  group: vector-item-data-audit-v4-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   audit:
-    name: Audit SCMDB LIVE and PTU
+    name: Audit SCMDB LIVE and PTU with Universal Resolver V4
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -28,15 +28,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
-      - name: Validate audit inputs
+      - name: Validate V4 audit inputs
         shell: bash
         run: |
           set -euo pipefail
-          test -f vector_item_data_audit_v2.py
+          test -f vector_item_data_audit_v4_universal.py
           test -f data/scmdb/latest.json
 
           python - <<'PY'
@@ -61,60 +61,88 @@ jobs:
               print(f'{channel}: {info.get("version", "unknown")}')
           PY
 
-      - name: Run VECTOR item audit
+      - name: Run VECTOR Universal Resolver V4
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf vector-item-audit-v2
-          python vector_item_data_audit_v2.py data/scmdb --out vector-item-audit-v2
+          rm -rf vector-item-audit-v4-universal
+          python vector_item_data_audit_v4_universal.py data/scmdb --out vector-item-audit-v4-universal
 
-      - name: Validate audit output
+      - name: Validate V4 audit output
         shell: bash
         run: |
           set -euo pipefail
-          test -s vector-item-audit-v2/summary.json
-          test -s vector-item-audit-v2/live/summary.json
-          test -s vector-item-audit-v2/ptu/summary.json
+          test -s vector-item-audit-v4-universal/summary.json
+          test -s vector-item-audit-v4-universal/live/summary.json
+          test -s vector-item-audit-v4-universal/ptu/summary.json
+          test -s vector-item-audit-v4-universal/live/properties.csv
+          test -s vector-item-audit-v4-universal/ptu/properties.csv
 
           python - <<'PY'
           import json
           from pathlib import Path
 
-          root = Path('vector-item-audit-v2')
+          root = Path('vector-item-audit-v4-universal')
           summary = json.loads((root / 'summary.json').read_text(encoding='utf-8'))
           for channel in ('live', 'ptu'):
-              if channel not in summary:
+              data = summary.get(channel)
+              if not data:
                   raise SystemExit(f'Missing {channel} summary')
-              print(channel, json.dumps(summary[channel], ensure_ascii=False))
+              if data.get('resolverVersion') != '4-universal':
+                  raise SystemExit(f'Unexpected resolver version for {channel}: {data.get("resolverVersion")}')
+              print(channel, json.dumps(data, ensure_ascii=False))
           PY
 
-      - name: Write GitHub Actions summary
+      - name: Write V4 GitHub Actions summary
         if: always()
         shell: bash
         run: |
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import csv
           import json
           from pathlib import Path
 
-          path = Path('vector-item-audit-v2/summary.json')
-          print('# VECTOR Item Data Audit')
+          root = Path('vector-item-audit-v4-universal')
+          summary_path = root / 'summary.json'
+
+          print('# VECTOR Universal Item Data Audit V4')
           print()
-          if not path.exists():
-              print('Audit output was not created. Check the failed step above.')
+          if not summary_path.exists():
+              print('V4 audit output was not created. Check the failed step above.')
               raise SystemExit(0)
 
-          data = json.loads(path.read_text(encoding='utf-8'))
+          data = json.loads(summary_path.read_text(encoding='utf-8'))
           print('| Channel | Version | Items | Blueprints | Properties | Modifiers | Family candidates |')
-          print('|---|---:|---:|---:|---:|---:|---:|')
+          print('|---|---|---:|---:|---:|---:|---:|')
           for channel in ('live', 'ptu'):
               s = data.get(channel, {})
               print(f'| {channel.upper()} | {s.get("version", "-")} | {s.get("items", "-")} | {s.get("blueprints", "-")} | {s.get("properties", "-")} | {s.get("modifier_rows", "-")} | {s.get("family_candidates", "-")} |')
 
           print()
+          print('## Baseline coverage by property')
+          for channel in ('live', 'ptu'):
+              path = root / channel / 'properties.csv'
+              print()
+              print(f'### {channel.upper()}')
+              if not path.exists():
+                  print('No properties.csv generated.')
+                  continue
+              rows = list(csv.DictReader(path.open(encoding='utf-8-sig')))
+              rows = [r for r in rows if int(r.get('modifier_usage_count') or 0) > 0]
+              rows.sort(key=lambda r: int(r.get('missing_count') or 0), reverse=True)
+              print('| Property | Used | Resolved | Missing | Coverage |')
+              print('|---|---:|---:|---:|---:|')
+              for r in rows:
+                  used = int(r.get('modifier_usage_count') or 0)
+                  resolved = int(r.get('resolved_count') or 0)
+                  missing = int(r.get('missing_count') or 0)
+                  coverage = (resolved / used * 100) if used else 0
+                  print(f'| `{r.get("property_key", "-")}` | {used} | {resolved} | {missing} | {coverage:.1f}% |')
+
+          print()
           print('## Issues')
           for channel in ('live', 'ptu'):
-              s = data.get(channel, {})
-              issues = s.get('issues_by_code', {}) or {}
+              issues = data.get(channel, {}).get('issues_by_code', {}) or {}
               if issues:
                   print(f'### {channel.upper()}')
                   for code, count in sorted(issues.items()):
@@ -123,31 +151,31 @@ jobs:
                   print(f'- {channel.upper()}: no issues reported')
           PY
 
-      - name: Publish audit results to repository
+      - name: Publish V4 audit results to repository
         if: success() && github.ref == 'refs/heads/main'
         shell: bash
         run: |
           set -euo pipefail
-          rm -rf data/audit
-          mkdir -p data/audit
-          cp -R vector-item-audit-v2/. data/audit/
+          rm -rf data/audit-v4
+          mkdir -p data/audit-v4
+          cp -R vector-item-audit-v4-universal/. data/audit-v4/
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/audit
+          git add data/audit-v4
 
           if git diff --cached --quiet; then
-            echo "No audit result changes to commit."
+            echo "No V4 audit result changes to commit."
           else
-            git commit -m "chore(audit): update VECTOR item data audit [skip ci]"
+            git commit -m "chore(audit): update VECTOR universal V4 audit [skip ci]"
             git push origin HEAD:main
           fi
 
-      - name: Upload audit artifact
+      - name: Upload V4 audit artifact
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: vector-item-audit-v2-${{ github.run_number }}
-          path: vector-item-audit-v2/
+          name: vector-item-audit-v4-universal-${{ github.run_number }}
+          path: vector-item-audit-v4-universal/
           if-no-files-found: warn
           retention-days: 30
