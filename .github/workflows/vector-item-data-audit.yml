@@ -1,0 +1,133 @@
+name: VECTOR Item Data Audit
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'data/scmdb/**'
+      - 'vector_item_data_audit_v2.py'
+      - '.github/workflows/vector-item-data-audit.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vector-item-data-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: Audit SCMDB LIVE and PTU
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate audit inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f vector_item_data_audit_v2.py
+          test -f data/scmdb/latest.json
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('data/scmdb')
+          latest = json.loads((root / 'latest.json').read_text(encoding='utf-8-sig'))
+          required = ('crafting_items', 'crafting_blueprints')
+
+          for channel in ('live', 'ptu'):
+              info = latest.get('channels', {}).get(channel)
+              if not info:
+                  raise SystemExit(f'Missing channel in latest.json: {channel}')
+              for key in required:
+                  filename = info.get('files', {}).get(key)
+                  if not filename:
+                      raise SystemExit(f'Missing {key} entry for {channel}')
+                  path = root / filename
+                  if not path.is_file():
+                      raise SystemExit(f'Missing data file: {path}')
+              print(f'{channel}: {info.get("version", "unknown")}')
+          PY
+
+      - name: Run VECTOR item audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf vector-item-audit-v2
+          python vector_item_data_audit_v2.py data/scmdb --out vector-item-audit-v2
+
+      - name: Validate audit output
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s vector-item-audit-v2/summary.json
+          test -s vector-item-audit-v2/live/summary.json
+          test -s vector-item-audit-v2/ptu/summary.json
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path('vector-item-audit-v2')
+          summary = json.loads((root / 'summary.json').read_text(encoding='utf-8'))
+          for channel in ('live', 'ptu'):
+              if channel not in summary:
+                  raise SystemExit(f'Missing {channel} summary')
+              print(channel, json.dumps(summary[channel], ensure_ascii=False))
+          PY
+
+      - name: Write GitHub Actions summary
+        if: always()
+        shell: bash
+        run: |
+          python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import json
+          from pathlib import Path
+
+          path = Path('vector-item-audit-v2/summary.json')
+          print('# VECTOR Item Data Audit')
+          print()
+          if not path.exists():
+              print('Audit output was not created. Check the failed step above.')
+              raise SystemExit(0)
+
+          data = json.loads(path.read_text(encoding='utf-8'))
+          print('| Channel | Version | Items | Blueprints | Properties | Modifiers | Family candidates |')
+          print('|---|---:|---:|---:|---:|---:|---:|')
+          for channel in ('live', 'ptu'):
+              s = data.get(channel, {})
+              print(f'| {channel.upper()} | {s.get("version", "-")} | {s.get("items", "-")} | {s.get("blueprints", "-")} | {s.get("properties", "-")} | {s.get("modifier_rows", "-")} | {s.get("family_candidates", "-")} |')
+
+          print()
+          print('## Issues')
+          for channel in ('live', 'ptu'):
+              s = data.get(channel, {})
+              issues = s.get('issues_by_code', {}) or {}
+              if issues:
+                  print(f'### {channel.upper()}')
+                  for code, count in sorted(issues.items()):
+                      print(f'- `{code}`: {count}')
+              else:
+                  print(f'- {channel.upper()}: no issues reported')
+          PY
+
+      - name: Upload audit artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-item-audit-v2-${{ github.run_number }}
+          path: vector-item-audit-v2/
+          if-no-files-found: warn
+          retention-days: 30
