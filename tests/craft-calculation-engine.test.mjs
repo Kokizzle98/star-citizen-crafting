@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { calculateCraft, combineEffects, interpolateModifier, selectModifierSegment, CalculationError } from './craft-calculation-engine.js';
+import { calculateCraft, combineEffects, interpolateModifier, selectModifierSegment, CalculationError } from '../src/calculation/craft-calculation-engine.js';
 
 const close = (actual, expected, tolerance = 1e-9) => assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
 
