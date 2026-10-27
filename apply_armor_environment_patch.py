@@ -20,9 +20,12 @@ ARMOR_ENVIRONMENT = {
             'resistance', 'protection'
         ]
     },
-    'pairRules': {
-        'armor_temperaturemin': 'armor_temperaturemax'
-    },
+    'pairRules': [
+        [
+            'armor_temperaturemin',
+            'armor_temperaturemax'
+        ]
+    ],
     'candidateLeaves': {
         'armor_temperaturemin': [
             'armor_temperaturemin', 'min', 'minimum',
