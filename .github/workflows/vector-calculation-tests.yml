@@ -1,0 +1,52 @@
+name: VECTOR Calculation Engine Tests
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches:
+      - main
+    paths:
+      - "src/calculation/**"
+      - "tests/**"
+      - "package.json"
+      - ".github/workflows/vector-calculation-tests.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/calculation/**"
+      - "tests/**"
+      - "package.json"
+
+permissions:
+  contents: read
+
+jobs:
+  calculation-tests:
+    name: Test Craft Calculation Engine
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Show runtime versions
+        run: |
+          node --version
+          npm --version
+
+      - name: Validate required files
+        run: |
+          test -f package.json
+          test -f src/calculation/craft-calculation-engine.js
+          test -f tests/craft-calculation-engine.test.mjs
+
+      - name: Run Calculation Engine regression tests
+        run: npm run test:calculation
