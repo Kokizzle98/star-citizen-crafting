@@ -1,0 +1,30 @@
+﻿channel,version,property_key,name,unit,category,modifier_usage_count,status
+ptu,4.10.3-ptu.12999338,weapon_recoil_handling,Recoil Handling,%+.2f %%,weapon,247,USED
+ptu,4.10.3-ptu.12999338,weapon_reloadspeed,Reload Speed,,weapon,0,UNUSED
+ptu,4.10.3-ptu.12999338,weapon_recoil_smoothness,Recoil Smoothness,%+.2f %%,weapon,247,USED
+ptu,4.10.3-ptu.12999338,weapon_tractor_fullstrengthdist,Full Strength Dist.,%.2f M,weapon,24,USED
+ptu,4.10.3-ptu.12999338,weapon_tractor_maxvolume,Max. Volume,Rating,weapon,12,USED
+ptu,4.10.3-ptu.12999338,weapon_tractor_maxdist,Max. Distance,%.2f M,weapon,24,USED
+ptu,4.10.3-ptu.12999338,weapon_hullscraping_speed,Speed,,weapon,15,USED
+ptu,4.10.3-ptu.12999338,itemresource_coolantgeneration,Coolant Rating,,other,300,USED
+ptu,4.10.3-ptu.12999338,weapon_firerate,Fire Rate,%.2f RPM,weapon,134,USED
+ptu,4.10.3-ptu.12999338,armor_radiationdissipation,Radiation Dissipation,%.2f mRem/s,armor,3,USED
+ptu,4.10.3-ptu.12999338,armor_temperaturemin,Min Temp,%+.2f ºC,armor,904,USED
+ptu,4.10.3-ptu.12999338,armor_temperaturemax,Max Temp,%+.2f ºC,armor,904,USED
+ptu,4.10.3-ptu.12999338,quantum_speed,Quantum Speed,%.2f Mm/s,other,114,USED
+ptu,4.10.3-ptu.12999338,weapon_spread,Spread,,weapon,0,UNUSED
+ptu,4.10.3-ptu.12999338,armor_damagemitigation,Damage Mitigation,,armor,876,USED
+ptu,4.10.3-ptu.12999338,weapon_hullscraping_efficiency,Efficiency,,weapon,5,USED
+ptu,4.10.3-ptu.12999338,health_maxhealth,Integrity,,other,799,USED
+ptu,4.10.3-ptu.12999338,weapon_hullscraping_radius,Radius,,weapon,15,USED
+ptu,4.10.3-ptu.12999338,radar_minaimassistdistance,Min. Assist Distance,%.2f M,other,120,USED
+ptu,4.10.3-ptu.12999338,weapon_damage,Impact Force,%+.2f %%,weapon,474,USED
+ptu,4.10.3-ptu.12999338,itemresource_powergeneration,Power Pips,,other,598,USED
+ptu,4.10.3-ptu.12999338,shield_maxhealth,Max. Shield Strength,,other,248,USED
+ptu,4.10.3-ptu.12999338,weapon_tractor_force,Beam Force,,weapon,12,USED
+ptu,4.10.3-ptu.12999338,quantum_fuelrequirement,Quantum Fuel Burn,%.2f per Km,other,114,USED
+ptu,4.10.3-ptu.12999338,crafter_craftspeed,Craft Speed,,crafter,0,UNUSED
+ptu,4.10.3-ptu.12999338,radar_maxaimassistdistance,Max. Assist Distance,%.2f M,other,120,USED
+ptu,4.10.3-ptu.12999338,weapon_recoil_kick,Recoil Kick,%+.2f %%,weapon,247,USED
+ptu,4.10.3-ptu.12999338,crafter_dismantleefficiency,Dismantle Efficiency,,crafter,0,UNUSED
+ptu,4.10.3-ptu.12999338,armor_radiationcapacity,Radiation Capacity,%.2f mRem,armor,0,UNUSED
