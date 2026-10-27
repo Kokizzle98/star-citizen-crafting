@@ -23,6 +23,9 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+      - name: Apply ARMOR_ENVIRONMENT resolver
+        run: |
+          python apply_armor_environment_patch.py    
       - name: Validate inputs
         run: |
           test -f vector_item_data_audit_v4_universal.py
