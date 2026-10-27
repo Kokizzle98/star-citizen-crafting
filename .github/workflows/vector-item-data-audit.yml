@@ -1,181 +1,86 @@
-name: VECTOR Universal Item Data Audit V4
-
+name: VECTOR SCMDB Path Profiler V5
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'data/scmdb/**'
       - 'vector_item_data_audit_v4_universal.py'
+      - 'vector_item_data_audit_v5_profiler.py'
+      - 'VECTOR_V5_RESOLVER_DEFINITION.json'
       - '.github/workflows/vector-item-data-audit.yml'
-
 permissions:
   contents: write
-
 concurrency:
-  group: vector-item-data-audit-v4-${{ github.ref }}
+  group: vector-item-data-audit-v5-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   audit:
-    name: Audit SCMDB LIVE and PTU with Universal Resolver V4
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 20
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v7
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
-
-      - name: Validate V4 audit inputs
-        shell: bash
+      - name: Validate inputs
         run: |
-          set -euo pipefail
           test -f vector_item_data_audit_v4_universal.py
+          test -f vector_item_data_audit_v5_profiler.py
+          test -f VECTOR_V5_RESOLVER_DEFINITION.json
           test -f data/scmdb/latest.json
-
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          root = Path('data/scmdb')
-          latest = json.loads((root / 'latest.json').read_text(encoding='utf-8-sig'))
-          required = ('crafting_items', 'crafting_blueprints')
-
-          for channel in ('live', 'ptu'):
-              info = latest.get('channels', {}).get(channel)
-              if not info:
-                  raise SystemExit(f'Missing channel in latest.json: {channel}')
-              for key in required:
-                  filename = info.get('files', {}).get(key)
-                  if not filename:
-                      raise SystemExit(f'Missing {key} entry for {channel}')
-                  path = root / filename
-                  if not path.is_file():
-                      raise SystemExit(f'Missing data file: {path}')
-              print(f'{channel}: {info.get("version", "unknown")}')
-          PY
-
-      - name: Run VECTOR Universal Resolver V4
-        shell: bash
+          python -m py_compile vector_item_data_audit_v4_universal.py vector_item_data_audit_v5_profiler.py
+      - name: Run V5 profiler and resolver
         run: |
-          set -euo pipefail
-          rm -rf vector-item-audit-v4-universal
-          python vector_item_data_audit_v4_universal.py data/scmdb --out vector-item-audit-v4-universal
-
-      - name: Validate V4 audit output
-        shell: bash
+          rm -rf vector-item-audit-v5
+          python vector_item_data_audit_v5_profiler.py data/scmdb --config VECTOR_V5_RESOLVER_DEFINITION.json --out vector-item-audit-v5
+      - name: Validate outputs
         run: |
-          set -euo pipefail
-          test -s vector-item-audit-v4-universal/summary.json
-          test -s vector-item-audit-v4-universal/live/summary.json
-          test -s vector-item-audit-v4-universal/ptu/summary.json
-          test -s vector-item-audit-v4-universal/live/properties.csv
-          test -s vector-item-audit-v4-universal/ptu/properties.csv
-
-          python - <<'PY'
-          import json
-          from pathlib import Path
-
-          root = Path('vector-item-audit-v4-universal')
-          summary = json.loads((root / 'summary.json').read_text(encoding='utf-8'))
-          for channel in ('live', 'ptu'):
-              data = summary.get(channel)
-              if not data:
-                  raise SystemExit(f'Missing {channel} summary')
-              if data.get('resolverVersion') != '4-universal':
-                  raise SystemExit(f'Unexpected resolver version for {channel}: {data.get("resolverVersion")}')
-              print(channel, json.dumps(data, ensure_ascii=False))
-          PY
-
-      - name: Write V4 GitHub Actions summary
+          test -s vector-item-audit-v5/summary.json
+          for channel in live ptu; do
+            test -s vector-item-audit-v5/$channel/summary.json
+            test -s vector-item-audit-v5/$channel/path_candidates.csv
+            test -s vector-item-audit-v5/$channel/path_frequency.csv
+            test -s vector-item-audit-v5/$channel/resolver_coverage.csv
+          done
+      - name: Write summary
         if: always()
-        shell: bash
         run: |
           python - <<'PY' >> "$GITHUB_STEP_SUMMARY"
-          import csv
-          import json
+          import csv,json
           from pathlib import Path
-
-          root = Path('vector-item-audit-v4-universal')
-          summary_path = root / 'summary.json'
-
-          print('# VECTOR Universal Item Data Audit V4')
-          print()
-          if not summary_path.exists():
-              print('V4 audit output was not created. Check the failed step above.')
-              raise SystemExit(0)
-
-          data = json.loads(summary_path.read_text(encoding='utf-8'))
-          print('| Channel | Version | Items | Blueprints | Properties | Modifiers | Family candidates |')
-          print('|---|---|---:|---:|---:|---:|---:|')
-          for channel in ('live', 'ptu'):
-              s = data.get(channel, {})
-              print(f'| {channel.upper()} | {s.get("version", "-")} | {s.get("items", "-")} | {s.get("blueprints", "-")} | {s.get("properties", "-")} | {s.get("modifier_rows", "-")} | {s.get("family_candidates", "-")} |')
-
-          print()
-          print('## Baseline coverage by property')
-          for channel in ('live', 'ptu'):
-              path = root / channel / 'properties.csv'
+          root=Path('vector-item-audit-v5'); print('# VECTOR SCMDB Path Profiler V5\n')
+          if not (root/'summary.json').exists(): print('No V5 output created.'); raise SystemExit()
+          data=json.loads((root/'summary.json').read_text())
+          for channel in ('live','ptu'):
+              s=data.get(channel,{}); print(f'## {channel.upper()}\n')
+              print(f'- Resolver: `{s.get("resolverVersion")}`')
+              print(f'- Missing baselines: {s.get("issues_by_code",{}).get("CRAFT_STAT_BASELINE_MISSING",0)}')
+              print(f'- Review baselines: {s.get("issues_by_code",{}).get("CRAFT_STAT_BASELINE_REVIEW",0)}')
+              print(f'- Profiler candidates: {s.get("profiler_candidates",0)}\n')
+              print('| Property | Used | Resolved | Missing | Coverage |\n|---|---:|---:|---:|---:|')
+              for r in csv.DictReader((root/channel/'resolver_coverage.csv').open(encoding='utf-8-sig')):
+                  if int(r['modifier_usage_count']): print(f'| `{r["property_key"]}` | {r["modifier_usage_count"]} | {r["resolved_count"]} | {r["missing_count"]} | {r["coverage_percent"]}% |')
               print()
-              print(f'### {channel.upper()}')
-              if not path.exists():
-                  print('No properties.csv generated.')
-                  continue
-              rows = list(csv.DictReader(path.open(encoding='utf-8-sig')))
-              rows = [r for r in rows if int(r.get('modifier_usage_count') or 0) > 0]
-              rows.sort(key=lambda r: int(r.get('missing_count') or 0), reverse=True)
-              print('| Property | Used | Resolved | Missing | Coverage |')
-              print('|---|---:|---:|---:|---:|')
-              for r in rows:
-                  used = int(r.get('modifier_usage_count') or 0)
-                  resolved = int(r.get('resolved_count') or 0)
-                  missing = int(r.get('missing_count') or 0)
-                  coverage = (resolved / used * 100) if used else 0
-                  print(f'| `{r.get("property_key", "-")}` | {used} | {resolved} | {missing} | {coverage:.1f}% |')
-
-          print()
-          print('## Issues')
-          for channel in ('live', 'ptu'):
-              issues = data.get(channel, {}).get('issues_by_code', {}) or {}
-              if issues:
-                  print(f'### {channel.upper()}')
-                  for code, count in sorted(issues.items()):
-                      print(f'- `{code}`: {count}')
-              else:
-                  print(f'- {channel.upper()}: no issues reported')
           PY
-
-      - name: Publish V4 audit results to repository
+      - name: Publish results
         if: success() && github.ref == 'refs/heads/main'
-        shell: bash
         run: |
-          set -euo pipefail
-          rm -rf data/audit-v4
-          mkdir -p data/audit-v4
-          cp -R vector-item-audit-v4-universal/. data/audit-v4/
-
+          rm -rf data/audit-v5
+          mkdir -p data/audit-v5
+          cp -R vector-item-audit-v5/. data/audit-v5/
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/audit-v4
-
-          if git diff --cached --quiet; then
-            echo "No V4 audit result changes to commit."
-          else
-            git commit -m "chore(audit): update VECTOR universal V4 audit [skip ci]"
+          git add data/audit-v5
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(audit): update VECTOR V5 profiler [skip ci]"
             git push origin HEAD:main
           fi
-
-      - name: Upload V4 audit artifact
+      - name: Upload artifact
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: vector-item-audit-v4-universal-${{ github.run_number }}
-          path: vector-item-audit-v4-universal/
+          name: vector-item-audit-v5-${{ github.run_number }}
+          path: vector-item-audit-v5/
           if-no-files-found: warn
           retention-days: 30
