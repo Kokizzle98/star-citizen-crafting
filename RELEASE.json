@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "product": "VECTOR",
+  "version": "1.2.0",
+  "releasePhase": "PREFLIGHT",
+  "sourceBranch": "develop",
+  "scmdb": {
+    "channel": "LIVE",
+    "version": "4.10.2-live.12913470",
+    "manifest": "data/scmdb/local-mirror-manifest.json",
+    "blueprints": "data/scmdb/crafting_blueprints-4.10.2-live.12913470.json",
+    "items": "data/scmdb/crafting_items-4.10.2-live.12913470.json"
+  },
+  "requiredGates": [
+    "scaffold",
+    "database-prechecks",
+    "authorization",
+    "scmdb-preflight",
+    "release-rollback"
+  ],
+  "promotion": {
+    "productionAllowed": false,
+    "nextPhase": "RC"
+  }
+}
