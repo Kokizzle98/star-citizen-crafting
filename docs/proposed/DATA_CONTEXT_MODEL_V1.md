@@ -102,13 +102,25 @@ Beispiele:
 - Blueprint-/Crafting-Vorschau;
 - Darstellung kommender Balance-/Stat-Aenderungen.
 
-VECTOR darf dabei den bestehenden persoenlichen Production User State als Auswahl-/Besitzkontext verwenden und diesen gegen das PTU-Dataset auswerten, sofern die jeweilige Berechnung fachlich kompatibel ist.
+VECTOR darf dabei den bestehenden persoenlichen Production User State als Auswahlbasis verwenden und diesen gegen das PTU-Dataset auswerten, sofern die jeweilige Berechnung fachlich kompatibel ist.
+
+Dabei gilt:
+
+- Production-Besitz, Inventory-Mengen und konkrete User Assets bleiben Production User State;
+- PTU-Werte duerfen fuer Preview, Vergleich und Berechnung verwendet werden;
+- Production-Besitz darf nicht als verifizierter PTU-Besitz oder als PTU-Inventory dargestellt werden;
+- eine PTU-Preview darf Actual Loadout, Inventory, Fleet oder andere Production-User-State-Daten nicht stillschweigend mutieren;
+- Preview-Ergebnisse muessen den verwendeten PTU-Dataset-Kontext in ihrer Berechnungsprovenienz behalten.
 
 Das erzeugt keine Kopie des persoenlichen Inventars fuer PTU.
 
 ## 8. Production User State
 
-VECTOR v1 pflegt primaer einen produktiven persoenlichen Game-State-Kontext fuer den normalen persistenten Spielerzustand.
+VECTOR v1 besitzt genau eine primaere Basis fuer persoenlichen persistenten Spielzustand: den `Production User State`.
+
+Der Production User State ist unabhaengig vom aktuell ausgewaehlten Dataset Context. Das Umschalten zwischen `LIVE` und `PTU` erzeugt, kopiert oder ersetzt keinen persoenlichen Besitzstand.
+
+VECTOR v1 pflegt damit einen produktiven persoenlichen Game-State-Kontext fuer den normalen persistenten Spielerzustand.
 
 Dazu koennen gehoeren:
 
@@ -146,7 +158,15 @@ Ein HOTFIX erzeugt nicht automatisch:
 - einen eigenen UI-Dataset-Kontext;
 - eine neue Game-State Epoch.
 
-Wenn spaeter belastbar festgestellt wird, dass ein HOTFIX VECTOR-relevante Referenz-/Game-Data-Werte veraendert, kann daraus eine neue LIVE-Dataset-Revision entstehen. Dafuer ist kein eigener `HOTFIX`-Runtime-Modus erforderlich.
+Ein HOTFIX darf nur dann eine neue LIVE-Dataset-Revision ausloesen, wenn eine belastbare Aenderungserkennung nachweist, dass sich VECTOR-relevante Referenz-/Game-Data-Werte gegenueber der aktiven LIVE-Revision geaendert haben.
+
+Binding Rules:
+
+- reine Client-, Server-, Stabilitaets- oder Infrastrukturfixes erzeugen keine neue LIVE-Dataset-Revision, sofern sie keine relevanten Game-/Referenzdaten veraendern;
+- die Entscheidung basiert auf nachweisbaren Datenunterschieden, nicht allein auf dem Vorhandensein eines HOTFIX-Builds;
+- bei relevanten Datenunterschieden wird eine neue LIVE-Dataset-Revision mit HOTFIX-Quellprovenienz erzeugt und durch die normalen Extraction-, Normalization-, Completeness-, Resolver- und Activation-Gates gefuehrt;
+- dafuer ist kein eigener `HOTFIX`-Runtime-Modus und kein dritter UI-Dataset-Schalter erforderlich;
+- kann die Relevanz der Aenderung nicht eindeutig bestimmt werden, bleibt die aktive LIVE-Dataset-Revision unveraendert und der HOTFIX wird als Review-/Provenienzfall behandelt.
 
 ## 10. EPTU und TECH_PREVIEW
 
@@ -187,7 +207,30 @@ Channel erkennen
 
 PTU User-State-Observations koennen spaeter ergaenzt werden, falls eine belastbare fachliche Nutzung entsteht. Sie sind keine Voraussetzung fuer v1.
 
-## 13. Game-State Epoch
+## 13. Dataset Trigger versus Wipe Target
+
+Ein Dataset Context und der davon betroffene User State sind getrennte Ziele.
+
+Fuer VECTOR v1 gilt bei Build-triggered Game Wipes:
+
+```text
+Trigger:
+validiertes und publishable LIVE-Dataset fuer einen exakt passenden Build
+
+Wipe Target:
+Production User State mit den explizit konfigurierten Wipe-Domaenen
+```
+
+Binding Rules:
+
+- das LIVE-Dataset kann die Ausfuehrung eines passenden `ARMED` Wipe Plans ausloesen;
+- das Dataset selbst ist nicht der persoenliche Zustand, der gewiped wird;
+- der Wipe betrifft ausschliesslich die im Plan definierten Production-User-State-Domaenen;
+- PTU-Dataset-Aktivierung loest in v1 keinen Production-User-State-Wipe aus;
+- HOTFIX-Erkennung loest keinen Wipe und keine neue Epoch aus, sofern kein ausdruecklich passender Wipe Plan alle regulaeren Gates besteht;
+- ein neuer Build oder eine neue Dataset-Revision erzeugt ohne ausgefuehrten Wipe Plan keine neue Game-State Epoch.
+
+## 14. Game-State Epoch
 
 Eine Game-State Epoch bezeichnet eine relevante Persistenzperiode des Production User State zwischen Wipe-/Reset-Grenzen.
 
@@ -203,7 +246,7 @@ Ein explizit konfigurierter und ausgefuehrter relevanter Game Wipe kann eine neu
 
 Partielle Wipes bleiben zusaetzlich ueber ihre expliziten Domain-Regeln nachvollziehbar.
 
-## 14. Kein paralleles PTU-Inventory in v1
+## 15. Kein paralleles PTU-Inventory in v1
 
 VECTOR v1 verlangt kein zweites persistentes PTU-Inventory/Fleet/Wallet/Reputation-Modell.
 
@@ -211,7 +254,7 @@ Das verhindert unnoetige Komplexitaet und erhaelt trotzdem den Hauptnutzen des P
 
 Eine spaetere Version darf PTU User State einfuehren, wenn Watcher/Import und fachlicher Nutzen dies rechtfertigen.
 
-## 15. Provenienz
+## 16. Provenienz
 
 Build-/Dataset-abhaengige Daten sollten, soweit relevant, mindestens nachvollziehbar machen:
 
@@ -226,7 +269,7 @@ observed/extracted timestamp
 
 Fuer Production User State bleibt zusaetzlich die relevante Game-State Epoch nachvollziehbar, wo sie fachlich erforderlich ist.
 
-## 16. Architekturregel fuer Channel-Mapping
+## 17. Architekturregel fuer Channel-Mapping
 
 Das Mapping bleibt in v1 bewusst klein:
 
@@ -262,20 +305,23 @@ UNKNOWN
   Production mutation: prohibited without resolution
 ```
 
-## 17. Data Integrity Invariants
+## 18. Data Integrity Invariants
 
 1. Aktive VECTOR-Dataset-Kontexte sind in v1 nur LIVE und PTU.
 2. LIVE und PTU werden nie gemischt.
 3. PTU dient primaer als Preview-/Berechnungskontext und erfordert kein dupliziertes User Inventory.
-4. HOTFIX ist bekannt, aber kein eigener UI-Dataset-Kontext.
-5. Ein HOTFIX erzeugt nicht automatisch einen neuen Game-State-Kontext oder eine neue Epoch.
-6. EPTU und TECH_PREVIEW werden erkannt, aber in v1 nicht aktiv berechnet/validiert.
-7. UNKNOWN wird niemals als LIVE geraten.
-8. Nicht unterstuetzte Watcher-Observations duerfen Production User State nicht mutieren.
-9. Dataset Revision und Game-State Epoch sind getrennte Konzepte.
-10. Dataset-Rollback oder Patch-Wechsel machen keinen Game Wipe rueckgaengig.
+4. Production-Besitz darf in PTU-Preview als Auswahlbasis dienen, aber niemals als verifizierter PTU-Besitz dargestellt werden.
+5. HOTFIX ist bekannt, aber kein eigener UI-Dataset-Kontext.
+6. Ein HOTFIX erzeugt nicht automatisch einen neuen Game-State-Kontext oder eine neue Epoch.
+7. EPTU und TECH_PREVIEW werden erkannt, aber in v1 nicht aktiv berechnet/validiert.
+8. UNKNOWN wird niemals als LIVE geraten.
+9. Nicht unterstuetzte Watcher-Observations duerfen Production User State nicht mutieren.
+10. Dataset Revision und Game-State Epoch sind getrennte Konzepte.
+11. Dataset-Rollback oder Patch-Wechsel machen keinen Game Wipe rueckgaengig.
+12. LIVE-Dataset ist bei Build-triggered Wipes der Triggerkontext; Wipe-Ziel ist der explizit konfigurierte Production User State.
+13. Ein HOTFIX erzeugt nur bei nachgewiesenen VECTOR-relevanten Datenunterschieden eine neue LIVE-Dataset-Revision.
 
-## 18. Non-Goals
+## 19. Non-Goals
 
 v1 definiert bewusst nicht:
 
@@ -289,7 +335,7 @@ v1 definiert bewusst nicht:
 
 Diese Faelle werden erst implementiert, wenn ein konkreter VECTOR-Nutzen entsteht.
 
-## 19. Acceptance Criteria
+## 20. Acceptance Criteria
 
 Die v1-Spezifikation ist umgesetzt, wenn VECTOR nachweisen kann, dass:
 
@@ -301,7 +347,7 @@ Die v1-Spezifikation ist umgesetzt, wenn VECTOR nachweisen kann, dass:
 - ein normaler Patch/HOTFIX keine Game-State Epoch erzeugt;
 - ein expliziter Wipe weiterhin die fuer User State relevante Epoch-/Historisierungslogik steuert.
 
-## 20. Status Decision
+## 21. Status Decision
 
 VECTOR Data Context Model v1 ist **PROPOSED**.
 
