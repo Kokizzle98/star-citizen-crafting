@@ -1,0 +1,11 @@
+# VECTOR PreFlight
+- [ ] SCMDB LIVE dataset is unique and hashed
+- [ ] TypeScript PASS
+- [ ] Lint PASS
+- [ ] Tests PASS
+- [ ] Next.js build PASS
+- [ ] Secret scan PASS
+- [ ] Identity/Admin/OAuth canonical implementation integrated once
+- [ ] Staging database prechecks PASS before migrations
+- [ ] SYSTEM_ADMIN and normal USER authorization tested
+- [ ] Rollback plan documented

@@ -1,28 +1,17 @@
-# Star Citizen Group Crafting PWA – V1
+# VECTOR 1.2.0 - Next.js 14 Scaffold
 
-## Enthalten
-- Installierbare PWA-Grundstruktur
-- Dashboard
-- Fabricator mit Blueprint-Suche und Rezeptanzeige
-- Materiallager (V1 lokal im Browser)
-- Blueprint-Browser
-- 1.618 Blueprints aus 4.10.2-live.12913470
-- Klassenvisuals
-- Offline-Cache via Service Worker
+Initial `develop` scaffold for the VECTOR restart.
 
-## Gratis veröffentlichen mit GitHub Pages
-1. Kostenloses GitHub-Konto erstellen/anmelden.
-2. Neues **öffentliches** Repository anlegen, z. B. `sc-crafting`. GitHub Pages ist mit GitHub Free für öffentliche Repositories verfügbar.
-3. Den Inhalt dieses Ordners in das Repository hochladen. `index.html` muss auf oberster Ebene liegen.
-4. Repository > Settings > Pages öffnen.
-5. Als Publishing Source den `main`-Branch und `/ (root)` auswählen.
-6. GitHub zeigt anschließend die öffentliche URL der Site an.
+## Local gates
+1. Copy `.env.example` to `.env.local` and add only local/staging credentials.
+2. `npm install`
+3. `npm run typecheck`
+4. `npm run lint`
+5. `npm test`
+6. `npm run build`
 
-## Wichtig
-Diese Grundstruktur funktioniert sofort als PWA, speichert Lagerdaten aber absichtlich noch lokal im Browser (`localStorage`). Damit deine Freunde denselben Live-Bestand sehen, muss als nächster Schritt ein gemeinsames Backend eingebunden werden, z. B. Supabase Free.
-
-## Lokaler Test
-PWA-Funktionen benötigen HTTP/HTTPS. Im Projektordner z. B. `python -m http.server 8000` starten und `http://localhost:8000` öffnen.
-
-## GitHub-Variante mit flacher Struktur
-Alle Dateien müssen direkt im Stammverzeichnis des Repositorys liegen. Diese Ausgabe verwendet keine Unterordner.
+## Safety
+- `CITIZEN_ID_ENABLED=false` is the initial default.
+- Never commit `.env.local` or server secrets.
+- Database migrations are not executed by this scaffold.
+- Production promotion is blocked until PreFlight and RC pass.
