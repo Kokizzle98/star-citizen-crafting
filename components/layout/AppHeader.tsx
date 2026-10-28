@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { HeaderAccountMenu } from '@/components/layout/HeaderAccountMenu'
 
 export function AppHeader() {
   return (
@@ -13,7 +14,10 @@ export function AppHeader() {
         <span aria-disabled="true">Fleet</span>
         <span aria-disabled="true">Trading</span>
       </nav>
-      <div className="release">1.2.0 · DEVELOP</div>
+      <div className="header-end">
+        <div className="release">1.2.0 · DEVELOP</div>
+        <HeaderAccountMenu />
+      </div>
     </header>
   )
 }
