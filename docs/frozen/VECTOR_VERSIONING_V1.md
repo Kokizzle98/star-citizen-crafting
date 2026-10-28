@@ -143,7 +143,20 @@ Exact storage names may be adapted during implementation, but the provenance inf
 - PTU does not alter the canonical combined VECTOR identifier.
 - PTU data may be incomplete, provisional or inconsistent.
 - PTU must pass the same Completeness Filter principles as LIVE.
-- PTU may be shown in the UI as a separate dataset channel.
+
+### 6.3 Strict dataset-channel isolation
+
+LIVE and PTU are strictly isolated dataset contexts.
+
+Binding rules:
+
+1. LIVE records, derived values and calculation inputs must never be mixed with PTU records, derived values or calculation inputs in the same active dataset context.
+2. The application must provide a global dataset-channel selector that allows the user to switch explicitly between `LIVE` and `PTU`.
+3. Switching the global channel changes the active dataset for all channel-dependent views, lookups, calculations and derived results.
+4. The currently active channel and compact game-data version must remain clearly visible in the application, for example `LIVE 4.10.2` or `PTU 4.10.3`.
+5. A calculation must use data from exactly one active channel. Cross-channel fallback is prohibited. Missing PTU data must not be completed with LIVE data, and missing LIVE data must not be completed with PTU data.
+6. If required data is missing in the active channel, the Completeness Filter applies and the affected result is marked incomplete or excluded according to the validation rules.
+7. The canonical VECTOR release identifier continues to use the approved LIVE build even when a user is actively viewing the PTU dataset.
 
 ## 7. Completeness Filter
 
@@ -263,6 +276,7 @@ Binding decisions:
 - VECTOR version and dataset build are independent axes;
 - same-build dataset enrichments use dataset revisions;
 - PTU is displayed and processed separately but never becomes the canonical release-build component;
+- LIVE and PTU are strictly isolated runtime dataset contexts; the application provides an explicit global channel selector and cross-channel fallback or mixing is prohibited;
 - LIVE and PTU both pass the Completeness Filter;
 - normal UI presentation uses compact dataset labels such as `LIVE 4.10.2` and `PTU 4.10.3`;
 - full provenance remains available internally and in a detailed system/version view.
