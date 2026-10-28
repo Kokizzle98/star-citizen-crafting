@@ -17,6 +17,7 @@ on:
       - 'next.config.mjs'
       - '.eslintrc.json'
       - '.github/workflows/vector-scaffold-check.yml'
+      - '.env.example'
   pull_request:
     branches: [develop]
 
