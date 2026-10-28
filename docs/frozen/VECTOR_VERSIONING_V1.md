@@ -239,9 +239,22 @@ A validated dataset activation may update the data baseline independently, witho
 
 If a dataset requires application, schema, normalization or engine changes, those changes follow the normal `develop -> Preview -> main` release workflow and update the VECTOR application version as appropriate.
 
-## 12. Frozen Decision
+## 12. GitHub README Release Documentation
 
-VECTOR Versioning v1 is FROZEN.
+The repository-root `README.md` is part of the official VECTOR release documentation.
+
+Binding rules:
+
+1. Every MAJOR VECTOR release must update `README.md`.
+2. The README update must describe the current major release baseline and must not remain on an obsolete scaffold or previous major-version description.
+3. The README update is part of the applicable MAJOR release gate and must be merged through the normal `develop -> main` workflow.
+4. The README should reference the released VECTOR version and the applicable LIVE dataset context where useful.
+5. Automation through the GitHub release / GitHub Actions pipeline is the preferred future implementation, but is not required until the release automation is implemented and validated.
+6. Until that automation exists, the README update is a mandatory manual MAJOR-release checklist item.
+
+## 13. Frozen Decision
+
+VECTOR Versioning v1 is FROZEN, including the GitHub README MAJOR-release documentation rule.
 
 Binding decisions:
 
