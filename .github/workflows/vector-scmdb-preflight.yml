@@ -1,0 +1,311 @@
+name: VECTOR SCMDB PreFlight
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+    paths:
+      - "data/scmdb/**"
+      - "VERSION"
+      - "package.json"
+      - ".github/workflows/vector-scmdb-preflight.yml"
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - "data/scmdb/**"
+      - "VERSION"
+      - "package.json"
+      - ".github/workflows/vector-scmdb-preflight.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: vector-scmdb-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scmdb-preflight:
+    name: Validate SCMDB release data
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Show checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Repository: $GITHUB_REPOSITORY"
+          echo "Ref:        $GITHUB_REF"
+          echo "SHA:        $GITHUB_SHA"
+          git log -1 --oneline
+
+      - name: Run SCMDB PreFlight
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from __future__ import annotations
+
+          import hashlib
+          import json
+          import os
+          import re
+          import sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          ROOT = Path.cwd()
+          DATA_DIR = ROOT / "data" / "scmdb"
+          MANIFEST = DATA_DIR / "local-mirror-manifest.json"
+          REPORT_DIR = ROOT / "preflight-output"
+          REPORT_DIR.mkdir(exist_ok=True)
+          REPORT = REPORT_DIR / "SCMDB_PREFLIGHT_REPORT.md"
+          HASHES = REPORT_DIR / "SCMDB_SHA256SUMS.txt"
+
+          errors: list[str] = []
+          warnings: list[str] = []
+          checks: list[tuple[str, str, str]] = []
+
+          def add(name: str, status: str, detail: str) -> None:
+              checks.append((name, status, detail))
+              print(f"[{status}] {name}: {detail}")
+
+          def fail(name: str, detail: str) -> None:
+              errors.append(detail)
+              add(name, "FAIL", detail)
+
+          def warn(name: str, detail: str) -> None:
+              warnings.append(detail)
+              add(name, "WARN", detail)
+
+          def sha256(path: Path) -> str:
+              h = hashlib.sha256()
+              with path.open("rb") as f:
+                  for chunk in iter(lambda: f.read(1024 * 1024), b""):
+                      h.update(chunk)
+              return h.hexdigest()
+
+          def collect_strings(value):
+              if isinstance(value, str):
+                  yield value
+              elif isinstance(value, list):
+                  for item in value:
+                      yield from collect_strings(item)
+              elif isinstance(value, dict):
+                  for item in value.values():
+                      yield from collect_strings(item)
+
+          if not DATA_DIR.is_dir():
+              fail("SCMDB directory", "data/scmdb does not exist")
+          else:
+              add("SCMDB directory", "PASS", "data/scmdb exists")
+
+          manifest_data = None
+          if not MANIFEST.is_file():
+              fail("Mirror manifest", "data/scmdb/local-mirror-manifest.json is missing")
+          else:
+              try:
+                  manifest_data = json.loads(MANIFEST.read_text(encoding="utf-8"))
+                  add("Mirror manifest", "PASS", "Manifest exists and contains valid JSON")
+              except Exception as exc:
+                  fail("Mirror manifest", f"Manifest JSON is invalid: {exc}")
+
+          referenced: list[str] = []
+          if manifest_data is not None:
+              referenced = [
+                  s.replace("\\", "/").lstrip("./")
+                  for s in collect_strings(manifest_data)
+                  if isinstance(s, str) and s.lower().endswith(".json")
+              ]
+              referenced = list(dict.fromkeys(referenced))
+              add("Manifest references", "PASS", f"Found {len(referenced)} unique JSON references")
+
+          def basename_matches(prefix: str, channel: str) -> list[str]:
+              pattern = re.compile(
+                  rf"^{re.escape(prefix)}.*-{re.escape(channel)}(?:[.-].*)?\.json$",
+                  re.IGNORECASE,
+              )
+              return sorted({s for s in referenced if pattern.match(Path(s).name)})
+
+          live_blueprints = basename_matches("crafting_blueprints-", "live")
+          live_items = basename_matches("crafting_items-", "live")
+
+          if len(live_blueprints) != 1:
+              fail(
+                  "Unique LIVE blueprints dataset",
+                  f"Expected exactly 1 manifest reference, found {len(live_blueprints)}: {live_blueprints}",
+              )
+          else:
+              add("Unique LIVE blueprints dataset", "PASS", live_blueprints[0])
+
+          if len(live_items) != 1:
+              fail(
+                  "Unique LIVE items dataset",
+                  f"Expected exactly 1 manifest reference, found {len(live_items)}: {live_items}",
+              )
+          else:
+              add("Unique LIVE items dataset", "PASS", live_items[0])
+
+          selected_refs = live_blueprints + live_items
+          selected_paths: list[Path] = []
+
+          def resolve_reference(ref: str) -> Path | None:
+              candidates = [ROOT / ref, DATA_DIR / ref, DATA_DIR / Path(ref).name]
+              existing = []
+              seen = set()
+              for candidate in candidates:
+                  candidate = candidate.resolve()
+                  if candidate in seen:
+                      continue
+                  seen.add(candidate)
+                  try:
+                      candidate.relative_to(ROOT.resolve())
+                  except ValueError:
+                      continue
+                  if candidate.is_file():
+                      existing.append(candidate)
+              return existing[0] if existing else None
+
+          for ref in selected_refs:
+              path = resolve_reference(ref)
+              if path is None:
+                  fail("Referenced dataset exists", f"Referenced file is missing: {ref}")
+                  continue
+              selected_paths.append(path)
+              add("Referenced dataset exists", "PASS", path.relative_to(ROOT).as_posix())
+              try:
+                  parsed = json.loads(path.read_text(encoding="utf-8"))
+                  if not isinstance(parsed, (dict, list)):
+                      warn("Dataset structure", f"JSON root is not an object/array: {ref}")
+                  add("Dataset JSON syntax", "PASS", path.name)
+              except Exception as exc:
+                  fail("Dataset JSON syntax", f"Invalid JSON in {ref}: {exc}")
+
+          if len(selected_paths) == 2:
+              hashes = {path: sha256(path) for path in selected_paths}
+              if len(set(hashes.values())) != len(hashes):
+                  fail("Dataset hash uniqueness", "LIVE blueprint and item datasets have identical SHA-256 hashes")
+              else:
+                  add("Dataset hash uniqueness", "PASS", "LIVE datasets have distinct SHA-256 hashes")
+          else:
+              hashes = {path: sha256(path) for path in selected_paths}
+
+          hash_lines = []
+          if MANIFEST.is_file():
+              hash_lines.append(f"{sha256(MANIFEST)}  {MANIFEST.relative_to(ROOT).as_posix()}")
+          for path in sorted(selected_paths, key=lambda p: p.as_posix()):
+              hash_lines.append(f"{hashes[path]}  {path.relative_to(ROOT).as_posix()}")
+          HASHES.write_text("\n".join(hash_lines) + ("\n" if hash_lines else ""), encoding="utf-8")
+
+          version_file = ROOT / "VERSION"
+          package_file = ROOT / "package.json"
+          version = version_file.read_text(encoding="utf-8").strip() if version_file.is_file() else None
+          package_version = None
+          if package_file.is_file():
+              try:
+                  package_version = str(json.loads(package_file.read_text(encoding="utf-8")).get("version", "")).strip()
+              except Exception as exc:
+                  fail("package.json", f"package.json is invalid JSON: {exc}")
+
+          if version:
+              add("VERSION", "PASS", version)
+          else:
+              warn("VERSION", "VERSION file is missing or empty")
+
+          if package_version:
+              add("package version", "PASS", package_version)
+          else:
+              warn("package version", "No package version found")
+
+          if version and package_version:
+              normalized_version = version.removeprefix("v")
+              normalized_package = package_version.removeprefix("v")
+              if normalized_version != normalized_package:
+                  fail(
+                      "Version consistency",
+                      f"VERSION ({version}) differs from package.json ({package_version})",
+                  )
+              else:
+                  add("Version consistency", "PASS", f"Both declare {normalized_version}")
+
+          secret_patterns = {
+              "Private key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+              "GitHub token": re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}\b"),
+              "Supabase service-role assignment": re.compile(
+                  r"(?:SUPABASE_SERVICE_ROLE_KEY|service_role_key)\s*[:=]\s*['\"]?[A-Za-z0-9._-]{20,}",
+                  re.IGNORECASE,
+              ),
+          }
+          scan_suffixes = {".json", ".js", ".ts", ".tsx", ".jsx", ".py", ".yml", ".yaml", ".env", ".md", ".sql"}
+          excluded_parts = {".git", "node_modules", ".next", "dist", "build", "preflight-output"}
+          secret_hits = []
+          for path in ROOT.rglob("*"):
+              if not path.is_file() or any(part in excluded_parts for part in path.parts):
+                  continue
+              if path.suffix.lower() not in scan_suffixes and path.name != ".env":
+                  continue
+              try:
+                  if path.stat().st_size > 5 * 1024 * 1024:
+                      continue
+                  text = path.read_text(encoding="utf-8", errors="ignore")
+              except OSError:
+                  continue
+              for label, pattern in secret_patterns.items():
+                  if pattern.search(text):
+                      secret_hits.append(f"{label}: {path.relative_to(ROOT).as_posix()}")
+
+          if secret_hits:
+              for hit in secret_hits:
+                  fail("Secret scan", hit)
+          else:
+              add("Secret scan", "PASS", "No high-confidence secret patterns detected")
+
+          result = "PASS" if not errors else "FAIL"
+          now = datetime.now(timezone.utc).isoformat()
+          lines = [
+              "# VECTOR SCMDB PreFlight Report",
+              "",
+              f"- Result: **{result}**",
+              f"- Repository: `{os.getenv('GITHUB_REPOSITORY', 'local')}`",
+              f"- Ref: `{os.getenv('GITHUB_REF', 'local')}`",
+              f"- Commit: `{os.getenv('GITHUB_SHA', 'local')}`",
+              f"- Generated: `{now}`",
+              "",
+              "## Checks",
+              "",
+              "| Check | Status | Detail |",
+              "|---|---:|---|",
+          ]
+          for name, status, detail in checks:
+              safe = detail.replace("|", "\\|").replace("\n", " ")
+              lines.append(f"| {name} | **{status}** | {safe} |")
+          lines += ["", "## SHA-256", "", "```text"] + hash_lines + ["```", ""]
+          REPORT.write_text("\n".join(lines), encoding="utf-8")
+
+          summary = os.getenv("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a", encoding="utf-8") as f:
+                  f.write(REPORT.read_text(encoding="utf-8"))
+
+          if errors:
+              print(f"SCMDB PreFlight failed with {len(errors)} error(s).", file=sys.stderr)
+              sys.exit(1)
+          print("SCMDB PreFlight passed.")
+          PY
+
+      - name: Upload PreFlight report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-scmdb-preflight-${{ github.run_number }}
+          path: preflight-output/
+          if-no-files-found: error
+          retention-days: 30
