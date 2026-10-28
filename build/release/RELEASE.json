@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "product": "VECTOR",
   "version": "1.2.0",
-  "releasePhase": "PREFLIGHT",
+  "releasePhase": "RC",
   "sourceBranch": "develop",
   "scmdb": {
     "channel": "LIVE",
@@ -16,10 +16,11 @@
     "database-prechecks",
     "authorization",
     "scmdb-preflight",
-    "release-rollback"
+    "release-rollback",
+    "rc-smoke"
   ],
   "promotion": {
     "productionAllowed": false,
-    "nextPhase": "RC"
+    "nextPhase": "PRODUCTION_REVIEW"
   }
 }
