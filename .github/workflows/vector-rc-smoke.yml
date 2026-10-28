@@ -1,0 +1,111 @@
+name: VECTOR RC Smoke Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - develop
+      
+permissions:
+  contents: read
+
+concurrency:
+  group: vector-rc-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  rc-smoke:
+    name: Validate VECTOR RC
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: staging
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate RC metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, sys
+          from pathlib import Path
+          release = json.loads(Path('build/release/RELEASE.json').read_text(encoding='utf-8'))
+          version = Path('VERSION').read_text(encoding='utf-8').strip()
+          package = json.loads(Path('package.json').read_text(encoding='utf-8'))
+          problems = []
+          if release.get('product') != 'VECTOR': problems.append('product must be VECTOR')
+          if release.get('releasePhase') != 'RC': problems.append('releasePhase must be RC')
+          if release.get('sourceBranch') != 'develop': problems.append('sourceBranch must be develop')
+          if release.get('promotion', {}).get('productionAllowed') is not False: problems.append('productionAllowed must remain false')
+          if not (release.get('version') == version == package.get('version')): problems.append('version mismatch')
+          if problems:
+              print('\n'.join(f'FAIL: {x}' for x in problems), file=sys.stderr)
+              sys.exit(1)
+          print(f"PASS: VECTOR {version} RC metadata")
+          PY
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript
+        run: npm run typecheck --if-present
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Tests
+        run: npm test --if-present
+
+      - name: Build
+        run: npm run build
+
+      - name: Validate SCMDB release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, sys
+          from pathlib import Path
+          r=json.loads(Path('build/release/RELEASE.json').read_text())
+          for key in ('manifest','blueprints','items'):
+              p=Path(r['scmdb'][key])
+              if not p.is_file():
+                  print(f'FAIL: missing {p}', file=sys.stderr); sys.exit(1)
+              json.loads(p.read_text(encoding='utf-8'))
+              print(f'PASS: {p}')
+          PY
+
+      - name: Write RC smoke report
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p preflight-output
+          {
+            echo '# VECTOR RC Smoke Test'
+            echo
+            echo "- Branch: \`${GITHUB_REF}\`"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Run: \`${GITHUB_RUN_NUMBER}\`"
+            echo '- Environment: `staging`'
+            echo '- Production promotion remains blocked by RELEASE.json.'
+          } > preflight-output/RC_SMOKE_REPORT.md
+          cat preflight-output/RC_SMOKE_REPORT.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload RC smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vector-rc-smoke-${{ github.run_number }}
+          path: preflight-output/
+          if-no-files-found: error
+          retention-days: 30
