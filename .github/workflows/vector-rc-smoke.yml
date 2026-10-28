@@ -2,7 +2,10 @@ name: VECTOR RC Smoke Test
 
 on:
   workflow_dispatch:
-
+  push:
+    branches:
+      - develop
+      
 permissions:
   contents: read
 
