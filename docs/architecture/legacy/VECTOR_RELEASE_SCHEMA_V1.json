@@ -1,0 +1,111 @@
+{
+  "_archive": {
+    "status": "LEGACY_REFERENCE",
+    "authority": "NON_BINDING",
+    "purpose": "Preserve the original VECTOR release-manifest concept as a historical design reference.",
+    "supersessionNote": "This schema predates the current VECTOR FROZEN governance, versioning and dataset rules. It must not be used as the authoritative release contract for new VECTOR releases.",
+    "overholtSummary": [
+      "The release channel model PREFLIGHT/RC/PRODUCTION predates the current develop -> Vercel Preview -> main -> Production workflow.",
+      "The schema models only a LIVE SCMDB dataset and does not model the parallel, strictly isolated LIVE/PTU runtime dataset contexts.",
+      "The schema has no explicit dataset revision/source revision model for same-build dataset refreshes.",
+      "The schema has no explicit Completeness Filter state for LIVE and PTU.",
+      "Extraction, normalization, validation, publishability and activation are not represented as separate pipeline stages.",
+      "The current canonical internal identifier Vector_{VersionNumber}_SC_{LIVEBuild} is not enforced as a required field.",
+      "Application releases and dataset-only activations are not modeled as separate manifest event types.",
+      "Current Git branch/Vercel environment governance is not represented.",
+      "Current MAJOR-release README documentation requirements are not represented.",
+      "Current migration/database gate evidence and build-triggered game-wipe references are not represented."
+    ],
+    "preservedConcepts": [
+      "VECTOR semantic application version components",
+      "LIVE as the canonical Star Citizen release baseline",
+      "SCMDB as the release data authority/source",
+      "Git commit provenance",
+      "SCMDB dataset identity, export metadata and content hash",
+      "compatibility/validation status",
+      "build metadata such as Next.js, Node and database schema",
+      "Production requiring a validated compatibility state"
+    ],
+    "futureDirection": "Use this file as the OG concept reference when designing VECTOR_RELEASE_SCHEMA_V2.json against the current FROZEN rules."
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vector.local/schemas/release-v1.schema.json",
+  "title": "VECTOR RELEASE.json Schema v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "product", "version", "release", "starCitizen", "scmdb", "compatibility"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "product": { "const": "VECTOR" },
+    "version": {
+      "type": "object", "additionalProperties": false,
+      "required": ["major", "minor", "patch", "semver"],
+      "properties": {
+        "major": { "type": "integer", "minimum": 0 },
+        "minor": { "type": "integer", "minimum": 0 },
+        "patch": { "type": "integer", "minimum": 0 },
+        "semver": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" }
+      }
+    },
+    "release": {
+      "type": "object", "additionalProperties": false,
+      "required": ["channel", "sequence", "identifier", "createdAt"],
+      "properties": {
+        "channel": { "enum": ["PREFLIGHT", "RC", "PRODUCTION"] },
+        "sequence": { "type": ["integer", "null"], "minimum": 1 },
+        "identifier": { "type": "string", "minLength": 1 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "commit": { "type": ["string", "null"] }
+      }
+    },
+    "starCitizen": {
+      "type": "object", "additionalProperties": false,
+      "required": ["channel", "buildNumber"],
+      "properties": {
+        "channel": { "const": "LIVE" },
+        "buildNumber": { "type": "string", "pattern": "^[0-9]+$" },
+        "displayVersion": { "type": ["string", "null"] }
+      }
+    },
+    "scmdb": {
+      "type": "object", "additionalProperties": false,
+      "required": ["sourceType", "channel", "buildNumber", "datasetId", "exportedAt", "exportSchemaVersion", "watcherVersion"],
+      "properties": {
+        "sourceType": { "const": "SCMDB" },
+        "channel": { "const": "LIVE" },
+        "buildNumber": { "type": "string", "pattern": "^[0-9]+$" },
+        "datasetId": { "type": "string", "minLength": 1 },
+        "sourceFile": { "type": ["string", "null"] },
+        "exportedAt": { "type": "string", "format": "date-time" },
+        "exportSchemaVersion": { "type": ["integer", "string"] },
+        "watcherVersion": { "type": "string", "minLength": 1 },
+        "contentHash": { "type": ["string", "null"] }
+      }
+    },
+    "compatibility": {
+      "type": "object", "additionalProperties": false,
+      "required": ["dataAuthority", "status", "validatedAt"],
+      "properties": {
+        "dataAuthority": { "const": "SCMDB_LIVE_DATASET" },
+        "status": { "enum": ["UNVERIFIED", "PREFLIGHT", "VALIDATED", "BLOCKED"] },
+        "validatedAt": { "type": ["string", "null"], "format": "date-time" },
+        "notes": { "type": "array", "items": { "type": "string" }, "default": [] }
+      }
+    },
+    "build": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "nextjs": { "type": ["string", "null"] },
+        "node": { "type": ["string", "null"] },
+        "databaseSchema": { "type": ["string", "null"] },
+        "builtAt": { "type": ["string", "null"], "format": "date-time" }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "release": { "properties": { "channel": { "const": "PRODUCTION" } } } } },
+      "then": { "properties": { "release": { "properties": { "sequence": { "type": "null" } } }, "compatibility": { "properties": { "status": { "const": "VALIDATED" } } } } }
+    }
+  ]
+}
