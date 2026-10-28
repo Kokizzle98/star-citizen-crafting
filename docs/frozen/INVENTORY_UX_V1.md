@@ -200,6 +200,22 @@ Binding rules:
 - saving re-applies merge rules and validation before persistence;
 - delete actions require an application-owned confirmation interaction where confirmation is necessary, never a native browser confirmation dialog.
 
+### 12.1 Inline editor activation
+
+An editable inventory lot/storage row may enter inline edit mode through direct row interaction.
+
+Binding rules:
+
+- Clicking or tapping an editable lot/storage row may activate its inline editor.
+- A dedicated `Edit` action may additionally remain available.
+- Direct row activation and an explicit Edit action must open the same editing state and follow the same validation and authorization rules.
+- Row activation must not interfere with expand/collapse controls, selection controls, links, buttons or other interactive elements contained in the row.
+- Keyboard activation must remain predictable and must follow the global VECTOR keyboard rules.
+- `Esc` cancels the active inline edit without committing changes.
+- Read-only lots must never enter edit mode through row interaction.
+- Foreign Crew lots remain strictly view-only and must not expose an enabled editing state merely because the current user shares a Crew with the owner.
+- Authorization must be enforced by the backend authorization model; the UI state is not a security boundary.
+
 ## 13. Keyboard and focus UX
 
 Inventory follows the global VECTOR keyboard rules:
