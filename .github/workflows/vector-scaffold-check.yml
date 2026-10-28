@@ -1,4 +1,5 @@
 name: VECTOR Scaffold Check
+
 on:
   workflow_dispatch:
   push:
@@ -8,12 +9,17 @@ on:
       - 'components/**'
       - 'lib/**'
       - 'tests/**'
+      - 'middleware.ts'
       - 'package.json'
       - 'package-lock.json'
       - 'tsconfig.json'
+      - 'next-env.d.ts'
+      - 'next.config.mjs'
+      - '.eslintrc.json'
       - '.github/workflows/vector-scaffold-check.yml'
   pull_request:
     branches: [develop]
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -23,6 +29,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
+          cache-dependency-path: package-lock.json
       - run: npm ci
       - run: npm run typecheck
       - run: npm run lint
