@@ -32,7 +32,7 @@ Operational systems retain their own authoritative runtime responsibilities:
 - **SCMDB Mirror / extracted SCMDB data:** primary external Star Citizen game-data source;
 - **OneDrive:** backup, handover packages, exports and emergency fallback only.
 
-OneDrive is not the primary source of truth for current code, architecture or FROZEN rules.
+OneDrive is not the primary source of truth for current code, architecture or FROZEN rules!
 
 ## 3. Branch Model
 
