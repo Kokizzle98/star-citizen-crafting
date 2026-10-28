@@ -1,5 +1,4 @@
 name: VECTOR Release PreFlight
-
 on:
   workflow_dispatch:
   push:
@@ -22,26 +21,21 @@ on:
       - "build/runbooks/ROLLBACK.md"
       - "data/scmdb/**"
       - ".github/workflows/vector-release-preflight.yml"
-
 permissions:
   contents: read
-
 concurrency:
   group: vector-release-preflight-${{ github.ref }}
   cancel-in-progress: true
-
 jobs:
   release-preflight:
     name: Validate VECTOR release gate
     runs-on: ubuntu-latest
     timeout-minutes: 10
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
       - name: Validate release metadata and rollback gate
         shell: bash
         run: |
@@ -50,7 +44,6 @@ jobs:
           import json, os, re, sys
           from pathlib import Path
           from datetime import datetime, timezone
-
           root = Path.cwd()
           release_path = root / "build/release/RELEASE.json"
           rollback_path = root / "build/runbooks/ROLLBACK.md"
@@ -59,22 +52,18 @@ jobs:
           out = root / "preflight-output"
           out.mkdir(exist_ok=True)
           report = out / "RELEASE_PREFLIGHT_REPORT.md"
-
           checks = []
           errors = []
-
           def check(name, ok, detail):
               status = "PASS" if ok else "FAIL"
               checks.append((name, status, detail))
               print(f"[{status}] {name}: {detail}")
               if not ok:
                   errors.append(f"{name}: {detail}")
-
           check("RELEASE.json exists", release_path.is_file(), "build/release/RELEASE.json")
           check("ROLLBACK.md exists", rollback_path.is_file(), "build/runbooks/ROLLBACK.md")
           check("VERSION exists", version_path.is_file(), "VERSION")
           check("package.json exists", package_path.is_file(), "package.json")
-
           release = {}
           package = {}
           if release_path.is_file():
@@ -89,36 +78,34 @@ jobs:
                   check("package.json syntax", True, "valid JSON")
               except Exception as e:
                   check("package.json syntax", False, str(e))
-
           version = version_path.read_text(encoding="utf-8").strip() if version_path.is_file() else ""
           package_version = str(package.get("version", "")).strip()
           release_version = str(release.get("version", "")).strip()
           check("Version consistency", bool(version) and version == package_version == release_version,
                 f"VERSION={version!r}, package={package_version!r}, release={release_version!r}")
-
           check("Product", release.get("product") == "VECTOR", str(release.get("product")))
-          check("Release phase", release.get("releasePhase") == "PREFLIGHT", str(release.get("releasePhase")))
+          release_phase = release.get("releasePhase")
+          check("Release phase", release_phase in {"PREFLIGHT", "RC"}, str(release_phase))
           check("Source branch", release.get("sourceBranch") == "develop", str(release.get("sourceBranch")))
-
           promotion = release.get("promotion") or {}
           check("Production blocked", promotion.get("productionAllowed") is False,
                 f"productionAllowed={promotion.get('productionAllowed')!r}")
-          check("Next phase RC", promotion.get("nextPhase") == "RC", str(promotion.get("nextPhase")))
-
+          expected_next_phase = "RC" if release_phase == "PREFLIGHT" else "PRODUCTION_REVIEW"
+          check("Next phase", promotion.get("nextPhase") == expected_next_phase,
+                f"expected={expected_next_phase}, actual={promotion.get('nextPhase')}")
           required = set(release.get("requiredGates") or [])
           expected = {"scaffold", "database-prechecks", "authorization", "scmdb-preflight", "release-rollback"}
+          if release_phase == "RC":
+              expected.add("rc-smoke")
           check("Required gates declared", expected.issubset(required), f"declared={sorted(required)}")
-
           scmdb = release.get("scmdb") or {}
           check("SCMDB channel", scmdb.get("channel") == "LIVE", str(scmdb.get("channel")))
           scmdb_version = str(scmdb.get("version", ""))
           check("SCMDB version", bool(re.fullmatch(r"\d+\.\d+\.\d+-live\.\d+", scmdb_version)), scmdb_version)
-
           for key in ("manifest", "blueprints", "items"):
               rel = scmdb.get(key)
               ok = isinstance(rel, str) and bool(rel) and (root / rel).is_file()
               check(f"SCMDB {key} exists", ok, str(rel))
-
           if scmdb_version:
               bp_expected = f"data/scmdb/crafting_blueprints-{scmdb_version}.json"
               item_expected = f"data/scmdb/crafting_items-{scmdb_version}.json"
@@ -126,7 +113,6 @@ jobs:
                     f"expected={bp_expected}, actual={scmdb.get('blueprints')}")
               check("Items release reference", scmdb.get("items") == item_expected,
                     f"expected={item_expected}, actual={scmdb.get('items')}")
-
           rollback = rollback_path.read_text(encoding="utf-8") if rollback_path.is_file() else ""
           rollback_requirements = {
               "Application rollback": "## Application rollback",
@@ -138,7 +124,6 @@ jobs:
           }
           for name, literal in rollback_requirements.items():
               check(name, literal in rollback, literal)
-
           result = "PASS" if not errors else "FAIL"
           lines = [
               "# VECTOR Release PreFlight Report", "",
@@ -152,18 +137,15 @@ jobs:
           for name, status, detail in checks:
               lines.append(f"| {name} | **{status}** | {str(detail).replace('|', '\\|')} |")
           report.write_text("\n".join(lines) + "\n", encoding="utf-8")
-
           summary = os.getenv("GITHUB_STEP_SUMMARY")
           if summary:
               with open(summary, "a", encoding="utf-8") as f:
                   f.write(report.read_text(encoding="utf-8"))
-
           if errors:
               print(f"Release PreFlight failed with {len(errors)} error(s).", file=sys.stderr)
               sys.exit(1)
           print("Release PreFlight passed.")
           PY
-
       - name: Upload release PreFlight report
         if: always()
         uses: actions/upload-artifact@v4
