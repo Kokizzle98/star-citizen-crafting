@@ -38,26 +38,26 @@ jobs:
             <meta name="viewport" content="width=device-width, initial-scale=1">
             <meta
               http-equiv="refresh"
-              content="0; url=https://vector-terminal-qqk4ng2sg-kokizzle98.vercel.app/"
+              content="0; url=https://https://sc-vector-terminal.vercel.app/"
             >
             <meta name="robots" content="noindex, nofollow">
             <link
               rel="canonical"
-              href="https://vector-terminal-qqk4ng2sg-kokizzle98.vercel.app/"
+              href="https://https://sc-vector-terminal.vercel.app/"
             >
             <title>VECTOR wird geöffnet</title>
           </head>
           <body>
             <p>
               VECTOR wurde verschoben.
-              <a href="https://vector-terminal-qqk4ng2sg-kokizzle98.vercel.app/">
+              <a href="https://https://sc-vector-terminal.vercel.app/">
                 Weiter zu VECTOR
               </a>
             </p>
 
             <script>
               window.location.replace(
-                "https://vector-terminal-qqk4ng2sg-kokizzle98.vercel.app/"
+                "https://https://sc-vector-terminal.vercel.app/"
               );
             </script>
           </body>
