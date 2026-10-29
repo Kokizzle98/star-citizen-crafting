@@ -83,29 +83,206 @@ A stable SCMDB/CIG UUID may be strong source identity evidence, but VECTOR prese
 
 ### 3.3 Cross-build identity
 
-When the same verified source identity appears across builds/channels, revisions may map to the same canonical entity.
+Cross-build identity resolution is conservative and evidence-driven. A shared display name, manufacturer name, catalog path or statistical similarity is never sufficient by itself to merge two source records into one canonical entity.
 
-If an upstream identifier changes, automatic remapping is allowed only when deterministic evidence proves continuity.
-
-Otherwise:
+The resolver process is ordered:
 
 ```text
-REVIEW_REQUIRED
+Exact Source Identity
+-> Explicit Authoritative Identity Relation
+-> Deterministic Composite Candidate Resolution
+-> Review Candidate Generation
+-> New Entity or Review
 ```
 
-No fuzzy name-only merge is authoritative.
+### 3.4 Match level 1: exact source identity
 
-### 3.4 Identity states
-
-Canonical/source identity resolution may use:
+The strongest automatic rule is:
 
 ```text
+same source_system
++
+same source_entity_id
+=
 SOURCE_EXACT
-RULE_RESOLVED
-REVIEW_REQUIRED
-SOURCE_DATA_MISSING
-QUARANTINED
 ```
+
+When the rule is satisfied, LIVE/PTU/build representations map to the same canonical entity while retaining independent Dataset Revision values.
+
+### 3.5 Match level 2: explicit source identity continuity
+
+An explicit trusted-source statement may resolve continuity across changed source identifiers when that statement means the records represent the same identity.
+
+Semantic relations such as `REPLACES`, `SUPERSEDES` or `VARIANT_OF` do not by themselves mean same identity. They normally relate separate canonical entities.
+
+A deterministic identity-continuity rule records:
+
+```text
+RULE_RESOLVED
+```
+
+with its source evidence and rule version.
+
+### 3.6 Match level 3: deterministic composite matching
+
+When no exact source identity exists, VECTOR may create a bounded candidate set from independent strong attributes such as:
+
+```text
+entity kind / source item family
+attach type
+attach subtype where meaningful
+manufacturer identity
+size
+exact entity/source class
+product family
+other source-stable identifiers
+```
+
+A composite resolver may map automatically only when:
+
+- its rule is explicitly versioned;
+- required attributes agree;
+- exactly one valid candidate remains;
+- no blocking negative evidence exists;
+- the rule is approved for that entity scope.
+
+Otherwise the result is `REVIEW_REQUIRED`.
+
+### 3.7 Match level 4: fuzzy candidate discovery
+
+Fuzzy or similarity-based signals may be used only to reduce/manual-review candidate search. Examples include similar names, descriptions, source paths or technical profiles.
+
+Fuzzy evidence never authorizes an automatic canonical merge in v1.
+
+```text
+FUZZY CANDIDATE
+-> REVIEW_REQUIRED
+```
+
+### 3.8 Negative evidence
+
+Identity resolution evaluates conflicts as well as matches.
+
+Blocking negative evidence may include scope-dependent contradictions such as:
+
+```text
+incompatible entity kind
+incompatible item / attach type
+incompatible size where size defines identity
+contradictory explicit source identity
+channel/build evidence proving separate entities
+```
+
+A matching name cannot override blocking negative evidence.
+
+### 3.9 Candidate blocking
+
+VECTOR must not compare every unresolved source record against every canonical entity.
+
+Candidate discovery first narrows the search using stable, indexed dimensions appropriate to the entity scope.
+
+Representative component block:
+
+```text
+entity_kind = ITEM
+item_family = shipcomponent
+attach_type = QuantumDrive
+size = 3
+```
+
+Only candidates inside the bounded block proceed to more expensive deterministic resolution.
+
+Candidate blocking is an optimization and never identity proof by itself.
+
+### 3.10 Identity resolution outcomes
+
+The resolver supports explicit outcomes:
+
+```text
+MATCH_EXISTING
+NEW_ENTITY
+REVIEW_REQUIRED
+QUARANTINED
+SOURCE_DATA_MISSING
+```
+
+`NEW_ENTITY` creates a new VECTOR canonical identity only after the resolver determines that no approved existing identity can be safely reused.
+
+### 3.11 Canonical merge
+
+If two existing canonical entities are later proven to represent the same entity, VECTOR performs an audited canonical merge rather than silently deleting history.
+
+Conceptually:
+
+```text
+canonical_entity_merge
+    source_vector_entity_id
+    target_vector_entity_id
+    reason
+    resolution_method
+    rule_version
+    evidence
+    approved_by
+    effective_at
+```
+
+The retired identity becomes non-authoritative and redirects/reconciles to the surviving canonical entity according to the approved migration procedure. Historical provenance remains inspectable.
+
+### 3.12 Canonical split
+
+If one canonical entity is later proven to contain multiple real entities, correction uses an audited split procedure.
+
+Historical source/revision mappings are reassigned only where evidence is deterministic. Ambiguous historical mutable state is never guessed into one of the new identities and instead becomes `REVIEW_REQUIRED`.
+
+### 3.13 Identity Resolution Event Ledger
+
+Every non-trivial identity decision is explainable through an immutable/auditable resolution event.
+
+Conceptually:
+
+```text
+identity_resolution_event
+    source_identity_id
+    candidate_vector_entity_id
+    decision
+    resolution_method
+    rule_version
+    supporting_evidence
+    conflicting_evidence
+    decided_at
+    decided_by
+```
+
+Typical resolution methods include:
+
+```text
+EXACT_SOURCE_ID
+EXPLICIT_IDENTITY_RELATION
+DETERMINISTIC_COMPOSITE
+MANUAL_REVIEW
+```
+
+### 3.14 Canonical ID generation contract
+
+`vector_entity_id` uses the PostgreSQL `uuid` data type and is:
+
+```text
+opaque
+immutable
+VECTOR-owned
+non-semantic
+```
+
+The exact generation algorithm remains an implementation decision until the deployed PostgreSQL/Supabase capabilities are verified. UUIDv4 and UUIDv7 are acceptable candidates if supported by the approved implementation.
+
+The generation algorithm must not encode source system, channel, build, taxonomy or user-visible meaning.
+
+### 3.15 Product family is not identity merge
+
+Membership in the same Product Family never means concrete entities are merged.
+
+For example, a base weapon and a verified named variant may share one Product Family while retaining separate canonical identities, inventory references and revision properties.
+
 
 ## 4. Entity kinds
 
@@ -736,6 +913,13 @@ CANONICAL_DATA_MODEL_V1 is ready to freeze only when VECTOR demonstrates that:
 - canonical IDs do not depend solely on names or paths;
 - source IDs remain preserved as mappings/provenance;
 - cross-build identity changes never merge by fuzzy name alone;
+- exact source-system + source-ID matches resolve automatically to the same canonical entity;
+- fuzzy matching can produce review candidates but never auto-merge in v1;
+- negative evidence can block otherwise similar identity candidates;
+- candidate blocking narrows comparison scope without acting as identity proof;
+- identity resolution returns explicit MATCH_EXISTING, NEW_ENTITY, REVIEW_REQUIRED, QUARANTINED or SOURCE_DATA_MISSING outcomes;
+- canonical merges and splits preserve historical provenance and are auditable;
+- non-trivial identity decisions are represented in the Identity Resolution Event Ledger;
 - Product Families do not replace concrete entity identity;
 - variants use explicit/deterministic evidence;
 - taxonomy and facets remain separate concepts;
@@ -756,8 +940,8 @@ CANONICAL_DATA_MODEL_V1 is ready to freeze only when VECTOR demonstrates that:
 
 ## 28. Open implementation decisions before FROZEN
 
-1. Canonical VECTOR entity ID generation method.
-2. Exact cross-build identity matching rules.
+1. Exact deployed UUID generation method after PostgreSQL/Supabase capability verification.
+2. Exact approved deterministic composite rules per entity scope.
 3. Final `entity_kind` dictionary.
 4. Initial taxonomy tree and governance for taxonomy changes.
 5. Exact Product Family creation rules.
