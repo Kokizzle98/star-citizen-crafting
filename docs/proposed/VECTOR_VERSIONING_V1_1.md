@@ -167,7 +167,7 @@ LIVE and PTU are strictly isolated Dataset Contexts.
 
 ### 7.4 No-Guess and Completeness Filter
 
-Channel membership does not imply completeness. Required inputs must be explicitly present and valid. Missing values must not be replaced by guesses or implicit zeroes; orphaned, contradictory or structurally unusable records must not enter affected calculations. An unreliable calculation must be marked incomplete, rejected or excluded from normal output.
+Channel membership does not imply completeness. Required inputs must be explicitly present and valid. Missing values must not be replaced by guesses or implicit zeroes; orphaned, contradictory or structurally unusable records must not enter affected calculations. A calculation with missing required inputs must receive an incomplete state and be excluded from normal calculated output. Incomplete results may be exposed in a controlled diagnostic state, but unreliable calculations must never be presented as valid.
 
 Recommended status values:
 
