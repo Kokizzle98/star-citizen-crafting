@@ -63,7 +63,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | Specification | Authority scope | Status | Notes / dependencies |
 |---|---|---|---|
 | `VECTOR_GOVERNANCE_V1.md` | Global governance, rule lifecycle, repository/release authority | `FROZEN` | Current Production authority; proposed successor: `VECTOR_GOVERNANCE_V1_1.md` |
-| `VECTOR_VERSIONING_V1.md` | VECTOR version, SC build and dataset versioning/isolation | `FROZEN` | Current Production authority; PTU Preview boundary remains unresolved pending approval of proposed `VECTOR_VERSIONING_V1_1.md` |
+| `VECTOR_VERSIONING_V1.md` | VECTOR version, SC build and dataset versioning/isolation | `FROZEN` | Current and sole binding VERSIONING authority; PTU Preview boundary remains unresolved pending governed promotion of proposed `VECTOR_VERSIONING_V1_1.md` |
 | `INVENTORY_UX_V1.md` | Personal Inventory UX and interaction behavior | `FROZEN` | Uses current location, keyboard and dataset-context invariants |
 | `FLEET_DATA_MODEL_V1.md` | User ship identity, ownership and fleet data semantics | `FROZEN` | Fleet planning remains separately specified/planned |
 | `PERSISTENCE_PROVENANCE_V1.md` | Persistence classes, provenance and game-state history | `FROZEN` | Requires alignment with proposed Data Context Model before that proposal can freeze |
@@ -79,7 +79,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `DATA_CONTEXT_MODEL_V1.md` | Build classification, LIVE/PTU dataset contexts, Production User State, PTU Preview, epochs | `PROPOSED` | Align its PTU Preview model with proposed `VECTOR_VERSIONING_V1_1.md` and applicable FROZEN specifications; proposals do not resolve R3 |
 | `DATASET_PIPELINE_V1.md` | `DATASET_PIPELINE` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; align mutable-state boundaries with applicable FROZEN rules before freeze |
 | `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; complete remaining cross-spec alignment before freeze |
-| `VECTOR_VERSIONING_V1_1.md` | `VERSIONING` | `PROPOSED` | Successor proposal to v1.0; defines typed PTU Preview contexts, but v1.0 remains binding and R3 remains open until approved and merged to `main` |
+| `VECTOR_VERSIONING_V1_1.md` | `VERSIONING` | `PROPOSED` | Full-document successor proposal to v1.0; supersession NOT EFFECTIVE until approval, freeze-transition evidence, simultaneous Rule Index transition and governed promotion to `main` as FROZEN. A PROPOSED file on `main` never supersedes v1.0. R3 remains open. See `reviews/VERSIONING_V1_1_IMPACT_ASSESSMENT.md` |
 | `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile staging requirement with README; bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
 
@@ -116,22 +116,17 @@ Until No-Guess has one canonical normative home, this index records it as a glob
 
 The current unresolved review point is not whether LIVE and PTU datasets may mix. They may not.
 
-The proposed versioning successor defines this typed combination for the future rule:
+The proposed versioning successor defines a typed combination for the future rule:
 
 ```text
-Production User State selection / asset identity
-+ PTU Dataset Context only for all channel-dependent reference/calculation inputs
-= PTU Preview Result
+PTU Dataset Context (all channel-dependent reference/calculation inputs)
++ read-only Production User State Snapshot (selection/input only)
+= PTU Preview result (visible label PTU_PREVIEW)
 ```
 
-The preview must not:
+A PTU Preview never mixes LIVE reference data into the PTU calculation, never mutates Production User State, never asserts PTU-native state, and never treats Production ownership as PTU ownership, inventory, wallet or reputation. Provenance of both the PTU dataset revision and the Production User State snapshot must be preserved.
 
-- mix LIVE reference/stat inputs into the PTU calculation;
-- claim Production ownership as verified PTU ownership;
-- mutate Production Inventory, Fleet or Actual Loadout state;
-- lose provenance of both the Production selection context and the PTU dataset context.
-
-`VECTOR_VERSIONING_V1_1.md` proposes this boundary and `DATA_CONTEXT_MODEL_V1.md` describes the v1 state model. Neither proposal overrides FROZEN v1.0. R3 remains open until the successor is reviewed, approved and merged to `main` as FROZEN, with applicable dependent FROZEN specifications reconciled through the governed lifecycle.
+The complete normative boundary is defined only in `VECTOR_VERSIONING_V1_1.md` (PROPOSED); `DATA_CONTEXT_MODEL_V1.md` describes the v1 state model. Neither proposal overrides FROZEN v1.0. `VECTOR_VERSIONING_V1_1.md` is a full-document successor; supersession becomes effective only after documented `project_owner` approval, freeze-transition evidence, a simultaneous Rule Index transition and governed promotion to `main` as FROZEN. R3 remains open until then. Dependent-specification impact is recorded in `reviews/VERSIONING_V1_1_IMPACT_ASSESSMENT.md`.
 
 ## 10. Historical and review records
 
@@ -150,6 +145,7 @@ docs/reviews/archive/
 |---|---|---|---|
 | `SCMDB_SCHEMA_CATALOG_PROFILE_V1.md` | `REVIEW_RECORD` | None (no Authority Scope) | Explicitly non-normative evidence only |
 | `archive/RULE_SET_REVIEW_2026-10-29.md` | `REVIEW_RECORD` | None (no Authority Scope) | Explicitly non-normative historical findings |
+| `VERSIONING_V1_1_IMPACT_ASSESSMENT.md` | `REVIEW_RECORD` | None (no Authority Scope) | Explicitly non-normative impact assessment and freeze-blocker record for proposed `VECTOR_VERSIONING_V1_1.md` |
 
 ## 11. Rule maintenance requirements
 
@@ -183,7 +179,7 @@ A concise repository-root `AGENTS.md` should later point contributors and coding
 |---|---|---|
 | R1 deterministic FROZEN precedence | `IN_PROGRESS` | `RULE_INDEX.md` + `VECTOR_GOVERNANCE_V1_1.md`; resolved only after approval/freeze |
 | R2 absent referenced policies | `IN_PROGRESS` | `RULE_INDEX.md` planned registry + later dedicated specs |
-| R3 LIVE/PTU preview boundary | `OPEN` | `VECTOR_VERSIONING_V1_1.md` successor proposal + `DATA_CONTEXT_MODEL_V1.md`; approval and explicit supersession of applicable `VECTOR_VERSIONING_V1.md` sections required |
+| R3 LIVE/PTU preview boundary | `OPEN` | `VECTOR_VERSIONING_V1_1.md` full-document successor proposal + `DATA_CONTEXT_MODEL_V1.md`; approval, freeze-transition evidence and governed promotion to `main` as FROZEN (with simultaneous Rule Index transition) required; remains `OPEN` until then |
 | R4 migration gates and paths | `OPEN` | `MIGRATION_TEST_CONTRACT_V1.md` + README/repository layout |
 | R5 freeze lifecycle / ADR location | `OPEN` | `VECTOR_GOVERNANCE_V1.md` |
 | R6 contributor/agent entry point | `OPEN` | repository-root `AGENTS.md` |

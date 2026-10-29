@@ -65,6 +65,22 @@ Fuer beide duerfen die fuer VECTOR relevanten Game-/Referenzdaten verarbeitet we
 
 LIVE und PTU werden getrennt extrahiert, normalisiert, validiert, versioniert und aktiviert.
 
+### 4.1 Kanonisches Vokabular
+
+Die folgenden Begriffe sind mit dem vorgeschlagenen `VECTOR_VERSIONING_V1_1.md` abgestimmt und werden je Konzept eindeutig verwendet:
+
+```text
+Dataset Context          LIVE_DATASET_CONTEXT | PTU_DATASET_CONTEXT
+                         (Kanalwerte: LIVE | PTU; Praesentation: z. B. "LIVE 4.10.2")
+User State Context       PRODUCTION_USER_STATE (einziger mutabler v1-Zustand)
+User State Snapshot      PRODUCTION_USER_STATE_SNAPSHOT (unveraenderlicher read-only Ausschnitt)
+Preview-Berechnung       PTU_PREVIEW_EVALUATION (evaluation_type = PTU_PREVIEW)
+Result Context           RESULT_CONTEXT_PTU_PREVIEW
+Sichtbares Label         PTU_PREVIEW (nur Anzeigetext, kein Identifier)
+```
+
+`Production` wird nur qualifiziert verwendet: Production-Deployment (`main`), Production User State (Zustandsdomaene), LIVE-Baseline (Game-Daten-Baseline, nicht "Production-Daten"), Asset im Production User State. Dieses Dokument gilt als PROPOSED und aendert keine FROZEN-Regel.
+
 ## 5. LIVE/PTU Isolation
 
 Binding Rules:
@@ -93,7 +109,7 @@ Er bedeutet in v1 nicht automatisch, dass persoenliche Besitz-/Inventory-Daten z
 
 PTU wird in v1 primaer fuer Vorschau und Vergleich genutzt.
 
-`PTU_PREVIEW` bezeichnet eine Berechnung mit genau einem PTU Reference Dataset. `PTU_NATIVE_STATE` waere ein separater persistenter PTU-Spielzustand und ist in v1 nicht aktiv.
+Eine PTU Preview ist eine Berechnung (`PTU_PREVIEW_EVALUATION`, `evaluation_type = PTU_PREVIEW`) mit genau einem PTU Reference Dataset (`PTU_DATASET_CONTEXT`). Ihr Ergebnis traegt den Result Context `RESULT_CONTEXT_PTU_PREVIEW` und das sichtbare Label `PTU_PREVIEW`. `PTU_NATIVE_STATE` waere ein separater persistenter PTU-Spielzustand und ist in v1 nicht aktiv.
 
 Beispiele:
 
@@ -115,7 +131,7 @@ Dabei gilt:
 - eine PTU-Preview darf Production Actual Loadout, Inventory, Fleet oder andere Production-User-State-Daten nicht mutieren;
 - Preview-Ergebnisse muessen den verwendeten PTU-Dataset-Kontext in ihrer Berechnungsprovenienz behalten.
 
-Das erzeugt weder eine Kopie des persoenlichen Inventars fuer PTU noch einen PTU-Native-State. `PTU_PREVIEW` und `PTU_NATIVE_STATE` sind verschiedene Kontexte.
+Das erzeugt weder eine Kopie des persoenlichen Inventars fuer PTU noch einen PTU-Native-State. `RESULT_CONTEXT_PTU_PREVIEW` und `PTU_NATIVE_STATE` sind verschiedene Kontexte. Der Production User State geht in eine PTU Preview ausschliesslich als unveraenderlicher, read-only `PRODUCTION_USER_STATE_SNAPSHOT` ein; Snapshot-Identitaet, Erfassungszeitpunkt bzw. Revision und Provenienz sind im vorgeschlagenen `VECTOR_VERSIONING_V1_1.md` definiert.
 
 ## 8. Production User State
 
@@ -282,7 +298,7 @@ Das Mapping bleibt in v1 bewusst klein:
 ```text
 LIVE
   Build Channel: supported
-  Dataset Context: LIVE
+  Dataset Context: LIVE (LIVE_DATASET_CONTEXT)
   Production User State: supported
 
 HOTFIX
@@ -292,8 +308,8 @@ HOTFIX
 
 PTU
   Build Channel: supported
-  Dataset Context: PTU
-  PTU_PREVIEW: supported, read-only Production User State input
+  Dataset Context: PTU (PTU_DATASET_CONTEXT)
+  PTU_PREVIEW_EVALUATION: supported (RESULT_CONTEXT_PTU_PREVIEW), read-only PRODUCTION_USER_STATE_SNAPSHOT input
   PTU_NATIVE_STATE: not implemented in v1; future governed extension
 
 EPTU
@@ -318,8 +334,8 @@ UNKNOWN
 2. LIVE- und PTU-Referenzdaten sowie kanalabhaengige abgeleitete Werte werden nie gemischt; PTU Preview nutzt hoechstens Production User State als separaten read-only Eingabekontext.
 3. PTU dient primaer als Preview-/Berechnungskontext und erfordert kein dupliziertes User Inventory.
 4. Production User State ist der einzige mutable Game-State-Kontext in v1.
-5. PTU_PREVIEW darf Production User State nur read-only als Auswahl-/Eingabekontext nutzen.
-6. PTU_PREVIEW mutiert Production User State nicht und behauptet keinen PTU-nativen Besitz oder Spielzustand.
+5. PTU_PREVIEW_EVALUATION darf Production User State nur read-only (als `PRODUCTION_USER_STATE_SNAPSHOT`) als Auswahl-/Eingabekontext nutzen.
+6. PTU_PREVIEW_EVALUATION mutiert Production User State nicht und behauptet keinen PTU-nativen Besitz oder Spielzustand.
 7. PTU_NATIVE_STATE ist eine zukuenftige, explizit implementierte und durch VECTOR-Regeln geregelte Erweiterung; PTU-Wipes setzen diese Erweiterung voraus.
 8. HOTFIX ist bekannt, aber kein eigener UI-Dataset-Kontext.
 9. Ein HOTFIX erzeugt nicht automatisch einen neuen Game-State-Kontext oder eine neue Epoch.
