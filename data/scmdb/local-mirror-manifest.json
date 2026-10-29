@@ -1,6 +1,6 @@
 {
   "source": "KrovaxCode/SCMDB_DATA",
-  "generatedAt": "2026-10-28T09:41:50.810Z",
+  "generatedAt": "2026-10-29T10:00:27.025Z",
   "totalJsonFiles": 23,
   "datasets": {
     "craftingBlueprints": {
@@ -8,7 +8,7 @@
         "crafting_blueprints-4.10.2-live.12913470.json"
       ],
       "ptu": [
-        "crafting_blueprints-4.10.3-ptu.12999338.json"
+        "crafting_blueprints-4.10.3-ptu.13032516.json"
       ],
       "other": []
     },
@@ -17,7 +17,7 @@
         "crafting_items-4.10.2-live.12913470.json"
       ],
       "ptu": [
-        "crafting_items-4.10.3-ptu.12999338.json"
+        "crafting_items-4.10.3-ptu.13032516.json"
       ],
       "other": []
     },
@@ -26,7 +26,7 @@
         "mining_data-4.10.2-live.12913470.json"
       ],
       "ptu": [
-        "mining_data-4.10.3-ptu.12999338.json"
+        "mining_data-4.10.3-ptu.13032516.json"
       ],
       "other": []
     },
@@ -35,7 +35,7 @@
         "mining_equipment-4.10.2-live.12913470.json"
       ],
       "ptu": [
-        "mining_equipment-4.10.3-ptu.12999338.json"
+        "mining_equipment-4.10.3-ptu.13032516.json"
       ],
       "other": []
     },
@@ -44,7 +44,7 @@
         "merged-4.10.2-live.12913470.json"
       ],
       "ptu": [
-        "merged-4.10.3-ptu.12999338.json"
+        "merged-4.10.3-ptu.13032516.json"
       ],
       "other": []
     },
@@ -53,7 +53,7 @@
         "mission-history-4.10.2-live.12913470.json"
       ],
       "ptu": [
-        "mission-history-4.10.3-ptu.12999338.json"
+        "mission-history-4.10.3-ptu.13032516.json"
       ],
       "other": []
     }
@@ -61,7 +61,7 @@
   "staticFiles": [
     "changelog.json",
     "cig_data_issues-4.10.2-live.12913470.json",
-    "cig_data_issues-4.10.3-ptu.12999338.json",
+    "cig_data_issues-4.10.3-ptu.13032516.json",
     "deltas-live.json",
     "deltas-ptu.json",
     "game-versions.json",
