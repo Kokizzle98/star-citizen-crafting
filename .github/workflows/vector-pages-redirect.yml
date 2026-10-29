@@ -1,1 +1,80 @@
+name: VECTOR Production Gateway
 
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy VECTOR redirect gateway
+    runs-on: ubuntu-latest
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Create redirect artifact
+        shell: bash
+        run: |
+          mkdir -p pages-redirect
+
+          cat > pages-redirect/index.html <<'HTML'
+          <!doctype html>
+          <html lang="de">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <meta
+              http-equiv="refresh"
+              content="0; url=https://vector-terminal-qqk4ng2sg-kokizzle98.vercel.app/"
+            >
+            <meta name="robots" content="noindex, nofollow">
+            <link
+              rel="canonical"
+              href="https://vector-terminal-qqk4ng2sg-kokizzle98.vercel.app/"
+            >
+            <title>VECTOR wird geöffnet</title>
+          </head>
+          <body>
+            <p>
+              VECTOR wurde verschoben.
+              <a href="https://vector-terminal-qqk4ng2sg-kokizzle98.vercel.app/">
+                Weiter zu VECTOR
+              </a>
+            </p>
+
+            <script>
+              window.location.replace(
+                "https://vector-terminal-qqk4ng2sg-kokizzle98.vercel.app/"
+              );
+            </script>
+          </body>
+          </html>
+          HTML
+
+          cp pages-redirect/index.html pages-redirect/404.html
+          touch pages-redirect/.nojekyll
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload redirect artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages-redirect
+
+      - name: Deploy redirect gateway
+        id: deployment
+        uses: actions/deploy-pages@v4
