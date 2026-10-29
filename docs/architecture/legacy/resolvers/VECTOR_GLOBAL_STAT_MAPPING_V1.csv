@@ -1,0 +1,30 @@
+property_key,display_name,category,unit,source_dataset,source_path,resolver,transform,status,notes
+weapon_firerate,Fire Rate,weapon,RPM,crafting_items,items[].fireModesIndex -> fireModesPools[index][].fireRate,PRIMARY_FIRE_MODE,identity,VERIFIED,SCMDB item points to pooled fire modes
+weapon_spread,Spread,weapon,,crafting_items,items[].fireModesIndex -> fireModesPools[index][].spread,PRIMARY_FIRE_MODE,canonical spread resolver,VERIFIED,Preserve min max firstAttack attack decay
+weapon_recoil_smoothness,Recoil Smoothness,weapon,%,crafting_items,items[].fireModesIndex -> fireModesPools[index][].recoil.smoothTime,PRIMARY_FIRE_MODE,domain calibration required,REVIEW_REQUIRED,Raw field verified but canonical percentage formula not defined
+weapon_recoil_handling,Recoil Handling,weapon,%,crafting_items,items[].fireModesIndex -> fireModesPools[index][].recoil.maxFireTime,PRIMARY_FIRE_MODE,domain calibration required,REVIEW_REQUIRED,Raw field verified but semantic mapping needs calibration
+weapon_recoil_kick,Recoil Kick,weapon,%,crafting_items,items[].fireModesIndex -> fireModesPools[index][].recoil.{pitchMaxDeg|yawMaxDeg|rollMaxDeg},PRIMARY_FIRE_MODE,vector magnitude or authoritative formula,REVIEW_REQUIRED,Do not select one axis silently
+weapon_reloadspeed,Reload Speed,weapon,,crafting_items,UNRESOLVED,UNRESOLVED,none,REVIEW_REQUIRED,Property exists but a baseline source was not verified
+weapon_damage,Impact Force,weapon,%,crafting_items,items[].ammoIndex -> ammo pool / damage payload,WEAPON_DAMAGE,aggregate damage channels,REVIEW_REQUIRED,Blueprint override calls this Laser Power for WeaponMining
+weapon_tractor_fullstrengthdist,Full Strength Dist.,weapon,M,crafting_items,UNRESOLVED,TRACTOR_BEAM,identity,REVIEW_REQUIRED,Resolve against tractor-beam item payload
+weapon_tractor_maxvolume,Max. Volume,weapon,Rating,crafting_items,UNRESOLVED,TRACTOR_BEAM,identity,REVIEW_REQUIRED,Resolve against tractor-beam item payload
+weapon_tractor_maxdist,Max. Distance,weapon,M,crafting_items,UNRESOLVED,TRACTOR_BEAM,identity,REVIEW_REQUIRED,Resolve against tractor-beam item payload
+weapon_tractor_force,Beam Force,weapon,,crafting_items,UNRESOLVED,TRACTOR_BEAM,identity,REVIEW_REQUIRED,Resolve against tractor-beam item payload
+weapon_hullscraping_speed,Speed,weapon,,crafting_items,UNRESOLVED,SALVAGE,identity,REVIEW_REQUIRED,Resolve against salvage item payload
+weapon_hullscraping_efficiency,Efficiency,weapon,,crafting_items,UNRESOLVED,SALVAGE,identity,REVIEW_REQUIRED,Resolve against salvage item payload
+weapon_hullscraping_radius,Radius,weapon,,crafting_items,UNRESOLVED,SALVAGE,identity,REVIEW_REQUIRED,Resolve against salvage item payload
+armor_temperaturemin,Min Temp,armor,°C,crafting_items,items[].temperatureMin,DIRECT,identity,REVIEW_REQUIRED,Property is authoritative; exact item field still requires full-file verification
+armor_temperaturemax,Max Temp,armor,°C,crafting_items,items[].temperatureMax,DIRECT,identity,REVIEW_REQUIRED,Property is authoritative; exact item field still requires full-file verification
+armor_damagemitigation,Damage Mitigation,armor,,crafting_items,items[].damageResistanceIndex -> damageResistancePools[index],DAMAGE_RESISTANCE,derive canonical mitigation,VERIFIED,Pool explicitly contains physical energy distortion thermal biochemical stun and impactForce
+armor_radiationdissipation,Radiation Dissipation,armor,mRem/s,crafting_items,UNRESOLVED,ARMOR_RADIATION,identity,REVIEW_REQUIRED,Property exists but baseline source not verified
+armor_radiationcapacity,Radiation Capacity,armor,mRem,crafting_items,UNRESOLVED,ARMOR_RADIATION,identity,REVIEW_REQUIRED,Property exists but baseline source not verified
+health_maxhealth,Integrity,other,,crafting_items,items[].health OR items[].maxHealth,DIRECT,identity,REVIEW_REQUIRED,Two candidate field names must be confirmed per item class
+itemresource_coolantgeneration,Coolant Rating,other,,crafting_items,UNRESOLVED,SHIP_RESOURCE,identity,REVIEW_REQUIRED,Resolve ship-component resource container
+itemresource_powergeneration,Power Pips,other,,crafting_items,UNRESOLVED,SHIP_RESOURCE,identity,REVIEW_REQUIRED,Additive blueprint modifier; baseline source not verified
+shield_maxhealth,Max. Shield Strength,other,,crafting_items,UNRESOLVED,SHIELD,identity,REVIEW_REQUIRED,Resolve shield component payload
+quantum_speed,Quantum Speed,other,Mm/s,crafting_items,UNRESOLVED,QUANTUM_DRIVE,unit normalization,REVIEW_REQUIRED,Resolve quantum-drive payload
+quantum_fuelrequirement,Quantum Fuel Burn,other,per Km,crafting_items,UNRESOLVED,QUANTUM_DRIVE,unit normalization,REVIEW_REQUIRED,Resolve quantum-drive payload
+radar_minaimassistdistance,Min. Assist Distance,other,M,crafting_items,UNRESOLVED,RADAR,identity,REVIEW_REQUIRED,Resolve radar payload
+radar_maxaimassistdistance,Max. Assist Distance,other,M,crafting_items,UNRESOLVED,RADAR,identity,REVIEW_REQUIRED,Resolve radar payload
+crafter_craftspeed,Craft Speed,crafter,,crafting_blueprints,tiers[].craftTimeSeconds,CRAFT_TIME,inverse semantic mapping,REVIEW_REQUIRED,Craft speed may be inverse of time; do not assume formula
+crafter_dismantleefficiency,Dismantle Efficiency,crafter,,crafting_blueprints,dismantle.efficiency,DIRECT,identity,VERIFIED,Global dismantle baseline is explicit

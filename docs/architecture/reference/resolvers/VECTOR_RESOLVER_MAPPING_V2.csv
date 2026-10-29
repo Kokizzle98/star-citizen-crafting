@@ -1,0 +1,30 @@
+﻿Property Key,Anzeigename,Kategorie,Einheit,Modifier-Nutzung LIVE,Quelldatensatz,Vorgeschlagener Quellpfad,Resolver,Transformation,Status,Priorität,Hinweis
+weapon_recoil_handling,Recoil Handling,weapon,%+.2f %%,247,crafting_items,items[].fireModesIndex -> fireModesPools[index][].recoil.maxFireTime,PRIMARY_FIRE_MODE,Kalibrierungsformel offen,REVIEW_REQUIRED,P1,Rohpfad belegt; Prozent-Semantik noch nicht freigeben
+weapon_reloadspeed,Reload Speed,weapon,,0,crafting_items,UNRESOLVED,UNRESOLVED,none,UNUSED,P4,"Im Blueprint-Katalog vorhanden, aktuell unbenutzt"
+weapon_recoil_smoothness,Recoil Smoothness,weapon,%+.2f %%,247,crafting_items,items[].fireModesIndex -> fireModesPools[index][].recoil.smoothTime,PRIMARY_FIRE_MODE,Kalibrierungsformel offen,REVIEW_REQUIRED,P1,Rohpfad belegt; Prozent-Semantik noch nicht freigeben
+weapon_tractor_fullstrengthdist,Full Strength Dist.,weapon,%.2f M,24,crafting_items,tractor payload: fullStrengthDistance,TRACTOR_BEAM,identity,CANDIDATE,P2,Exakten SCMDB-Pfad im vollständigen Item-Payload bestätigen
+weapon_tractor_maxvolume,Max. Volume,weapon,Rating,12,crafting_items,tractor payload: maxVolume,TRACTOR_BEAM,identity,CANDIDATE,P2,Exakten SCMDB-Pfad bestätigen
+weapon_tractor_maxdist,Max. Distance,weapon,%.2f M,24,crafting_items,tractor payload: maxDistance,TRACTOR_BEAM,identity,CANDIDATE,P2,Exakten SCMDB-Pfad bestätigen
+weapon_hullscraping_speed,Speed,weapon,,15,crafting_items,salvage payload: scraping speed,SALVAGE,identity,CANDIDATE,P2,Gegen Salvage-Itemstruktur prüfen
+itemresource_coolantgeneration,Coolant Rating,other,,300,crafting_items,ship component resource payload: coolant generation,SHIP_RESOURCE,identity,CANDIDATE,P1,Hohe Nutzung; priorisiert auflösen
+weapon_firerate,Fire Rate,weapon,%.2f RPM,134,crafting_items,items[].fireModesIndex -> fireModesPools[index][].fireRate,PRIMARY_FIRE_MODE,identity,VERIFIED,P1,Primärer Fire Mode muss explizit gewählt werden
+armor_radiationdissipation,Radiation Dissipation,armor,%.2f mRem/s,3,crafting_items,armor payload: radiation dissipation,ARMOR_RADIATION,identity,CANDIDATE,P3,Niedrige Nutzung
+armor_temperaturemin,Min Temp,armor,%+.2f ºC,904,crafting_items,armor payload / pool reference: minimum temperature,ARMOR_TEMPERATURE,identity,BLOCKED_BY_PATH,P0,Audit meldet Baseline für betroffene Armor-Produkte als MISSING
+armor_temperaturemax,Max Temp,armor,%+.2f ºC,904,crafting_items,armor payload / pool reference: maximum temperature,ARMOR_TEMPERATURE,identity,BLOCKED_BY_PATH,P0,Audit meldet Baseline für betroffene Armor-Produkte als MISSING
+quantum_speed,Quantum Speed,other,%.2f Mm/s,114,crafting_items,quantum drive payload: speed,QUANTUM_DRIVE,unit normalization,CANDIDATE,P1,Exakten Pfad und Einheit bestätigen
+weapon_spread,Spread,weapon,,0,crafting_items,items[].fireModesIndex -> fireModesPools[index][].spread,PRIMARY_FIRE_MODE,preserve structure,VERIFIED_UNUSED,P4,Rohstruktur min/max/firstAttack/attack/decay erhalten
+armor_damagemitigation,Damage Mitigation,armor,,876,crafting_items,items[].damageResistanceIndex -> damageResistancePools[index],DAMAGE_RESISTANCE,kanonische Mitigation ableiten,RESOLVER_BUG,P0,"Pool ist belegt, Audit löst Itemreferenz derzeit nicht auf"
+weapon_hullscraping_efficiency,Efficiency,weapon,,5,crafting_items,salvage payload: scraping efficiency,SALVAGE,identity,CANDIDATE,P3,Gegen Salvage-Itemstruktur prüfen
+health_maxhealth,Integrity,other,,799,crafting_items,items[].health OR items[].maxHealth / component payload,INTEGRITY,identity,CANDIDATE,P0,Hohe Nutzung; Feldvariante je Itemklasse bestimmen
+weapon_hullscraping_radius,Radius,weapon,,15,crafting_items,salvage payload: scraping radius,SALVAGE,identity,CANDIDATE,P2,Gegen Salvage-Itemstruktur prüfen
+radar_minaimassistdistance,Min. Assist Distance,other,%.2f M,120,crafting_items,radar payload: min aim assist distance,RADAR,identity,CANDIDATE,P1,Exakten Pfad bestätigen
+weapon_damage,Impact Force,weapon,%+.2f %%,474,crafting_items,items[].ammoIndex -> ammo pool / damage payload,WEAPON_DAMAGE,Damage-Kanäle aggregieren,CANDIDATE,P0,WeaponMining verwendet Anzeigenamen Laser Power
+itemresource_powergeneration,Power Pips,other,,598,crafting_items,ship component resource payload: power generation,SHIP_RESOURCE,additive baseline,CANDIDATE,P0,Additiver Blueprint-Modifier; Baseline zwingend erforderlich
+shield_maxhealth,Max. Shield Strength,other,,248,crafting_items,shield component payload: max health,SHIELD,identity,CANDIDATE,P1,Exakten Pfad bestätigen
+weapon_tractor_force,Beam Force,weapon,,12,crafting_items,tractor payload: beam force,TRACTOR_BEAM,identity,CANDIDATE,P2,Exakten Pfad bestätigen
+quantum_fuelrequirement,Quantum Fuel Burn,other,%.2f per Km,114,crafting_items,quantum drive payload: fuel requirement,QUANTUM_DRIVE,unit normalization,CANDIDATE,P1,Exakten Pfad und Einheit bestätigen
+crafter_craftspeed,Craft Speed,crafter,,0,crafting_blueprints,tiers[].craftTimeSeconds,CRAFT_TIME,inverse semantic mapping,UNUSED_REVIEW,P4,"Formel erst definieren, falls Property genutzt wird"
+radar_maxaimassistdistance,Max. Assist Distance,other,%.2f M,120,crafting_items,radar payload: max aim assist distance,RADAR,identity,CANDIDATE,P1,Exakten Pfad bestätigen
+weapon_recoil_kick,Recoil Kick,weapon,%+.2f %%,247,crafting_items,items[].fireModesIndex -> fireModesPools[index][].recoil.{pitchMaxDeg|yawMaxDeg|rollMaxDeg},PRIMARY_FIRE_MODE,Vektorformel offen,REVIEW_REQUIRED,P1,Keine einzelne Achse stillschweigend verwenden
+crafter_dismantleefficiency,Dismantle Efficiency,crafter,,0,crafting_blueprints,dismantle.efficiency,DIRECT,identity,VERIFIED_UNUSED,P4,Globale Baseline explizit
+armor_radiationcapacity,Radiation Capacity,armor,%.2f mRem,0,crafting_items,armor payload: radiation capacity,ARMOR_RADIATION,identity,UNUSED_REVIEW,P4,"Im Katalog vorhanden, aktuell unbenutzt"
