@@ -26,7 +26,7 @@ If `SUCCESSOR_PROPOSAL_REQUIRED_BEFORE_FREEZE` were returned for any specificati
 | Specification | Classification |
 |---|---|
 | `PERSISTENCE_PROVENANCE_V1.md` | `RULE_INDEX_OR_REFERENCE_UPDATE_REQUIRED_AT_FREEZE` |
-| `GAME_WIPE_MODEL_V1.md` | `NO_SUCCESSOR_CHANGE_REQUIRED` |
+| `GAME_WIPE_MODEL_V1.md` | `RULE_INDEX_OR_REFERENCE_UPDATE_REQUIRED_AT_FREEZE` |
 | `VECTOR_GOVERNANCE_V1.md` | `NO_SUCCESSOR_CHANGE_REQUIRED` |
 | `VECTOR_VERSIONING_V1.md` | `RULE_INDEX_OR_REFERENCE_UPDATE_REQUIRED_AT_FREEZE` |
 
@@ -42,15 +42,25 @@ Evidence:
 - §6.2 (L139-148) describes an epoch as "a persistent state period for a channel" and says records "may reference" it. This does not require PTU-native epochs, so it is not contradicted by a Production-only v1 mutable state (`PRODUCTION_USER_STATE`).
 - §21.6 (L364) "LIVE and PTU provenance never cross-fallback" is preserved.
 
-Why not "no change": the Rule Index row for this specification already notes that it "requires alignment with proposed Data Context Model". At freeze the Rule Index/reference notes must record how its "channel" epoch wording and provenance expectations relate to the typed contexts. No binding rule is contradicted.
+Why not "no change": the Rule Index row for this specification already notes that it "requires alignment with proposed Data Context Model". At freeze the Rule Index/reference notes must record how its "channel" epoch wording and provenance expectations relate to the typed contexts. In addition, §6.1 (L137) names `VECTOR_VERSIONING_V1.md` directly ("The canonical VECTOR release identifier follows `VECTOR_VERSIONING_V1.md`…"); that direct reference is part of the freeze-time reference update already required by this classification. No binding rule is contradicted.
 
-### 2.2 `GAME_WIPE_MODEL_V1.md` - no successor change
+### 2.2 `GAME_WIPE_MODEL_V1.md` - reference update at freeze
 
 Evidence:
 
 - §10 (L185-193): LIVE/PTU are never mixed, missing values do not fall back across channels, completeness precedes build-derived defaults. All preserved by v1.1 §8.3 and §9.
 - §9 (L173-183): "there *may* be a current epoch per *supported* game-state channel/context according to the persistence architecture" is permissive. Production-only v1 mutable state is a supported configuration.
 - A PTU Preview is read-only and not a wipe target (v1.1 §7.2.3, §7.6); this is consistent with the FROZEN dry-run and wipe-target semantics.
+
+Why not "no change": §10 (L193) names `VECTOR_VERSIONING_V1.md` directly ("according to `VECTOR_VERSIONING_V1.md`"). Because v1.1 is a full-document successor, that version-specific reference needs a binding disposition when supersession becomes effective. No binding rule is contradicted.
+
+Required freeze-time disposition (recorded now, not applied now): at the freeze transition, the direct reference in `docs/frozen/GAME_WIPE_MODEL_V1.md` §10 (L193) must be explicitly dispositioned by one of the following governed freeze mechanisms, selected and justified in the freeze-transition change set under the then-binding Governance:
+
+1. controlled update of the direct reference to the newly effective authority;
+2. explicitly justified retention of the old version-specific reference; or
+3. another binding supersession mechanism that resolves the reference unambiguously.
+
+This change set records the requirement only. It does not select or execute any of these actions and does not modify `GAME_WIPE_MODEL_V1.md` or any other `docs/frozen/*` file. The action is applied only when v1.1 is actually frozen and supersession is activated.
 
 ### 2.3 `VECTOR_GOVERNANCE_V1.md` - no successor change
 
@@ -115,7 +125,7 @@ These are not defects of the classifications above; they must be handled in the 
 
 - project_owner approval, freeze-transition change set, `SUPERSEDED` marking of v1.0, R3 closure and predecessor-file treatment (v1.1 §16).
 - Resolution of D1 (canonical authority is still PROPOSED).
-- Freeze-time Rule Index/reference updates for `PERSISTENCE_PROVENANCE_V1.md` and `VECTOR_VERSIONING_V1.md`.
+- Freeze-time Rule Index/reference updates for `PERSISTENCE_PROVENANCE_V1.md`, `GAME_WIPE_MODEL_V1.md` (including the mandatory L193 disposition in §2.2) and `VECTOR_VERSIONING_V1.md`.
 - Approval of `VECTOR_GOVERNANCE_V1_1.md` (R1) and its formalization of approval-evidence rules.
 - Code implementation of snapshot/provenance storage and the visible `PTU_PREVIEW` label.
 - Intentional: the German `DATA_CONTEXT_MODEL_V1.md` and the English v1.1 retain their own languages.

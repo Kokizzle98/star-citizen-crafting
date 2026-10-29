@@ -249,8 +249,11 @@ The following typed combination is the only combination permitted for a PTU Prev
 Dataset Context:
     PTU_DATASET_CONTEXT              (PTU Reference Dataset)
 
-User State Context:
-    PRODUCTION_USER_STATE_SNAPSHOT   (read-only snapshot of PRODUCTION_USER_STATE)
+User State Context (source):
+    PRODUCTION_USER_STATE            (never mutated by the preview)
+
+User State Snapshot (separate read-only input derived from the source context, §6.4):
+    PRODUCTION_USER_STATE_SNAPSHOT   (immutable)
 
 Result Context:
     RESULT_CONTEXT_PTU_PREVIEW       (visible label: PTU_PREVIEW)
@@ -258,7 +261,7 @@ Result Context:
 
 No other context is implied. The combination does not create a PTU user-state realm and does not permit the preview to claim PTU-native facts.
 
-A reference-only PTU Preview does not consume Production User State. It uses `PTU_DATASET_CONTEXT` and `RESULT_CONTEXT_PTU_PREVIEW` with no User State Context and no snapshot. If Production User State is consumed, it is consumed only through the snapshot above.
+A reference-only PTU Preview does not consume Production User State. It uses `PTU_DATASET_CONTEXT` and `RESULT_CONTEXT_PTU_PREVIEW` with no User State Context and no snapshot. If Production User State is consumed, `PRODUCTION_USER_STATE` is the source User State Context, the preview neither mutates nor directly consumes that mutable state, and the evaluation input is the corresponding immutable `PRODUCTION_USER_STATE_SNAPSHOT` derived from it.
 
 ### 7.2 Input and result constraints
 
@@ -311,10 +314,10 @@ reproducibility                REPRODUCIBLE | NON_REPRODUCIBLE (with reason)
 Rules:
 
 - `reproducibility` is `REPRODUCIBLE` only if the exact `dataset_revision_id` content and all evaluation inputs remain retrievable and, where Production User State was consumed, the exact snapshot (or an equivalent retained state revision) also remains retrievable. Otherwise it is `NON_REPRODUCIBLE`, with the missing input or retention reason stated. A reference-only PTU Preview, which has no snapshot, may therefore be `REPRODUCIBLE`. Immutability of a snapshot does not by itself require its retention, and this specification does not introduce a dataset-retention or snapshot-retention requirement.
-- If no snapshot was used (reference-only PTU Preview), `user_state_context`, `user_state_snapshot_id` and the snapshot time/revision are explicitly absent, and the result must not imply that Production User State was consulted. If Production User State was consumed, `user_state_context`, `user_state_snapshot_id` and `snapshot_captured_at` or `snapshot_revision` are mandatory.
+- If no snapshot was used (reference-only PTU Preview), `user_state_context`, `user_state_snapshot_id` and the snapshot time/revision are explicitly absent, and the result must not imply that Production User State was consulted. If Production User State was consumed, `user_state_context`, `user_state_snapshot_id` and `snapshot_captured_at` or `snapshot_revision` are mandatory. The `user_state_context` field contains `PRODUCTION_USER_STATE` and never `PRODUCTION_USER_STATE_SNAPSHOT`; the snapshot is identified only by `user_state_snapshot_id`.
 - Provenance must identify the exact PTU Dataset Context (including dataset revision) and, where Production User State was consumed, the Production User State Context and the snapshot used.
 
-**Non-persisted results.** If a PTU Preview result is not persisted, the output must still be accompanied by a minimum provenance envelope containing at least: `result_context`, `evaluation_type`, `channel`, `sc_build`, `dataset_revision_id`, `resolution_state`, `created_at`, and the visible `PTU_PREVIEW` label, plus `user_state_snapshot_id` with `snapshot_captured_at` or `snapshot_revision` if Production User State was consumed. A non-persisted result is `NON_REPRODUCIBLE` unless its inputs are separately retained.
+**Non-persisted results.** A PTU Preview result that is not persisted is not exempt from the provenance contract above. When presented externally (UI, API or export), it must carry, or provide an unambiguous association to, all applicable provenance fields listed above; provenance that is not unambiguously bound to the specific result does not satisfy this requirement. At minimum, the following fields must be attached directly to the visible or transported output: `result_context`, `evaluation_type`, `channel`, `sc_build`, `dataset_revision_id`, `resolution_state`, `created_at`, and the visible `PTU_PREVIEW` label, plus `user_state_snapshot_id` with `snapshot_captured_at` or `snapshot_revision` if Production User State was consumed. All other applicable fields listed above (for example `vector_version`, `release_sc_build`, `canonical_entity_mappings[]`, `resolver_version` where applied, and `reproducibility`) must be carried with the output or unambiguously associated with it. This minimum does not waive, replace or limit the full applicable provenance contract; if a reduced envelope would make any required provenance unavailable, the envelope is insufficient. This paragraph does not itself require persistence of the result, dataset retention or snapshot retention. A non-persisted result is `NON_REPRODUCIBLE` unless its inputs are separately retained.
 
 ### 7.6 PTU-native mutable state
 
@@ -350,7 +353,7 @@ Binding rules:
 5. A calculation must use data from exactly one active channel, that is, exactly one active Dataset Context. Cross-channel fallback is prohibited. Missing PTU data must not be completed with LIVE data, and missing LIVE data must not be completed with PTU data.
 6. If required data is missing in the active channel, the Completeness Filter applies and the affected result is marked incomplete or excluded according to the validation rules.
 7. The canonical VECTOR release identifier continues to use the approved LIVE build even when a user is actively viewing the PTU dataset.
-8. A read-only `PRODUCTION_USER_STATE_SNAPSHOT` used for a PTU Preview is a separately typed User State Context (§6.7), not LIVE reference data or a second Dataset Context. It cannot supply or override any channel-dependent reference value.
+8. A read-only `PRODUCTION_USER_STATE_SNAPSHOT` used for a PTU Preview is a separately typed User State Snapshot (§6.4, §6.7), derived from the User State Context `PRODUCTION_USER_STATE` (§6.3). It is not LIVE reference data or a second Dataset Context. It cannot supply or override any channel-dependent reference value.
 
 ## 9. Completeness Filter
 
