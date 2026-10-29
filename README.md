@@ -143,11 +143,26 @@ This architecture separates:
 - validated game data
 - safe implementation workflows
 
-## Local Development
 
-1. Copy `.env.example` to `.env.local`
-2. Add only local or staging credentials
-3. Install dependencies:
+## Safety Rules
+CITIZEN_ID_ENABLED=false is the default
+Never commit .env.local or server secrets
+Database migrations must be validated in staging first
+Production promotion is blocked until checks pass
+Missing or unresolved data must remain visible as review states
 
-```bash
-npm install
+
+## Future Direction
+VECTOR is intentionally designed as a long-term community tool. It can grow toward:
+
+richer crafting workflows
+more complete item and armor resolution
+better loadout comparison and planning
+broader community-driven data support
+optional supporter models later on, if the project proves valuable
+Monetization, if introduced at all, will be secondary, community-friendly, and never the foundation of the project.
+
+## Summary
+VECTOR is a free, hobby-driven, community-first Star Citizen project designed to make crafting, planning, and item analysis more structured and accessible. It combines a modern Next.js application with a data-heavy, validation-focused architecture to build a useful platform for the community, not just a prototype.
+
+The long-term goal is to create something genuinely helpful, extensible, and sustainable — with a strong community-first identity and no pressure to force monetization.
