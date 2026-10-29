@@ -78,16 +78,17 @@ Each channel maintains an independent:
 - Star Citizen build identity;
 - candidate dataset;
 - dataset revision;
-- publication state;
-- channel-scoped mutable game state.
+- publication state.
 
 LIVE and PTU use the same logical data contract but can contain different entities, values and active revisions.
+In v1, mutable game state is the Production User State defined by `DATA_CONTEXT_MODEL_V1.md`, not a separate state store per dataset channel. A PTU Preview may read that state as a selection/input context but must not mutate it or assert PTU-native mutable state.
 
 ## 5. Core invariants
 
 ### 5.1 No LIVE/PTU data mixing
 
 A calculation or reference lookup must resolve against exactly one active dataset context unless an explicitly approved comparison workflow requests both contexts as separate inputs.
+For a PTU Preview, Production User State may be a separate read-only selection/input context; all channel-dependent reference data and derived values still come exclusively from the PTU dataset. Production User State is not LIVE reference data and does not authorize LIVE/PTU reference-data mixing.
 
 ```text
 LIVE candidate -> LIVE revision
@@ -259,8 +260,10 @@ Conceptual content:
 
 ```text
 source_record_id
+source_system
 source_name
 source_revision
+identity_namespace
 source_entity_id
 source_class_path
 content_hash
@@ -305,7 +308,11 @@ resolution_status
 
 ### 11.4 Mutable Game State Layer
 
-Contains channel-scoped player/game-derived state such as inventory, in-game ownership and actual loadouts.
+In v1, this layer contains the single Production User State, including mutable player/game-derived state such as inventory, in-game ownership and Actual Loadouts. Its identity is independent from the selected reference dataset revision.
+
+A PTU Preview may read Production User State as a read-only selection/input context with one PTU Reference Dataset. It must not mutate that state or represent it as PTU-native ownership, inventory, wallet, reputation or other PTU-native mutable state. `PTU_PREVIEW` and `PTU_NATIVE_STATE` are distinct contexts; PTU-native mutable state is a future extension, not an active v1 assumption.
+
+The logical model can support a future `PTU_NATIVE_STATE` as an independently channel-isolated state context without changing canonical entity identity or reference-data revision semantics. That extension requires explicit implementation and governance before its state or wipe operations are active.
 
 ### 11.5 Persistent VECTOR State Layer
 
@@ -392,15 +399,15 @@ resolution_status
 rule_version
 ```
 
-Assignment roles may include:
+The v1 assignment role set is exactly:
 
 ```text
 PRIMARY
 SECONDARY
-VARIANT
 FUNCTIONAL
-COMPATIBILITY
 ```
+
+The Canonical Data Model is authoritative for category-assignment semantics and defines the complete v1 role set. Variant and compatibility semantics are Relations (for example, `VARIANT_OF` and `COMPATIBLE_WITH`), not taxonomy/category assignment roles. This pipeline may process and publish those structures but does not independently define their semantic authority.
 
 Ambiguous assignments remain `REVIEW_REQUIRED` or `QUARANTINED` rather than becoming authoritative.
 
@@ -485,11 +492,12 @@ Responsibilities include:
 - canonical entity resolution;
 - normalized names and types;
 - normalized units;
-- source-ID mapping;
+- source-ID mapping using `source_system`, `identity_namespace` and `source_entity_id`;
 - manufacturer resolution;
 - size/facet resolution;
 - base/variant relationships;
 - taxonomy assignments;
+- relation extraction and publication under the Canonical Data Model's semantic authority;
 - resolver-compatible property values;
 - provenance;
 - build/channel metadata;
@@ -510,7 +518,7 @@ Shared Canonical Catalog
 +
 Dataset-revisioned Reference Data
 +
-Channel-scoped Mutable Game State
+Production User State (v1 mutable game state)
 +
 Persistent VECTOR State
 ```
@@ -708,7 +716,7 @@ A pipeline-rule, resolver, taxonomy or completeness-rule change may require expl
 
 ## 26. Mutable Game State
 
-Mutable channel-specific state is stored separately from reference data.
+In v1, Production User State is the mutable game-state context and is stored separately from reference data. It is not duplicated or switched when the active reference Dataset Context changes.
 
 Examples include:
 
@@ -721,9 +729,11 @@ Examples include:
 - Actual Loadouts;
 - game-derived ownership.
 
-Mutable rows reference canonical entities and an explicit channel/context where required.
+Mutable rows reference canonical entities and the Production User State context. Dataset-derived interpretation resolves against exactly one selected active dataset revision; a PTU Preview reads Production User State inputs without changing them or asserting PTU-native state.
 
 Mutable state must not duplicate complete item definition/stat payloads when a canonical/revision reference is sufficient.
+
+`PTU_NATIVE_STATE` is a future extension. If explicitly implemented and governed by VECTOR rules, its mutable rows must have an independently identifiable PTU state context and must remain isolated from Production User State. This extension does not require redesigning canonical entities or weakening LIVE/PTU reference-data isolation.
 
 ## 27. Persistent VECTOR State
 
@@ -747,20 +757,19 @@ Dataset Update != Game Wipe
 
 Reference/catalog data is not a normal game-wipe target.
 
-### 28.1 PTU wipe
+### 28.1 PTU-native game-state wipe
 
-A PTU wipe can target approved mutable PTU state without deleting:
+A PTU dataset activation or PTU Preview does not create or target mutable PTU state in v1. A PTU-native game-state wipe becomes applicable only after `PTU_NATIVE_STATE` is explicitly implemented and governed by VECTOR rules. If introduced, it may target only its approved PTU-native state domains and must not delete:
 
-- LIVE mutable state;
+- Production User State;
 - canonical catalog;
 - LIVE/PTU reference revisions;
 - VECTOR Persistent State.
 
 ### 28.2 LIVE wipe
 
-A LIVE wipe can target approved mutable LIVE state without deleting:
+A LIVE game wipe can target only the explicitly approved domains of the v1 Production User State, without deleting:
 
-- PTU mutable state;
 - canonical catalog;
 - LIVE/PTU reference revisions;
 - VECTOR Persistent State.
@@ -858,8 +867,10 @@ DATASET_PIPELINE_V1 is ready to freeze only when VECTOR demonstrates that:
 - read-model consistency is included in promotion semantics;
 - identical unchanged processing does not create duplicate active revisions;
 - transformation-rule changes can explicitly trigger safe reprocessing;
-- mutable Game State is separated from Reference Data;
-- LIVE/PTU mutable state can be wiped independently;
+- Production User State is separated from Reference Data and is the only mutable game-state context required in v1;
+- PTU Preview reads Production User State without mutation or PTU-native ownership/state assertions;
+- PTU-native mutable state and its wipe operations remain future extensions until explicitly implemented and governed by VECTOR rules;
+- any future PTU-native state is independently channel-isolated from Production User State;
 - canonical catalog/reference stats are excluded from ordinary wipe scope;
 - VECTOR Persistent State survives ordinary game wipes;
 - provenance explains every active resolved classification/value.

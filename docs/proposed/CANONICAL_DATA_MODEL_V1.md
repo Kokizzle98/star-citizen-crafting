@@ -73,13 +73,21 @@ canonical_entity
 source_identity
     vector_entity_id
     source_system
+    identity_namespace
     source_entity_id
+    entity_kind_evidence
     first_seen_revision_id
     last_seen_revision_id
     mapping_status
 ```
 
-A stable SCMDB/CIG UUID may be strong source identity evidence, but VECTOR preserves an independent internal identity boundary.
+A conceptual uniqueness constraint is:
+
+```text
+UNIQUE(source_system, identity_namespace, source_entity_id)
+```
+
+`entity_kind` must be compatible with the resolved canonical identity, but is conflict evidence rather than part of the exact source identity key. A stable SCMDB/CIG UUID may be strong source identity evidence, but VECTOR preserves an independent internal identity boundary.
 
 ### 3.3 Cross-build identity
 
@@ -102,12 +110,26 @@ The strongest automatic rule is:
 ```text
 same source_system
 +
+same identity_namespace
++
 same source_entity_id
 =
 SOURCE_EXACT
 ```
 
-When the rule is satisfied, LIVE/PTU/build representations map to the same canonical entity while retaining independent Dataset Revision values.
+When the exact identity is unique and its evidence is compatible, LIVE/PTU/build representations map to the same canonical entity while retaining independent Dataset Revision values. `entity_kind` compatibility is checked before accepting the mapping.
+
+#### Exact identity collision/conflict path
+
+If the same exact source identity is already mapped inconsistently, or the incoming record has a contradictory `entity_kind` or other incompatible identity evidence, VECTOR must:
+
+- preserve the source record and conflicting evidence with provenance;
+- not create a second authoritative identity for that exact source key;
+- not auto-merge or silently remap either canonical entity;
+- return `REVIEW_REQUIRED` or `QUARANTINED`, according to the conflict severity;
+- record the non-trivial decision and candidates/conflicts in the Identity Resolution Event Ledger.
+
+This is an identity collision/conflict, not permission to extend the uniqueness key with `entity_kind`.
 
 ### 3.5 Match level 2: explicit source identity continuity
 
@@ -441,7 +463,7 @@ catalog_assignment
     rule_version
 ```
 
-Supported conceptual roles:
+The v1 taxonomy/category assignment roles are exactly:
 
 ```text
 PRIMARY
@@ -449,7 +471,7 @@ SECONDARY
 FUNCTIONAL
 ```
 
-Variant and compatibility relationships belong primarily in Relations rather than being forced into taxonomy.
+These are the complete v1 taxonomy/category assignment roles. The Canonical Data Model is authoritative for their semantics. Variant and compatibility semantics belong in Relations (for example, `VARIANT_OF` and `COMPATIBLE_WITH`) and must not be encoded as taxonomy/category assignment roles. The Dataset Pipeline may process and publish these assignments and relations but does not define their semantic authority.
 
 ## 8. Source Classification
 
@@ -769,7 +791,7 @@ Conceptual inventory row:
 ```text
 inventory_lot
     user/crew owner
-    channel/context
+    state_context
     canonical_entity_id
     quantity
     quality
@@ -777,27 +799,26 @@ inventory_lot
     game-state metadata
 ```
 
-Reference stats are resolved from the selected active dataset revision when needed.
+In v1, mutable game state is the Production User State. Reference stats are resolved from exactly one selected active dataset revision when needed. A PTU Preview may use Production User State as a read-only selection/input context alongside PTU reference data, but cannot mutate it or assert PTU-native ownership, inventory, wallet, reputation or other PTU-native mutable state.
 
 This avoids repeating full reference payloads in every inventory record.
+
+`PTU_PREVIEW` and `PTU_NATIVE_STATE` are distinct. PTU-native mutable state is not an active v1 assumption; it is a future extension requiring explicit implementation and governance under VECTOR rules. The model permits that extension to use an independently channel-isolated state context without changing canonical entity identity or revision-scoped reference data.
 
 ## 19. Wipe boundary
 
 Canonical entities, taxonomy, facets, relations and reference revision properties are not normal Star Citizen wipe targets.
 
-Game wipes target mutable channel-scoped state domains.
+In v1, game wipes target explicitly approved Production User State domains. A PTU Preview is read-only and is not a wipe target.
 
 Examples:
 
 ```text
-PTU INVENTORY_ONLY
--> PTU inventory state only
-
 LIVE FULL_GAME_STATE
--> approved LIVE mutable state domains
+-> approved Production User State domains
 ```
 
-A wipe does not crawl the complete reference catalog to decide what can be removed. Wipe scope is defined by state-domain ownership and channel keys.
+A PTU-native wipe becomes applicable only if `PTU_NATIVE_STATE` is explicitly implemented and governed under VECTOR rules; it may then target only its approved PTU-native state domains, independently of Production User State. A wipe does not crawl the complete reference catalog to decide what can be removed. Wipe scope is defined by state-domain ownership and context.
 
 ## 20. Query contract
 
@@ -912,8 +933,11 @@ CANONICAL_DATA_MODEL_V1 is ready to freeze only when VECTOR demonstrates that:
 - every published source entity maps to a canonical identity or explicit unresolved/quarantine state;
 - canonical IDs do not depend solely on names or paths;
 - source IDs remain preserved as mappings/provenance;
+- the source identity uniqueness boundary is `(source_system, identity_namespace, source_entity_id)`;
+- an exact source identity is not split into a second authoritative identity because `entity_kind` conflicts;
+- contradictory entity-kind or identity evidence follows an explicit `REVIEW_REQUIRED`/`QUARANTINED` collision path without auto-merge;
 - cross-build identity changes never merge by fuzzy name alone;
-- exact source-system + source-ID matches resolve automatically to the same canonical entity;
+- exact source-system + namespace + source-ID matches resolve to the same canonical entity only when identity evidence is compatible;
 - fuzzy matching can produce review candidates but never auto-merge in v1;
 - negative evidence can block otherwise similar identity candidates;
 - candidate blocking narrows comparison scope without acting as identity proof;
@@ -931,7 +955,9 @@ CANONICAL_DATA_MODEL_V1 is ready to freeze only when VECTOR demonstrates that:
 - Relations model semantic links without forcing them into taxonomy;
 - technical stats are revision-scoped;
 - missing and ambiguous data remain distinguishable from zero;
-- mutable game state references canonical entities rather than duplicating full definitions;
+- v1 mutable game state is Production User State and references canonical entities rather than duplicating full definitions;
+- PTU Preview may read Production User State with PTU reference data but does not mutate or assert PTU-native state;
+- PTU-native state and PTU-specific wipes are future extensions requiring explicit implementation and governance;
 - game wipes target state domains rather than the reference catalog;
 - bounded queries can serve representative Inventory, Fleet, Fabricator and comparison use cases;
 - AI retrieval can produce compact projections without raw-dataset crawling;
