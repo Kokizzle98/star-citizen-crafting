@@ -69,7 +69,8 @@ LIVE und PTU werden getrennt extrahiert, normalisiert, validiert, versioniert un
 
 Binding Rules:
 
-- LIVE und PTU werden niemals in einer Berechnung gemischt.
+- LIVE- und PTU-Referenzdaten sowie daraus abgeleitete kanalabhaengige Werte werden niemals in einer Berechnung gemischt.
+- Eine PTU Preview darf den Production User State als separaten read-only Auswahl-/Eingabekontext verwenden; alle kanalabhaengigen Referenzdaten und daraus abgeleiteten Werte stammen ausschliesslich aus dem PTU Reference Dataset. Der Production User State ist kein LIVE-Referenzdatensatz und erlaubt keine LIVE/PTU-Referenzdatenmischung.
 - Kein Cross-Channel-Fallback.
 - Fehlende LIVE-Daten werden nicht aus PTU ergaenzt.
 - Fehlende PTU-Daten werden nicht aus LIVE ergaenzt.
@@ -92,6 +93,8 @@ Er bedeutet in v1 nicht automatisch, dass persoenliche Besitz-/Inventory-Daten z
 
 PTU wird in v1 primaer fuer Vorschau und Vergleich genutzt.
 
+`PTU_PREVIEW` bezeichnet eine Berechnung mit genau einem PTU Reference Dataset. `PTU_NATIVE_STATE` waere ein separater persistenter PTU-Spielzustand und ist in v1 nicht aktiv.
+
 Beispiele:
 
 - Fabricator Preview mit kommenden PTU-Werten;
@@ -102,23 +105,25 @@ Beispiele:
 - Blueprint-/Crafting-Vorschau;
 - Darstellung kommender Balance-/Stat-Aenderungen.
 
-VECTOR darf dabei den bestehenden persoenlichen Production User State als Auswahlbasis verwenden und diesen gegen das PTU-Dataset auswerten, sofern die jeweilige Berechnung fachlich kompatibel ist.
+VECTOR darf dabei den bestehenden persoenlichen Production User State als read-only Auswahl-/Eingabekontext verwenden und ihn gegen das PTU Reference Dataset auswerten, sofern die jeweilige Berechnung fachlich kompatibel ist. Die Preview verwendet keine LIVE-Referenzdaten als PTU-Ersatz.
 
 Dabei gilt:
 
 - Production-Besitz, Inventory-Mengen und konkrete User Assets bleiben Production User State;
 - PTU-Werte duerfen fuer Preview, Vergleich und Berechnung verwendet werden;
-- Production-Besitz darf nicht als verifizierter PTU-Besitz oder als PTU-Inventory dargestellt werden;
-- eine PTU-Preview darf Actual Loadout, Inventory, Fleet oder andere Production-User-State-Daten nicht stillschweigend mutieren;
+- Production-Besitz darf nicht als verifizierter PTU-Besitz oder als PTU-Inventar, PTU-Wallet, PTU-Reputation oder anderer PTU-nativer Spielzustand dargestellt werden;
+- eine PTU-Preview darf Production Actual Loadout, Inventory, Fleet oder andere Production-User-State-Daten nicht mutieren;
 - Preview-Ergebnisse muessen den verwendeten PTU-Dataset-Kontext in ihrer Berechnungsprovenienz behalten.
 
-Das erzeugt keine Kopie des persoenlichen Inventars fuer PTU.
+Das erzeugt weder eine Kopie des persoenlichen Inventars fuer PTU noch einen PTU-Native-State. `PTU_PREVIEW` und `PTU_NATIVE_STATE` sind verschiedene Kontexte.
 
 ## 8. Production User State
 
 VECTOR v1 besitzt genau eine primaere Basis fuer persoenlichen persistenten Spielzustand: den `Production User State`.
 
 Der Production User State ist unabhaengig vom aktuell ausgewaehlten Dataset Context. Das Umschalten zwischen `LIVE` und `PTU` erzeugt, kopiert oder ersetzt keinen persoenlichen Besitzstand.
+
+Der Production User State ist in v1 der einzige mutable Game-State-Kontext. Eine PTU Preview darf ihn als read-only Auswahl-/Eingabekontext verwenden, aber weder mutieren noch daraus PTU-native Besitz- oder Zustandsaussagen ableiten.
 
 VECTOR v1 pflegt damit einen produktiven persoenlichen Game-State-Kontext fuer den normalen persistenten Spielerzustand.
 
@@ -205,7 +210,7 @@ Channel erkennen
 -> keine Production-User-State-Mutation
 ```
 
-PTU User-State-Observations koennen spaeter ergaenzt werden, falls eine belastbare fachliche Nutzung entsteht. Sie sind keine Voraussetzung fuer v1.
+PTU-Observations duerfen nicht als Production User State umgedeutet werden. Persistente PTU-native User-State-Observations sind erst nach expliziter Einfuehrung und Governance von `PTU_NATIVE_STATE` zulaessig; sie sind keine Voraussetzung fuer v1.
 
 ## 13. Dataset Trigger versus Wipe Target
 
@@ -227,6 +232,7 @@ Binding Rules:
 - das Dataset selbst ist nicht der persoenliche Zustand, der gewiped wird;
 - der Wipe betrifft ausschliesslich die im Plan definierten Production-User-State-Domaenen;
 - PTU-Dataset-Aktivierung loest in v1 keinen Production-User-State-Wipe aus;
+- PTU Preview ist kein Wipe-Ziel; PTU-native Wipe-Operationen werden erst anwendbar, wenn `PTU_NATIVE_STATE` explizit implementiert und geregelt ist;
 - HOTFIX-Erkennung loest keinen Wipe und keine neue Epoch aus, sofern kein ausdruecklich passender Wipe Plan alle regulaeren Gates besteht;
 - ein neuer Build oder eine neue Dataset-Revision erzeugt ohne ausgefuehrten Wipe Plan keine neue Game-State Epoch.
 
@@ -246,13 +252,13 @@ Ein explizit konfigurierter und ausgefuehrter relevanter Game Wipe kann eine neu
 
 Partielle Wipes bleiben zusaetzlich ueber ihre expliziten Domain-Regeln nachvollziehbar.
 
-## 15. Kein paralleles PTU-Inventory in v1
+## 15. Kein PTU_NATIVE_STATE in v1
 
-VECTOR v1 verlangt kein zweites persistentes PTU-Inventory/Fleet/Wallet/Reputation-Modell.
+VECTOR v1 enthaelt keinen persistenten `PTU_NATIVE_STATE` und damit kein separates PTU-Inventory, keine PTU-Fleet, PTU-Wallet oder PTU-Reputation.
 
-Das verhindert unnoetige Komplexitaet und erhaelt trotzdem den Hauptnutzen des PTU-Datasets: Vorschau und Berechnung kommender Spielwerte.
+Das verhindert unnoetige Komplexitaet und erhaelt den Nutzen des PTU-Datasets fuer read-only Vorschau und Berechnung kommender Spielwerte auf Basis von Production User State.
 
-Eine spaetere Version darf PTU User State einfuehren, wenn Watcher/Import und fachlicher Nutzen dies rechtfertigen.
+Eine spaetere Version darf `PTU_NATIVE_STATE` als eigenen, vom Production User State isolierten mutablen Spielzustandskontext einfuehren, wenn Watcher/Import und fachlicher Nutzen dies rechtfertigen und die Erweiterung explizit implementiert und durch VECTOR-Regeln geregelt ist. Production User State, PTU Preview und PTU-nativer Spielzustand bleiben getrennte Konzepte.
 
 ## 16. Provenienz
 
@@ -287,7 +293,8 @@ HOTFIX
 PTU
   Build Channel: supported
   Dataset Context: PTU
-  Persistent PTU User State: not required in v1
+  PTU_PREVIEW: supported, read-only Production User State input
+  PTU_NATIVE_STATE: not implemented in v1; future governed extension
 
 EPTU
   Build Channel: known
@@ -308,18 +315,21 @@ UNKNOWN
 ## 18. Data Integrity Invariants
 
 1. Aktive VECTOR-Dataset-Kontexte sind in v1 nur LIVE und PTU.
-2. LIVE und PTU werden nie gemischt.
+2. LIVE- und PTU-Referenzdaten sowie kanalabhaengige abgeleitete Werte werden nie gemischt; PTU Preview nutzt hoechstens Production User State als separaten read-only Eingabekontext.
 3. PTU dient primaer als Preview-/Berechnungskontext und erfordert kein dupliziertes User Inventory.
-4. Production-Besitz darf in PTU-Preview als Auswahlbasis dienen, aber niemals als verifizierter PTU-Besitz dargestellt werden.
-5. HOTFIX ist bekannt, aber kein eigener UI-Dataset-Kontext.
-6. Ein HOTFIX erzeugt nicht automatisch einen neuen Game-State-Kontext oder eine neue Epoch.
-7. EPTU und TECH_PREVIEW werden erkannt, aber in v1 nicht aktiv berechnet/validiert.
-8. UNKNOWN wird niemals als LIVE geraten.
-9. Nicht unterstuetzte Watcher-Observations duerfen Production User State nicht mutieren.
-10. Dataset Revision und Game-State Epoch sind getrennte Konzepte.
-11. Dataset-Rollback oder Patch-Wechsel machen keinen Game Wipe rueckgaengig.
-12. LIVE-Dataset ist bei Build-triggered Wipes der Triggerkontext; Wipe-Ziel ist der explizit konfigurierte Production User State.
-13. Ein HOTFIX erzeugt nur bei nachgewiesenen VECTOR-relevanten Datenunterschieden eine neue LIVE-Dataset-Revision.
+4. Production User State ist der einzige mutable Game-State-Kontext in v1.
+5. PTU_PREVIEW darf Production User State nur read-only als Auswahl-/Eingabekontext nutzen.
+6. PTU_PREVIEW mutiert Production User State nicht und behauptet keinen PTU-nativen Besitz oder Spielzustand.
+7. PTU_NATIVE_STATE ist eine zukuenftige, explizit implementierte und durch VECTOR-Regeln geregelte Erweiterung; PTU-Wipes setzen diese Erweiterung voraus.
+8. HOTFIX ist bekannt, aber kein eigener UI-Dataset-Kontext.
+9. Ein HOTFIX erzeugt nicht automatisch einen neuen Game-State-Kontext oder eine neue Epoch.
+10. EPTU und TECH_PREVIEW werden erkannt, aber in v1 nicht aktiv berechnet/validiert.
+11. UNKNOWN wird niemals als LIVE geraten.
+12. Nicht unterstuetzte Watcher-Observations duerfen Production User State nicht mutieren.
+13. Dataset Revision und Game-State Epoch sind getrennte Konzepte.
+14. Dataset-Rollback oder Patch-Wechsel machen keinen Game Wipe rueckgaengig.
+15. LIVE-Dataset ist bei Build-triggered Wipes der Triggerkontext; Wipe-Ziel ist der explizit konfigurierte Production User State.
+16. Ein HOTFIX erzeugt nur bei nachgewiesenen VECTOR-relevanten Datenunterschieden eine neue LIVE-Dataset-Revision.
 
 ## 19. Non-Goals
 
@@ -327,7 +337,7 @@ v1 definiert bewusst nicht:
 
 - vollstaendiges EPTU-Dataset Processing;
 - TECH_PREVIEW Dataset Processing;
-- persistentes PTU-Inventory;
+- PTU_NATIVE_STATE, einschliesslich persistentem PTU-Inventory/Fleet/Wallet/Reputation;
 - persistente EPTU-/TECH_PREVIEW-User-State-Realms;
 - automatischen HOTFIX-Dataset-Import;
 - automatische Auswertung aller kuenftigen CIG-Channeltypen;
@@ -341,6 +351,9 @@ Die v1-Spezifikation ist umgesetzt, wenn VECTOR nachweisen kann, dass:
 
 - LIVE und PTU als getrennte Dataset-Kontexte funktionieren;
 - ein Nutzer PTU-Werte fuer Fabricator/Items/Fleet-/Equipment-Preview verwenden kann, ohne sein Production Inventory zu duplizieren;
+- PTU Preview Production User State read-only als Auswahl-/Eingabekontext nutzt und diesen nicht mutiert;
+- PTU Preview keine PTU-native Ownership, Inventory-, Wallet-, Reputation- oder sonstige PTU-native Mutable-State-Aussage trifft;
+- PTU_NATIVE_STATE und PTU-Wipes erst nach expliziter Implementierung und Governance verfuegbar sind;
 - HOTFIX als Build-Metadatum erkannt werden kann, ohne einen dritten UI-Dataset-Modus zu erzeugen;
 - EPTU/TECH_PREVIEW/UNKNOWN nicht irrtuemlich als LIVE importiert werden;
 - ein zukuenftiger Watcher nicht unterstuetzte Channels sicher klassifizieren kann;

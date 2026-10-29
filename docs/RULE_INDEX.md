@@ -77,6 +77,8 @@ The following registry reflects the current known VECTOR rule set and must be re
 |---|---|---|---|
 | `VECTOR_GOVERNANCE_V1_1.md` | Global governance, lifecycle, rule authority and FROZEN conflict resolution | `PROPOSED` | Successor to `VECTOR_GOVERNANCE_V1.md` v1.0; required to resolve R1 |
 | `DATA_CONTEXT_MODEL_V1.md` | Build classification, LIVE/PTU dataset contexts, Production User State, PTU Preview, epochs | `PROPOSED` | Make Production User State + PTU Dataset Preview explicitly legal without LIVE/PTU dataset mixing; align dependent FROZEN specs |
+| `DATASET_PIPELINE_V1.md` | `DATASET_PIPELINE` | `PROPOSED` | Reconcile mutable-state boundaries and canonical data semantics |
+| `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | Resolve identity namespace and align pipeline semantics |
 | `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile staging requirement with README; bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
 
@@ -87,7 +89,6 @@ A `PLANNED` entry records that the domain is known but the referenced normative 
 | Planned specification | Intended authority scope | Interim handling |
 |---|---|---|
 | `AUTH_V1_1.md` | Direct password auth, social login, provider linking and auth safety | Use only auth rules already present in existing FROZEN specifications; unresolved details remain deferred/blocked |
-| `DATASET_PIPELINE_V1.md` | Mirror/extraction/normalization/completeness/revision/activation pipeline | Use existing FROZEN dataset invariants; do not invent missing pipeline behavior |
 | `LOCATION_RULES_V1.md` | Canonical locations, persistent `Unbekannt`, manual selectable locations, reconciliation | Existing explicit FROZEN references remain binding within their current documents; consolidate into this specification later |
 | `FLEET_PLANNING_V1.md` | Draft/Published/Active fleet plans and official requirements | Do not treat historical/legacy planning documents as current normative authority |
 | `PROVIDER_AUTHORITY_V1.md` | Provider direction, authority, capabilities, observations/mutations | Derive only after modern provider ADR/Data Context reconciliation |
@@ -143,6 +144,11 @@ docs/reviews/archive/
 ```
 
 `RULE_SET_REVIEW_2026-10-29.md` is a `REVIEW_RECORD`, not a policy. Its findings are remediation inputs and remain historically unchanged after remediation.
+
+| Review record | Status | Authority Scope | Authority |
+|---|---|---|---|
+| `SCMDB_SCHEMA_CATALOG_PROFILE_V1.md` | `REVIEW_RECORD` | None (no Authority Scope) | Explicitly non-normative evidence only |
+| `archive/RULE_SET_REVIEW_2026-10-29.md` | `REVIEW_RECORD` | None (no Authority Scope) | Explicitly non-normative historical findings |
 
 ## 11. Rule maintenance requirements
 
