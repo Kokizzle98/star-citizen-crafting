@@ -62,7 +62,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 
 | Specification | Authority scope | Status | Notes / dependencies |
 |---|---|---|---|
-| `VECTOR_GOVERNANCE_V1.md` | Global governance, rule lifecycle, repository/release authority | `FROZEN` | Governs rule status and development/release governance |
+| `VECTOR_GOVERNANCE_V1.md` | Global governance, rule lifecycle, repository/release authority | `FROZEN` | Current Production authority; proposed successor: `VECTOR_GOVERNANCE_V1_1.md` |
 | `VECTOR_VERSIONING_V1.md` | VECTOR version, SC build and dataset versioning/isolation | `FROZEN` | Global dataset-isolation invariant; pending explicit PTU-preview boundary clarification |
 | `INVENTORY_UX_V1.md` | Personal Inventory UX and interaction behavior | `FROZEN` | Uses current location, keyboard and dataset-context invariants |
 | `FLEET_DATA_MODEL_V1.md` | User ship identity, ownership and fleet data semantics | `FROZEN` | Fleet planning remains separately specified/planned |
@@ -75,6 +75,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 
 | Specification | Intended authority scope | Status | Freeze blockers / next action |
 |---|---|---|---|
+| `VECTOR_GOVERNANCE_V1_1.md` | Global governance, lifecycle, rule authority and FROZEN conflict resolution | `PROPOSED` | Successor to `VECTOR_GOVERNANCE_V1.md` v1.0; required to resolve R1 |
 | `DATA_CONTEXT_MODEL_V1.md` | Build classification, LIVE/PTU dataset contexts, Production User State, PTU Preview, epochs | `PROPOSED` | Make Production User State + PTU Dataset Preview explicitly legal without LIVE/PTU dataset mixing; align dependent FROZEN specs |
 | `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile staging requirement with README; bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
@@ -173,7 +174,7 @@ A concise repository-root `AGENTS.md` should later point contributors and coding
 
 | Finding | Status | Remediation home |
 |---|---|---|
-| R1 deterministic FROZEN precedence | `IN_PROGRESS` | `RULE_INDEX.md` + `VECTOR_GOVERNANCE_V1.md` |
+| R1 deterministic FROZEN precedence | `IN_PROGRESS` | `RULE_INDEX.md` + `VECTOR_GOVERNANCE_V1_1.md`; resolved only after approval/freeze |
 | R2 absent referenced policies | `IN_PROGRESS` | `RULE_INDEX.md` planned registry + later dedicated specs |
 | R3 LIVE/PTU preview boundary | `OPEN` | `DATA_CONTEXT_MODEL_V1.md` + `VECTOR_VERSIONING_V1.md` |
 | R4 migration gates and paths | `OPEN` | `MIGRATION_TEST_CONTRACT_V1.md` + README/repository layout |
@@ -182,6 +183,13 @@ A concise repository-root `AGENTS.md` should later point contributors and coding
 
 ## 14. Status decision
 
-`RULE_INDEX.md` is **PROPOSED** until the current repository inventory and FROZEN authority metadata are verified and `VECTOR_GOVERNANCE_V1.md` is updated to make this registry/conflict model authoritative.
+`RULE_INDEX.md` is **PROPOSED** until:
+
+- the current repository inventory is reconciled;
+- FROZEN Authority Scopes are sufficiently defined;
+- `VECTOR_GOVERNANCE_V1_1.md` is approved and FROZEN;
+- the governance successor establishes this registry/conflict model as authoritative.
+
+Until then, `VECTOR_GOVERNANCE_V1.md` v1.0 remains the current Production governance authority.
 
 Once approved, the index should remain a canonical registry/navigation document while domain behavior continues to live in the individual FROZEN specifications.
