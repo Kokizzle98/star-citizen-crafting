@@ -5,7 +5,7 @@ armor_temperaturemax,temperatureResistance.max,ACCEPTED,896
 armor_temperaturemin,temperatureResistance.min,ACCEPTED,896
 quantum_speed,driveSpeed,ACCEPTED,57
 radar_maxaimassistdistance,temperatureResistance.max,REJECTED_SCOPE,881
-radar_maxaimassistdistance,combatRange.max,ACCEPTED,271
+radar_maxaimassistdistance,combatRange.max,ACCEPTED,272
 radar_maxaimassistdistance,shieldAbsorption.biochemical.max,REJECTED_SCOPE,61
 radar_maxaimassistdistance,shieldAbsorption.distortion.max,REJECTED_SCOPE,61
 radar_maxaimassistdistance,shieldAbsorption.energy.max,REJECTED_SCOPE,61

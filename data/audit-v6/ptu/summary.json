@@ -1,25 +1,25 @@
 {
   "channel": "ptu",
-  "version": "4.10.3-ptu.12999338",
+  "version": "4.10.3-ptu.13032516",
   "resolverVersion": "6-multisource",
-  "items": 1616,
-  "blueprints": 1618,
+  "items": 1617,
+  "blueprints": 1619,
   "properties": 29,
-  "modifier_rows": 6556,
+  "modifier_rows": 6561,
   "family_candidates": 46,
   "issues_by_code": {
     "CRAFT_STAT_BASELINE_MISSING": 594,
     "BLUEPRINT_OUTPUT_UNRESOLVED": 1,
-    "CRAFT_STAT_BASELINE_REVIEW": 618
+    "CRAFT_STAT_BASELINE_REVIEW": 621
   },
   "property_resolution": {
     "weapon_recoil_handling": {
-      "REVIEW_REQUIRED": 206,
+      "REVIEW_REQUIRED": 207,
       "SOURCE_DATA_MISSING": 41
     },
     "weapon_reloadspeed": {},
     "weapon_recoil_smoothness": {
-      "REVIEW_REQUIRED": 206,
+      "REVIEW_REQUIRED": 207,
       "SOURCE_DATA_MISSING": 41
     },
     "weapon_tractor_fullstrengthdist": {
@@ -39,7 +39,7 @@
       "SOURCE_DATA_MISSING": 4
     },
     "weapon_firerate": {
-      "RESOLVED": 110,
+      "RESOLVED": 111,
       "SOURCE_DATA_MISSING": 24
     },
     "armor_radiationdissipation": {
@@ -77,7 +77,7 @@
     },
     "weapon_damage": {
       "SOURCE_DATA_MISSING": 34,
-      "RESOLVED": 440
+      "RESOLVED": 441
     },
     "itemresource_powergeneration": {
       "RESOLVED": 598
@@ -96,30 +96,30 @@
       "SOURCE_UNAVAILABLE": 120
     },
     "weapon_recoil_kick": {
-      "REVIEW_REQUIRED": 206,
+      "REVIEW_REQUIRED": 207,
       "SOURCE_DATA_MISSING": 41
     },
     "crafter_dismantleefficiency": {},
     "armor_radiationcapacity": {}
   },
   "source_files": {
-    "cig_data_issues": "cig_data_issues-4.10.3-ptu.12999338.json",
-    "crafting_blueprints": "crafting_blueprints-4.10.3-ptu.12999338.json",
-    "crafting_items": "crafting_items-4.10.3-ptu.12999338.json",
-    "merged": "merged-4.10.3-ptu.12999338.json",
-    "mining_data": "mining_data-4.10.3-ptu.12999338.json",
-    "mining_equipment": "mining_equipment-4.10.3-ptu.12999338.json",
-    "mission_history": "mission-history-4.10.3-ptu.12999338.json"
+    "cig_data_issues": "cig_data_issues-4.10.3-ptu.13032516.json",
+    "crafting_blueprints": "crafting_blueprints-4.10.3-ptu.13032516.json",
+    "crafting_items": "crafting_items-4.10.3-ptu.13032516.json",
+    "merged": "merged-4.10.3-ptu.13032516.json",
+    "mining_data": "mining_data-4.10.3-ptu.13032516.json",
+    "mining_equipment": "mining_equipment-4.10.3-ptu.13032516.json",
+    "mission_history": "mission-history-4.10.3-ptu.13032516.json"
   },
-  "v5ProfilerCandidates": 7204,
+  "v5ProfilerCandidates": 7205,
   "v6MultiSourceCandidates": 76,
   "v6LoadedSources": [
-    "crafting_items-4.10.3-ptu.12999338.json",
-    "merged-4.10.3-ptu.12999338.json",
-    "mining_equipment-4.10.3-ptu.12999338.json",
-    "mining_data-4.10.3-ptu.12999338.json",
-    "crafting_blueprints-4.10.3-ptu.12999338.json",
-    "cig_data_issues-4.10.3-ptu.12999338.json",
-    "mission-history-4.10.3-ptu.12999338.json"
+    "crafting_items-4.10.3-ptu.13032516.json",
+    "merged-4.10.3-ptu.13032516.json",
+    "mining_equipment-4.10.3-ptu.13032516.json",
+    "mining_data-4.10.3-ptu.13032516.json",
+    "crafting_blueprints-4.10.3-ptu.13032516.json",
+    "cig_data_issues-4.10.3-ptu.13032516.json",
+    "mission-history-4.10.3-ptu.13032516.json"
   ]
 }
