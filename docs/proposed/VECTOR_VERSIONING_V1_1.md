@@ -243,7 +243,7 @@ v1.0 §6.3 states that LIVE and PTU "records, derived values and calculation inp
 
 ### 7.1 Permitted PTU Preview combination
 
-The following typed combination is the only combination permitted for a PTU Preview:
+The following typed combination is the only combination permitted for a PTU Preview that consumes Production User State:
 
 ```text
 Dataset Context:
@@ -257,6 +257,8 @@ Result Context:
 ```
 
 No other context is implied. The combination does not create a PTU user-state realm and does not permit the preview to claim PTU-native facts.
+
+A reference-only PTU Preview does not consume Production User State. It uses `PTU_DATASET_CONTEXT` and `RESULT_CONTEXT_PTU_PREVIEW` with no User State Context and no snapshot. If Production User State is consumed, it is consumed only through the snapshot above.
 
 ### 7.2 Input and result constraints
 
@@ -295,7 +297,7 @@ dataset_revision_id            selected PTU dataset revision (identifies ptu_dat
 upstream_revision              PTU source revision (= ptu_source_revision)
 vector_version                 VECTOR application version
 release_sc_build               approved LIVE build of the release
-user_state_context             PRODUCTION_USER_STATE
+user_state_context             PRODUCTION_USER_STATE (only if Production User State was consumed)
 user_state_snapshot_id         snapshot used, if any
 snapshot_captured_at | snapshot_revision
 canonical_entity_mappings[]    vector_entity_id, mapping outcome, evidence reference
@@ -308,11 +310,11 @@ reproducibility                REPRODUCIBLE | NON_REPRODUCIBLE (with reason)
 
 Rules:
 
-- `reproducibility` is `REPRODUCIBLE` only if both the exact `dataset_revision_id` content and the exact snapshot (or an equivalent retained state revision) remain retrievable. Otherwise it is `NON_REPRODUCIBLE`, with the reason stated.
-- If no snapshot was used, `user_state_snapshot_id` and the snapshot time/revision are explicitly absent, and the result must not imply that Production User State was consulted.
-- Provenance must identify both the exact PTU Dataset Context (including dataset revision) and the Production User State Context/snapshot used.
+- `reproducibility` is `REPRODUCIBLE` only if the exact `dataset_revision_id` content and all evaluation inputs remain retrievable and, where Production User State was consumed, the exact snapshot (or an equivalent retained state revision) also remains retrievable. Otherwise it is `NON_REPRODUCIBLE`, with the missing input or retention reason stated. A reference-only PTU Preview, which has no snapshot, may therefore be `REPRODUCIBLE`. Immutability of a snapshot does not by itself require its retention, and this specification does not introduce a dataset-retention or snapshot-retention requirement.
+- If no snapshot was used (reference-only PTU Preview), `user_state_context`, `user_state_snapshot_id` and the snapshot time/revision are explicitly absent, and the result must not imply that Production User State was consulted. If Production User State was consumed, `user_state_context`, `user_state_snapshot_id` and `snapshot_captured_at` or `snapshot_revision` are mandatory.
+- Provenance must identify the exact PTU Dataset Context (including dataset revision) and, where Production User State was consumed, the Production User State Context and the snapshot used.
 
-**Non-persisted results.** If a PTU Preview result is not persisted, the output must still be accompanied by a minimum provenance envelope containing at least: `result_context`, `evaluation_type`, `channel`, `sc_build`, `dataset_revision_id`, `user_state_snapshot_id` with `snapshot_captured_at` or `snapshot_revision`, `resolution_state`, `created_at`, and the visible `PTU_PREVIEW` label. A non-persisted result is `NON_REPRODUCIBLE` unless its inputs are separately retained.
+**Non-persisted results.** If a PTU Preview result is not persisted, the output must still be accompanied by a minimum provenance envelope containing at least: `result_context`, `evaluation_type`, `channel`, `sc_build`, `dataset_revision_id`, `resolution_state`, `created_at`, and the visible `PTU_PREVIEW` label, plus `user_state_snapshot_id` with `snapshot_captured_at` or `snapshot_revision` if Production User State was consumed. A non-persisted result is `NON_REPRODUCIBLE` unless its inputs are separately retained.
 
 ### 7.6 PTU-native mutable state
 
@@ -481,7 +483,7 @@ Proposed binding decisions:
 - normal UI presentation uses compact dataset labels such as `LIVE 4.10.2` and `PTU 4.10.3`;
 - full provenance remains available internally and in a detailed system/version view;
 - Dataset Context, User State Context, User State Snapshot, preview evaluation and Result Context are separate typed concepts;
-- a PTU Preview uses exactly one PTU Dataset Context and a read-only `PRODUCTION_USER_STATE_SNAPSHOT`, never mutates Production User State, and never asserts PTU-native state;
+- a PTU Preview uses exactly one PTU Dataset Context and, if it consumes Production User State, only a read-only `PRODUCTION_USER_STATE_SNAPSHOT`; it never mutates Production User State and never asserts PTU-native state;
 - every PTU Preview result carries the provenance in §7.5.
 
 Any material amendment requires a successor version of this document and the normal VECTOR governance process.
