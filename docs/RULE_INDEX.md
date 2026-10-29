@@ -63,7 +63,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | Specification | Authority scope | Status | Notes / dependencies |
 |---|---|---|---|
 | `VECTOR_GOVERNANCE_V1.md` | Global governance, rule lifecycle, repository/release authority | `FROZEN` | Current Production authority; proposed successor: `VECTOR_GOVERNANCE_V1_1.md` |
-| `VECTOR_VERSIONING_V1.md` | VECTOR version, SC build and dataset versioning/isolation | `FROZEN` | Global dataset-isolation invariant; pending explicit PTU-preview boundary clarification |
+| `VECTOR_VERSIONING_V1.md` | VECTOR version, SC build and dataset versioning/isolation | `FROZEN` | Current Production authority; PTU Preview boundary remains unresolved pending approval of proposed `VECTOR_VERSIONING_V1_1.md` |
 | `INVENTORY_UX_V1.md` | Personal Inventory UX and interaction behavior | `FROZEN` | Uses current location, keyboard and dataset-context invariants |
 | `FLEET_DATA_MODEL_V1.md` | User ship identity, ownership and fleet data semantics | `FROZEN` | Fleet planning remains separately specified/planned |
 | `PERSISTENCE_PROVENANCE_V1.md` | Persistence classes, provenance and game-state history | `FROZEN` | Requires alignment with proposed Data Context Model before that proposal can freeze |
@@ -76,9 +76,10 @@ The following registry reflects the current known VECTOR rule set and must be re
 | Specification | Intended authority scope | Status | Freeze blockers / next action |
 |---|---|---|---|
 | `VECTOR_GOVERNANCE_V1_1.md` | Global governance, lifecycle, rule authority and FROZEN conflict resolution | `PROPOSED` | Successor to `VECTOR_GOVERNANCE_V1.md` v1.0; required to resolve R1 |
-| `DATA_CONTEXT_MODEL_V1.md` | Build classification, LIVE/PTU dataset contexts, Production User State, PTU Preview, epochs | `PROPOSED` | Make Production User State + PTU Dataset Preview explicitly legal without LIVE/PTU dataset mixing; align dependent FROZEN specs |
-| `DATASET_PIPELINE_V1.md` | `DATASET_PIPELINE` | `PROPOSED` | Reconcile mutable-state boundaries and canonical data semantics |
-| `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | Resolve identity namespace and align pipeline semantics |
+| `DATA_CONTEXT_MODEL_V1.md` | Build classification, LIVE/PTU dataset contexts, Production User State, PTU Preview, epochs | `PROPOSED` | Align its PTU Preview model with proposed `VECTOR_VERSIONING_V1_1.md` and applicable FROZEN specifications; proposals do not resolve R3 |
+| `DATASET_PIPELINE_V1.md` | `DATASET_PIPELINE` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; align mutable-state boundaries with applicable FROZEN rules before freeze |
+| `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; complete remaining cross-spec alignment before freeze |
+| `VECTOR_VERSIONING_V1_1.md` | `VERSIONING` | `PROPOSED` | Successor proposal to v1.0; defines typed PTU Preview contexts, but v1.0 remains binding and R3 remains open until approved and merged to `main` |
 | `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile staging requirement with README; bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
 
@@ -115,7 +116,7 @@ Until No-Guess has one canonical normative home, this index records it as a glob
 
 The current unresolved review point is not whether LIVE and PTU datasets may mix. They may not.
 
-The open semantic boundary is whether this typed combination is allowed:
+The proposed versioning successor defines this typed combination for the future rule:
 
 ```text
 Production User State selection / asset identity
@@ -130,7 +131,7 @@ The preview must not:
 - mutate Production Inventory, Fleet or Actual Loadout state;
 - lose provenance of both the Production selection context and the PTU dataset context.
 
-`DATA_CONTEXT_MODEL_V1.md` must resolve this boundary explicitly and the applicable FROZEN dataset-isolation rule must be clarified before the proposal is frozen.
+`VECTOR_VERSIONING_V1_1.md` proposes this boundary and `DATA_CONTEXT_MODEL_V1.md` describes the v1 state model. Neither proposal overrides FROZEN v1.0. R3 remains open until the successor is reviewed, approved and merged to `main` as FROZEN, with applicable dependent FROZEN specifications reconciled through the governed lifecycle.
 
 ## 10. Historical and review records
 
@@ -182,7 +183,7 @@ A concise repository-root `AGENTS.md` should later point contributors and coding
 |---|---|---|
 | R1 deterministic FROZEN precedence | `IN_PROGRESS` | `RULE_INDEX.md` + `VECTOR_GOVERNANCE_V1_1.md`; resolved only after approval/freeze |
 | R2 absent referenced policies | `IN_PROGRESS` | `RULE_INDEX.md` planned registry + later dedicated specs |
-| R3 LIVE/PTU preview boundary | `OPEN` | `DATA_CONTEXT_MODEL_V1.md` + `VECTOR_VERSIONING_V1.md` |
+| R3 LIVE/PTU preview boundary | `OPEN` | `VECTOR_VERSIONING_V1_1.md` successor proposal + `DATA_CONTEXT_MODEL_V1.md`; approval and explicit supersession of applicable `VECTOR_VERSIONING_V1.md` sections required |
 | R4 migration gates and paths | `OPEN` | `MIGRATION_TEST_CONTRACT_V1.md` + README/repository layout |
 | R5 freeze lifecycle / ADR location | `OPEN` | `VECTOR_GOVERNANCE_V1.md` |
 | R6 contributor/agent entry point | `OPEN` | repository-root `AGENTS.md` |
