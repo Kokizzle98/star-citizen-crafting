@@ -92,7 +92,7 @@ Minimum length:             12 characters
 Mandatory character sets:  none
 Passphrases:                allowed
 Periodic forced rotation:   prohibited by default
-Compromised-password check: required when supported by the active auth plan/provider
+Compromised-password check: required when natively supported by the active auth provider/plan
 ```
 
 VECTOR must not require arbitrary uppercase/lowercase/number/symbol composition merely to satisfy a complexity checklist.
@@ -113,9 +113,16 @@ A password change may instead be required or initiated because of:
 
 ### 5.4 Compromised-password protection
 
-When the active authentication provider/plan supports rejection of known compromised passwords, that protection must be enabled for VECTOR.
+When the active authentication provider/plan natively supports rejection of known compromised passwords, that protection must be enabled in Production.
 
-Lack of that provider feature must not be hidden by claiming the check occurred.
+If native compromised-password protection is not available under the active provider/plan:
+
+- this alone is not a Production release blocker for Auth v1.1;
+- all other VECTOR password, session, MFA, re-authentication, recovery and abuse-protection requirements remain mandatory;
+- VECTOR must not claim or imply that compromised-password checking is active;
+- VECTOR v1.1 does not require a custom application-owned password-breach checker.
+
+If a later provider/plan upgrade makes native compromised-password protection available, enabling it in Production becomes mandatory under this policy.
 
 ### 5.5 Password storage boundary
 
@@ -133,6 +140,18 @@ VECTOR requires a sufficiently fresh authenticated context and the approved prov
 
 A stale session alone must not be treated as sufficient assurance for a high-risk password change.
 
+After a normal authenticated password change by a non-privileged user:
+
+```text
+Current authenticated session:
+KEEP ACTIVE
+
+All other existing sessions:
+REVOKE
+```
+
+The current privileged/elevated context, if any, must be re-evaluated and must not inherit elevated assurance merely because the normal user session remains active.
+
 ### 6.2 Forgotten-password recovery
 
 Public password-reset behavior must not reveal whether an email address belongs to a VECTOR account.
@@ -145,7 +164,46 @@ If an account exists for this email address, a recovery message has been sent.
 
 The recovery link/flow must use an approved redirect target and provider-issued recovery state.
 
-### 6.3 Recovery does not reassign ownership
+After successful password recovery:
+
+```text
+ALL existing sessions:
+REVOKE
+
+Next access:
+FULL AUTHENTICATION REQUIRED
+
+If MFA is enrolled:
+MFA REQUIRED
+```
+
+A recovery-created state must not be treated as permission to preserve old sessions.
+
+### 6.3 Suspected or confirmed compromise
+
+When a password change/recovery is associated with suspected or confirmed account compromise:
+
+```text
+ALL existing sessions:
+REVOKE
+```
+
+The user must complete full authentication again, including MFA when enrolled.
+
+### 6.4 SYSTEM_ADMIN password change
+
+A password change for a `SYSTEM_ADMIN` account invalidates all existing sessions and privileged contexts.
+
+The account must complete:
+
+```text
+Full Authentication
+-> MFA
+-> AAL2
+-> new privileged context before privileged actions
+```
+
+### 6.5 Recovery does not reassign ownership
 
 Recovery of authentication access must not automatically:
 
@@ -301,25 +359,83 @@ If provider unlink succeeds but VECTOR mirror finalization fails, the authentica
 
 ## 12. Session and logout security
 
-### 12.1 Approved session authority
+### 12.1 Normal user session lifetime
 
-VECTOR uses the authentication provider's session/tokens as the authentication source and must validate authentication server-side for protected operations.
+VECTOR v1.1 normal user session policy:
 
-Client UI state alone is never sufficient proof of authentication or privilege.
+```text
+Idle Timeout:              8 hours
+Absolute Session Lifetime: 7 days
+Concurrent Sessions:       allowed
+Remember This Device:      not supported in v1.1
+```
 
-### 12.2 Logout
+After the absolute seven-day lifetime is reached, the user must complete full authentication again.
 
-VECTOR must support normal logout of the active session.
+If MFA is enrolled, the new authentication must also satisfy the enrolled MFA requirement.
 
-Security-sensitive account workflows may require revocation or refresh of affected sessions when credentials, factors or linked identities materially change.
+Activity must not extend a normal session beyond the absolute seven-day limit.
 
-The exact global session lifetime and all-device logout behavior remain implementation/configuration decisions to be validated against the approved auth provider before FROZEN unless separately specified.
+### 12.2 Privileged SYSTEM_ADMIN context
 
-### 12.3 Session anomaly handling
+The privileged/admin security context is intentionally shorter than the normal user session:
+
+```text
+Privileged Idle Timeout:       30 minutes
+Privileged Absolute Lifetime:  8 hours
+MFA:                           mandatory
+Privileged Assurance:          AAL2 required
+```
+
+Expiration of the privileged context does not have to terminate the underlying valid normal VECTOR user session.
+
+Instead, privileged actions become unavailable until the user re-establishes the required elevated authentication context.
+
+### 12.3 Server-side enforcement
+
+Session expiration and revocation are security controls and must be enforced server-side or by the authoritative authentication service.
+
+Client timers may improve UX but are not authentication authority.
+
+Clearing browser storage or changing local UI state without authoritative session invalidation does not satisfy a required revocation.
+
+### 12.4 Access-token lifetime is not session lifetime
+
+Short-lived access/JWT tokens and the overall VECTOR session lifetime are separate concepts.
+
+Token refresh must not bypass:
+
+- idle timeout;
+- absolute session lifetime;
+- explicit revocation;
+- MFA/AAL requirements;
+- privileged-context expiration.
+
+### 12.5 Concurrent sessions
+
+Normal VECTOR users may maintain multiple simultaneous authenticated sessions on different devices/browsers.
+
+A new normal sign-in does not, by itself, invalidate all older sessions.
+
+Security events defined elsewhere in this specification may revoke some or all sessions.
+
+### 12.6 Logout
+
+VECTOR must support explicit logout of the active session.
+
+Logout must invalidate the authoritative active session to the extent supported/required by the authentication architecture; local UI cleanup alone is insufficient.
+
+### 12.7 Session anomaly handling
 
 Invalid, expired, revoked or inconsistent sessions fail closed.
 
 VECTOR must not reconstruct authentication from stale local UI state.
+
+### 12.8 Provider capability / plan constraint
+
+If the active authentication provider/plan natively supports the required idle and absolute session controls, VECTOR should use the authoritative provider controls.
+
+If the current provider/plan does not natively support a required session limit, Auth v1.1 must not be marked FROZEN until an approved server-side enforcement design is defined for the missing control or the deployment capability is upgraded.
 
 ## 13. Callback and redirect security
 
@@ -375,6 +491,9 @@ PASSWORD_RECOVERY_COMPLETED
 MFA_ENROLLED
 MFA_UNENROLLED
 AUTH_SECURITY_CONFLICT
+SESSION_REVOKED
+ALL_SESSIONS_REVOKED
+PRIVILEGED_CONTEXT_EXPIRED
 ```
 
 Audit records must not contain raw passwords, MFA secrets, reusable tokens or provider secrets.
@@ -448,6 +567,8 @@ AUTH_PROVIDER_CONFLICT
 AUTH_CALLBACK_INVALID
 AUTH_RECOVERY_CONFLICT
 AUTH_SESSION_INVALID
+AUTH_SESSION_EXPIRED
+AUTH_PRIVILEGED_CONTEXT_EXPIRED
 ```
 
 Exact implementation error names may evolve as long as the security semantics are preserved.
@@ -461,10 +582,10 @@ AUTH v1.1 does not define:
 - Star Citizen handle claims;
 - Game Identity claim freshness;
 - Crew authorization/RBAC beyond authentication boundaries;
-- exact session timeout constants;
-- exact provider-side rate-limit numbers;
 - SMS MFA as a v1.1 requirement;
 - passkeys/hardware security keys as a v1.1 requirement;
+- a custom VECTOR password-breach lookup service;
+- a Remember-This-Device trust layer;
 - a BSI certification or legal compliance certification.
 
 ## 22. External dependency assumptions
@@ -478,8 +599,11 @@ Before implementation/freeze, current provider documentation and deployed-projec
 - identity linking/unlinking;
 - MFA/TOTP and AAL behavior;
 - password recovery/re-authentication;
+- authoritative session-revocation behavior;
+- idle and absolute session enforcement;
 - redirect/callback configuration;
 - password-security options;
+- native compromised-password protection availability;
 - provider availability and configuration for Discord, Twitch, Google, Apple and Microsoft.
 
 If current provider behavior conflicts with this proposed specification, implementation is blocked until the policy/provider integration is reconciled rather than silently weakened.
@@ -493,10 +617,21 @@ AUTH v1.1 is ready to freeze only when VECTOR can demonstrate that:
 - email/password registration requires verified email before normal verified use;
 - password minimum length is 12 characters;
 - arbitrary composition rules and periodic forced password rotation are not required;
-- compromised-password rejection is enabled when supported by the active provider plan;
+- native compromised-password rejection is enabled when supported by the active provider/plan;
+- lack of native compromised-password protection is accurately represented and no custom breach checker is required in v1.1;
 - public password recovery does not reveal account existence;
 - normal users may opt into TOTP MFA and enrolled MFA is enforced;
 - SYSTEM_ADMIN accounts require MFA and privileged operations require AAL2;
+- normal user sessions enforce an 8-hour idle timeout and seven-day absolute lifetime;
+- seven-day expiration requires full authentication again and MFA when enrolled;
+- concurrent normal-user sessions are allowed;
+- `Remember This Device` is not part of v1.1;
+- SYSTEM_ADMIN privileged contexts enforce 30-minute idle and eight-hour absolute limits;
+- expiration of privileged context removes privileged capability without unnecessarily destroying a still-valid normal user session;
+- session limits and revocation are enforced by authoritative server/provider controls, not client-only timers;
+- normal authenticated password change revokes all other sessions while allowing the current validated normal session to remain;
+- password recovery and suspected/confirmed compromise revoke all existing sessions;
+- SYSTEM_ADMIN password change revokes all sessions and requires full authentication, MFA and AAL2 before privileged actions;
 - password, email and identity-link changes require appropriate fresh authentication;
 - linking uses verified provider/session identity rather than editable provider subjects;
 - last-login removal is blocked;
@@ -508,17 +643,33 @@ AUTH v1.1 is ready to freeze only when VECTOR can demonstrate that:
 
 ## 24. Open implementation decisions before FROZEN
 
-The following are intentionally not guessed in this PROPOSED version and require environment/provider validation:
+The following remain intentionally open after the current decision batch:
 
-1. exact session lifetime and idle/absolute timeout policy;
-2. exact global/all-device session revocation behavior after password recovery/change;
-3. exact Supabase plan capability for compromised-password protection at Production launch;
-4. exact approved Vercel Preview redirect pattern;
-5. whether automatic provider linking is disabled in configuration or merely treated as non-authoritative by VECTOR reconciliation;
-6. final UI/UX for MFA enrollment, recovery and factor removal;
-7. whether stronger phishing-resistant factors/passkeys become required in a later auth version.
+1. exact global/all-device provider API implementation for required session revocation;
+2. exact approved Vercel Preview redirect pattern;
+3. whether automatic provider linking is disabled in configuration or merely treated as non-authoritative by VECTOR reconciliation;
+4. final UI/UX for MFA enrollment, recovery and factor removal;
+5. whether stronger phishing-resistant factors/passkeys become required in a later auth version.
 
-These decisions must be closed or explicitly deferred with safe defaults before FROZEN approval.
+The following previous open decisions are now closed by this proposal:
+
+```text
+Normal user idle timeout:          8 hours
+Normal user absolute lifetime:     7 days
+Remember This Device:              not supported in v1.1
+Concurrent normal sessions:        allowed
+SYSTEM_ADMIN privileged idle:      30 minutes
+SYSTEM_ADMIN privileged absolute:  8 hours
+Normal password change:            revoke all other sessions
+Password recovery:                 revoke all sessions
+Suspected/confirmed compromise:    revoke all sessions
+SYSTEM_ADMIN password change:      revoke all sessions
+Native compromised-password guard: mandatory when available
+No native compromised-password guard: not release-blocking by itself
+Custom breach checker:             not required in v1.1
+```
+
+Remaining open decisions must be closed or explicitly deferred with safe defaults before FROZEN approval.
 
 ## 25. R2 remediation classification
 
@@ -541,7 +692,7 @@ VECTOR Authentication v1.1 is **PROPOSED**.
 
 It becomes eligible for FROZEN only after:
 
-- open implementation decisions are closed or safely deferred;
+- remaining open implementation decisions are closed or safely deferred;
 - provider configuration/capabilities are validated;
 - interaction with `GAME_IDENTITY_V1.md` is defined without duplicated authority;
 - `RULE_INDEX.md` is updated to register AUTH v1.1 as PROPOSED and later FROZEN;
