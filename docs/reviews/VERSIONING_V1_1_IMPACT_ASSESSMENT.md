@@ -29,6 +29,8 @@ If `SUCCESSOR_PROPOSAL_REQUIRED_BEFORE_FREEZE` were returned for any specificati
 | `GAME_WIPE_MODEL_V1.md` | `RULE_INDEX_OR_REFERENCE_UPDATE_REQUIRED_AT_FREEZE` |
 | `FLEET_DATA_MODEL_V1.md` | `RULE_INDEX_OR_REFERENCE_UPDATE_REQUIRED_AT_FREEZE` |
 | `VECTOR_GOVERNANCE_V1.md` | `NO_SUCCESSOR_CHANGE_REQUIRED` |
+| `INVENTORY_UX_V1.md` | `NO_SUCCESSOR_CHANGE_REQUIRED` |
+| `ROLLBACK_POLICY_V1.md` | `NO_SUCCESSOR_CHANGE_REQUIRED` |
 | `VECTOR_VERSIONING_V1.md` | `RULE_INDEX_OR_REFERENCE_UPDATE_REQUIRED_AT_FREEZE` |
 
 No specification is classified `SUCCESSOR_PROPOSAL_REQUIRED_BEFORE_FREEZE`; no successor-driven freeze blocker arises from this assessment.
@@ -91,6 +93,32 @@ Required freeze-time disposition (recorded now, not applied now): at the freeze 
 3. another binding supersession mechanism that resolves the reference unambiguously.
 
 This change set records the requirement only. It does not select or execute any of these actions and does not modify `FLEET_DATA_MODEL_V1.md` or any other `docs/frozen/*` file. The action is applied only when v1.1 is actually frozen and supersession is activated.
+
+### 2.6 `INVENTORY_UX_V1.md` - no successor change
+
+Evidence:
+
+- §14 (L232-247) and acceptance criteria 10 and 12 (L291, L293) require strict LIVE/PTU isolation, one active channel, no cross-channel fallback, a visible compact dataset label and Completeness Filter handling instead of substitution. v1.1 §6.7 and §8.3 preserve this; a `PRODUCTION_USER_STATE_SNAPSHOT` is user-state input, not LIVE reference data.
+- §2 (L17) and §15 (L256) distinguish owned lots and quantities from dataset-derived values and external game-data completeness. This matches the typed Dataset Context / User State Context separation in v1.1 §6.
+- §15 (L252-255) forbids guessing and fabricated defaults. This is consistent with v1.1 §7.3, §7.4 and §9.
+- Inventory UX defines no PTU-native inventory and no preview. A PTU Preview never mutates Inventory and never presents Production ownership as PTU ownership (v1.1 §7.2.3, §7.2.4, §7.6); the visible `PTU_PREVIEW` label is additive to §14.
+- The specification names no version-specific authority, so no direct-reference disposition is required.
+
+No binding rule is contradicted and no Rule Index or reference change is required because of v1.1.
+
+### 2.7 `ROLLBACK_POLICY_V1.md` - no successor change
+
+Evidence:
+
+- §12 (L205-227) keeps VECTOR code version, LIVE build and dataset revision as separate axes; v1.1 §4 carries the v1.0 axes verbatim.
+- §13 (L228-237) requires strict LIVE/PTU isolation and visible labels such as `LIVE 4.10.2` or `PTU 4.10.3`; v1.1 §8.3 preserves this.
+- Rollback operates on runtime axes. It consumes no calculation inputs, no Production User State snapshot and no preview, and names no version-specific authority.
+
+No binding rule is contradicted and no Rule Index or reference change is required because of v1.1.
+
+### 2.8 Screened, not classified
+
+`PLATFORM_CRITICAL_ACTIONS_V1.md` was screened. §26 (L355-362) restates isolation for destructive operations, and its "preview" is a dry-run or impact preview (§6), unrelated to `PTU_PREVIEW`. It names no version-specific authority and has no substantive dependency on v1.1, so it is not a dependent specification under §1.
 
 ## 3. Open freeze dependencies (not successor classifications)
 
