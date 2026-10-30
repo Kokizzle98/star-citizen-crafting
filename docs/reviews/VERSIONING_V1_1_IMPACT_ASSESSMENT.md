@@ -129,6 +129,7 @@ These are not defects of the classifications above; they must be handled in the 
 | D1 | v1.1 §7.3 and §7.5 reference `CANONICAL_DATA_MODEL_V1.md` (PROPOSED) for canonical identity/mapping and field names, and the typed vocabulary is mirrored in proposed `DATA_CONTEXT_MODEL_V1.md` | Dispositioned at proposal level by owner selection V11-PF-02 (§7): the references are non-binding forward references with a strict fail-closed interim contract defined in v1.1 §7.3, so the v1.1 freeze is not sequenced after the Canonical Data Model. Its own freeze must reconcile with the then-FROZEN v1.1 (its freeze list L1024 already requires Versioning reconciliation) |
 | D2 | project_owner approval and freeze-transition evidence (v1.1 §16.2) | Future governed task |
 | D3 | Rule Index transition at freeze (v1.1 §16.4) | Future change set, same as D2 |
+| D4 | Governance v1 §5.5 applicability: ADR for significant architectural changes, with no defined significance threshold | Dispositioned by owner decision V11-PF-04 (§7): ADR not required. This promotion introduces or changes no runtime, persistence, provider, database or system-component architecture; applicable FROZEN provenance and identity authority (`PERSISTENCE_PROVENANCE_V1.md` §3) remains intact; no competing canonical identity architecture is created. The determination applies only to this promotion and establishes no general ADR threshold |
 
 ## 4. Finding closure matrix (F1-F14)
 
@@ -180,7 +181,7 @@ These are not defects of the classifications above; they must be handled in the 
 
 ## 7. Owner decisions (non-normative evidence)
 
-This section records design directions selected by the repository owner on 2026-10-30 for the remaining pre-freeze questions. The records are evidence only. They are not project-owner freeze approval, not approval of any future freeze-transition change set, not promotion authorization, not resolution of R3 and not activation of supersession. The repository does not identify the holder of the `project_owner` role, so each freeze-transition approver is recorded as `TO_BE_RECORDED`. The status values in this section are evidence-only values within this impact assessment; they are not Rule Index statuses, document lifecycle states or Governance approval states. `OWNER_SELECTED` means the repository owner selected the design direction. `IMPLEMENTED_REVIEW_PASSED` means the owner-selected direction is reflected in the current PROPOSED repository text, the substantive implementation was reviewed at the exact commit cited in the record's Evidence row, and that review reported no active or open issues. This status is proposal-level evidence only: it is not project-owner freeze approval, does not authorize promotion, does not resolve R3, does not execute supersession and does not change any document lifecycle state. `NOT_EXECUTED` means no governed freeze-transition action, lifecycle promotion, R3 resolution or supersession activation has occurred. The cited review covers the substantive implementation at commit `1e363a2`. A later evidence-only update that records this result does not retroactively alter the scope of that review and must not be represented as reviewed by it. A final review of the complete later PR head may still be requested; its review ID does not need to be added recursively to these records, and the durable evidence remains the implementation commit and its directly associated review.
+This section records design directions selected by the repository owner on 2026-10-30 for the remaining pre-freeze questions. The records are evidence only. They are not project-owner freeze approval, not approval of any future freeze-transition change set, not promotion authorization, not resolution of R3 and not activation of supersession. The repository does not identify the holder of the `project_owner` role, so each freeze-transition approver is recorded as `TO_BE_RECORDED`. The status values in this section are evidence-only values within this impact assessment; they are not Rule Index statuses, document lifecycle states or Governance approval states. `OWNER_SELECTED` means the repository owner selected the design direction. `IMPLEMENTED_PENDING_REVIEW` means the owner-selected direction is reflected in the current PROPOSED repository text but has not yet passed a fresh review covering that implementation. This status is proposal-level evidence only and does not constitute freeze approval, promotion authorization, R3 resolution, supersession activation or a lifecycle-state change. `IMPLEMENTED_REVIEW_PASSED` means the owner-selected direction is reflected in the current PROPOSED repository text, the substantive implementation was reviewed at the exact commit cited in the record's Evidence row, and that review reported no active or open issues. This status is proposal-level evidence only: it is not project-owner freeze approval, does not authorize promotion, does not resolve R3, does not execute supersession and does not change any document lifecycle state. `NOT_EXECUTED` means no governed freeze-transition action, lifecycle promotion, R3 resolution or supersession activation has occurred. The cited review covers the substantive implementation at commit `1e363a2`. A later evidence-only update that records this result does not retroactively alter the scope of that review and must not be represented as reviewed by it. A final review of the complete later PR head may still be requested; its review ID does not need to be added recursively to these records, and the durable evidence remains the implementation commit and its directly associated review.
 
 ### V11-PF-01
 
@@ -240,4 +241,24 @@ This section records design directions selected by the repository owner on 2026-
 | Date | 2026-10-30 |
 | Owner decision status | OWNER_SELECTED |
 | Proposal implementation status | IMPLEMENTED_REVIEW_PASSED |
+| Freeze-transition status | NOT_EXECUTED |
+
+### V11-PF-04
+
+| Field | Value |
+|---|---|
+| Decision ID | V11-PF-04 |
+| Question | Does the promotion of `VECTOR_VERSIONING_V1_1.md` require an ADR under Governance v1 §5.5? |
+| Selected option | ADR not required for this promotion |
+| Rationale | The promotion is a rule/specification successor. It introduces or changes no runtime, persistence, provider, database or system-component architecture; applicable FROZEN provenance and identity authority remains intact; no competing canonical identity architecture is created |
+| Authority basis | `VECTOR_GOVERNANCE_V1.md` §5.5 (FROZEN), which requires an ADR for significant architectural changes and defines no significance threshold; the determination is made by owner decision and applies only to this promotion |
+| Affected documents | `VECTOR_VERSIONING_V1_1.md` §16.3; this record |
+| Required follow-up | None for ADR creation. No ADR file is created and no general ADR threshold is established |
+| Owner selection | Confirmed by repository owner on 2026-10-30 |
+| Owner selection evidence | Repository-owner instruction dated 2026-10-30 |
+| Freeze-transition approver | TO_BE_RECORDED for the governed freeze-transition change set |
+| Evidence | Implementation in PROPOSED text (`VECTOR_VERSIONING_V1_1.md` §16.3 and this record); not yet reviewed at the implementing head |
+| Date | 2026-10-30 |
+| Owner decision status | OWNER_SELECTED |
+| Proposal implementation status | IMPLEMENTED_PENDING_REVIEW |
 | Freeze-transition status | NOT_EXECUTED |
