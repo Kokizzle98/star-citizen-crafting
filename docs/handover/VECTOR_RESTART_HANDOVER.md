@@ -14,15 +14,37 @@ This document is operational and non-normative.
 - Work package: `Restart Safety + AI Efficiency v1`
 - Branch: `docs/restart-safety-ai-efficiency-v1`
 - Base: `develop`
-- Expected anchor commit: `c768aa6`
-- Working-tree expectation at work-package start: `CLEAN`
+- Checkpoint date: `2026-10-30`
+- Work-package base (historical): `c768aa6`
+- Active checkpoint anchor: `28ff61406111edb61597ac1addd018817ef25c92`
+- Working-tree expectation: `CLEAN`
+- Active PR: `#10`
+- PR state: `OPEN / DRAFT`
+- PR base: `develop`
 
-Allowed active-work-package paths:
+The work-package base is the historical branch origin and is not the active recovery comparison anchor. The active checkpoint anchor is the verified repository state produced by the previous recovery-control remediation. Current HEAD is the actual branch tip.
+
+Allowed scope after the active checkpoint anchor (exactly these paths):
 
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
 - `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`
 
-The expected anchor is intentionally not an exact expected HEAD. Later work-package commits may advance HEAD. HEAD remains compatible only when the anchor is an ancestor of HEAD and the complete anchor-to-HEAD delta is limited to the allowed paths. Any unexpected changed path produces `RECOVERY_STATE = DRIFT_DETECTED`. The anchor and the allowed path set are local to the current checkpoint.
+Recovery control block:
+
+- checkpoint date;
+- active work package;
+- expected branch;
+- base branch;
+- work-package base;
+- active checkpoint anchor;
+- allowed path set;
+- working-tree expectation;
+- active PR expectations;
+- `NEXT STEP`.
+
+The control block is trusted only from the LVCR copy (see LVCR trust model in the recovery procedure), never from the working tree or the current HEAD copy.
+
+The anchor is intentionally not an exact expected HEAD. The current committed HEAD may legitimately advance beyond the active checkpoint anchor only when all recovery invariants pass. Any unexpected changed path produces `RECOVERY_STATE = DRIFT_DETECTED`.
 
 ### Previous stable Versioning checkpoint
 
@@ -118,21 +140,43 @@ Out of scope:
 
 ## 7. RECOVERY PROCEDURE
 
+### LVCR trust model
+
+The Last Verified Control Revision (LVCR) is the trusted revision containing the owner-validated recovery control block.
+
+- Merged checkpoint: the LVCR is the verified commit on `origin/develop`.
+- Unmerged PR checkpoint: the LVCR is the exact owner-confirmed commit recorded in the active PR description under `Checkpoint control revision`.
+- The active PR description is the durable LVCR source for an unmerged checkpoint. Chat history and restart prompts may repeat the LVCR for convenience but are not authoritative LVCR sources.
+- This handover must not contain its own current commit as the durable trust source.
+- A modified handover must not authorize its own changed control fields or changed allowlist.
+
+Fail-closed: recovery produces `RECOVERY_STATE = DRIFT_DETECTED` when the LVCR cannot be determined, the active PR description has no checkpoint control revision for an unmerged checkpoint, the recorded LVCR is not an ancestor of HEAD, the LVCR handover copy cannot be read, the HEAD control block differs from the LVCR control block, or the current handover attempts to widen its own allowlist without owner revalidation and LVCR rotation.
+
+### Procedure
+
 1. Read this handover.
 2. Read `CURRENT CHECKPOINT`.
 3. Read `NEXT STEP`.
-4. Verify the current repository root.
+4. Verify the repository root.
 5. Run `git status --short`.
 6. Run `git branch --show-current`.
-7. Run `git rev-parse --short HEAD` (informational; HEAD is not compared literally).
+7. Run `git rev-parse HEAD` (informational; HEAD is not compared literally).
 8. Run `git fetch origin`.
-9. Verify the expected branch against the actual branch.
-10. Run `git merge-base --is-ancestor c768aa6 HEAD` and require exit code `0`.
-11. Run `git diff --name-only c768aa6 HEAD` and compare every returned path against the allowed active-work-package path set. Treat any unexpected path as `RECOVERY_STATE = DRIFT_DETECTED`.
-12. Verify the working-tree expectation.
-13. Verify upstream and remote state when applicable.
-14. Verify active PR head, draft state and checks when applicable.
-15. Produce exactly one recovery result:
+9. Verify the expected branch.
+10. Determine the LVCR: merged checkpoint, verified `origin/develop`; unmerged checkpoint, the exact owner-confirmed commit from the active PR description.
+11. If the LVCR cannot be determined, emit `RECOVERY_STATE = DRIFT_DETECTED`.
+12. Run `git merge-base --is-ancestor <LVCR> HEAD` and require exit code `0`.
+13. Read the trusted handover with `git show <LVCR>:docs/handover/VECTOR_RESTART_HANDOVER.md`.
+14. Compare the HEAD recovery control block with the LVCR control block.
+15. Any control-block difference is `RECOVERY_STATE = DRIFT_DETECTED` until owner revalidation and LVCR rotation have occurred.
+16. Using the trusted LVCR control block, run `git merge-base --is-ancestor <anchor> HEAD` and require exit code `0`.
+17. Run `git diff --name-only <anchor> HEAD`.
+18. Compare every returned path against the allowed scope obtained from the trusted LVCR copy.
+19. Any unexpected path is `RECOVERY_STATE = DRIFT_DETECTED`.
+20. Verify the working-tree expectation.
+21. Verify upstream and remote state when applicable.
+22. Verify active PR head, draft state and checks when applicable.
+23. Emit exactly one recovery result:
 
 `RECOVERY_STATE = MATCH`
 
@@ -142,13 +186,16 @@ or
 
 ### MATCH behavior
 
-`RECOVERY_STATE = MATCH` requires all applicable invariants to pass:
+`RECOVERY_STATE = MATCH` requires every applicable invariant to pass:
 
 - expected branch matches;
-- the anchor is an ancestor of HEAD;
-- every changed path between the anchor and HEAD is in the allowed path set;
-- the working tree matches the checkpoint expectation;
-- applicable upstream, remote and PR state matches the checkpoint.
+- the LVCR can be determined;
+- the LVCR is an ancestor of HEAD;
+- the HEAD control block equals the trusted LVCR control block;
+- the active anchor is an ancestor of HEAD;
+- every anchor-to-HEAD path is inside the trusted allowed scope;
+- the working-tree expectation matches;
+- applicable upstream, remote and PR expectations match.
 
 When MATCH:
 
@@ -160,13 +207,18 @@ When MATCH:
 `RECOVERY_STATE = DRIFT_DETECTED` includes at least:
 
 - wrong branch;
-- anchor is not an ancestor of HEAD;
-- unexpected changed path after the anchor;
+- LVCR missing or undeterminable;
+- LVCR not an ancestor of HEAD;
+- unreadable LVCR handover;
+- unverified recovery-control-field change;
+- mutable allowlist attempting to authorize its own new scope;
+- active anchor not an ancestor of HEAD;
+- unexpected path after the anchor;
 - unexpected dirty working tree;
 - material upstream or remote mismatch;
-- material active-PR mismatch.
+- material PR mismatch.
 
-Later commits alone are not drift when the anchor remains an ancestor and the complete delta stays inside the allowed path set.
+Later commits alone are not drift when all invariants above still pass.
 
 When drift is detected:
 
@@ -204,34 +256,48 @@ Avoid checkpoint churn.
 
 ### Anchor rotation
 
-`expected_anchor_commit` identifies the verified starting point of the current checkpoint or active work package. It is checkpoint-local, not a permanent project anchor.
+Distinct concepts:
 
-Every new checkpoint created because of a material `CHECKPOINT_REQUIRED` transition must update together:
+- Work-package base: the historical branch origin of the current work package. It does not change during that work package and is not the active recovery comparison anchor.
+- Active checkpoint anchor: the verified repository state used by the current checkpoint.
+- Current HEAD: the actual branch tip.
+- Allowed scope: the path set permitted after the current active checkpoint anchor.
+- LVCR: the trusted revision containing the owner-validated recovery control block.
+
+These fields rotate together as one coherent checkpoint and must not be updated independently:
 
 - checkpoint date;
 - active work package;
 - expected branch;
-- expected anchor commit;
-- allowed path set;
-- state expectations;
+- base branch;
+- work-package base (when a new package begins);
+- active checkpoint anchor;
+- allowed scope;
+- working-tree expectation;
+- PR expectations;
+- LVCR;
 - `NEXT STEP`.
 
-These values form one coherent recovery checkpoint and must not be updated independently in a way that creates an inconsistent checkpoint.
+Rotation is required after:
 
-- Rotation replaces the old anchor with the verified starting commit of the new checkpoint.
-- Rotation occurs only after the actual repository state has been verified.
-- The old anchor remains available through Git history but is no longer used for active recovery after rotation.
-- A checkpoint must never silently inherit an outdated anchor or allowed path set.
+- work-package completion;
+- beginning a new major work package;
+- a merge establishing a new stable base;
+- a lifecycle or freeze transition;
+- a material scope change;
+- any recovery-control-field change;
+- any owner-approved allowlist change.
 
-Rotation is required at least when:
+Routine in-scope implementation commits do not rotate the checkpoint merely because HEAD advances.
 
-- a new major work package starts on another branch;
-- a merge establishes a new stable base;
-- a freeze or lifecycle transition establishes a new verified state;
-- the active work package is completed and another begins;
-- another `CHECKPOINT_REQUIRED` transition materially changes the recovery baseline.
+A recovery-control-field change remains drift until:
 
-Routine commits and citation-only fixes inside the same work package do not rotate the anchor merely because HEAD advances.
+1. it is committed and pushed;
+2. deterministic validation passes;
+3. the repository owner confirms the new control revision;
+4. the active PR description is updated to the new LVCR.
+
+Rotation occurs only after the actual repository state has been verified. The old base, anchor and LVCR remain available through Git history but are no longer active after rotation. A checkpoint must never silently inherit an outdated anchor or allowed path set.
 
 ## 9. AI WORK MODE
 
@@ -248,4 +314,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Commit and publish the validated Restart Safety + AI Efficiency v1 documentation on branch docs/restart-safety-ai-efficiency-v1. Do not modify PR #9.
+NEXT STEP: Commit and push the grouped checkpoint-control remediation, record its exact commit as the PR #10 checkpoint control revision after deterministic validation, and then run one Lite re-review. Do not modify PR #9.

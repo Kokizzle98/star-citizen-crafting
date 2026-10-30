@@ -222,11 +222,21 @@ Avoid checkpoint churn.
 
 Anchor rotation policy:
 
+- Work-package base, active checkpoint anchor and current HEAD are distinct concepts. The base is historical; the anchor is the verified state of the current checkpoint; HEAD is the actual tip.
 - Recovery checkpoints use a checkpoint-local anchor, not a permanent project anchor.
 - Allowed work-package paths define the permitted delta after that anchor.
-- The anchor and allowed paths must be rotated together, with branch, work package, state expectations and `NEXT STEP`, when a new material checkpoint begins.
+- The anchor and allowed scope rotate together, with branch, work package, state expectations, LVCR and `NEXT STEP`, when a new material checkpoint begins.
 - An anchor is rotated only after the new base state is verified.
-- Routine commits inside the same allowed work-package scope do not rotate the anchor.
+- Routine in-scope commits do not automatically rotate the checkpoint.
+- A control-field change remains drift until owner revalidation and LVCR rotation.
+
+LVCR convention:
+
+- The mutable current handover is not its own trust source. The recovery control block is trusted only from the Last Verified Control Revision (LVCR).
+- Merged checkpoint: the LVCR is the verified `origin/develop` commit.
+- Unmerged PR checkpoint: the LVCR is the owner-confirmed commit recorded in the active PR description.
+- Chat history and restart prompts are not durable LVCR sources.
+- For an active unmerged checkpoint, the PR description must include `Checkpoint control revision: <full commit hash>`. This field is updated only after deterministic validation and owner confirmation.
 
 ## 13. Recovery and drift handling
 
@@ -236,10 +246,10 @@ See `docs/handover/VECTOR_RESTART_HANDOVER.md`.
 - Chat replay is not the primary mechanism.
 - Drift detection is mandatory before continuing.
 - Never resolve drift by assumption.
-- Recovery is compatible when the expected branch matches, the anchor is an ancestor of HEAD, the anchor-to-HEAD delta stays inside the allowed paths, and working-tree, remote and PR state match.
+- Recovery is compatible only when the expected branch matches, the LVCR is determined and is an ancestor of HEAD, the HEAD control block equals the LVCR control block, the anchor is an ancestor of HEAD, the anchor-to-HEAD delta stays inside the trusted allowed paths, and working-tree, remote and PR state match.
 - Later commits inside the same allowed work-package scope do not automatically cause drift.
 - An unexpected path, branch or state mismatch causes drift.
-- Storing an exact expected HEAD in the handover is normally avoided because a handover commit would self-invalidate it. An exact HEAD may be recorded as historical evidence, but the operational recovery invariant remains anchor plus allowed delta.
+- Exact expected HEAD values are normally avoided because committing the handover would self-invalidate them. Historical exact commit hashes may be recorded as evidence without becoming self-referential active recovery invariants.
 
 ## 14. AI Usage Baseline: 2026-10-29 to 2026-10-30
 
