@@ -27,6 +27,7 @@ If `SUCCESSOR_PROPOSAL_REQUIRED_BEFORE_FREEZE` were returned for any specificati
 |---|---|
 | `PERSISTENCE_PROVENANCE_V1.md` | `RULE_INDEX_OR_REFERENCE_UPDATE_REQUIRED_AT_FREEZE` |
 | `GAME_WIPE_MODEL_V1.md` | `RULE_INDEX_OR_REFERENCE_UPDATE_REQUIRED_AT_FREEZE` |
+| `FLEET_DATA_MODEL_V1.md` | `RULE_INDEX_OR_REFERENCE_UPDATE_REQUIRED_AT_FREEZE` |
 | `VECTOR_GOVERNANCE_V1.md` | `NO_SUCCESSOR_CHANGE_REQUIRED` |
 | `VECTOR_VERSIONING_V1.md` | `RULE_INDEX_OR_REFERENCE_UPDATE_REQUIRED_AT_FREEZE` |
 
@@ -71,6 +72,25 @@ Observation (not a change request): §5.6 states that a proposed rule becomes Pr
 ### 2.4 `VECTOR_VERSIONING_V1.md` - reference update at freeze
 
 v1.1 is a full-document successor. No edit to `VECTOR_VERSIONING_V1.md` occurs now. At a future governed freeze transition the Rule Index must record v1.0 as `SUPERSEDED` with v1.1 as its replacement; the treatment of the predecessor file follows the then-binding Governance and the approved transition plan (v1.1 §16.6).
+
+### 2.5 `FLEET_DATA_MODEL_V1.md` - reference update at freeze
+
+Evidence:
+
+- §12 (L202-205) requires dataset-derived fleet information to use the active dataset channel with strict LIVE/PTU isolation and no cross-channel fallback. v1.1 §6.7 and §8.3 preserve this.
+- §12 (L209) states that changing the dataset channel does not create a second owned ship. This is consistent with v1.1 §6.3 (`PRODUCTION_USER_STATE` is not created, copied or replaced by a dataset switch).
+- §19 invariant 8 (L272) forbids mixing LIVE and PTU data in one derived fleet calculation. A `PRODUCTION_USER_STATE_SNAPSHOT` is user-state input, not LIVE reference data (v1.1 §6.7, §8.3(8)), so no rule is contradicted.
+- Fleet loadout and ownership domains remain `PRODUCTION_USER_STATE`; a PTU Preview never mutates them (v1.1 §7.2.3).
+
+Why not "no change": §12 (L207) names VECTOR Versioning v1 directly ("according to VECTOR Versioning v1"). Because v1.1 is a full-document successor, that version-specific reference needs a binding disposition when supersession becomes effective. No binding rule is contradicted.
+
+Required freeze-time disposition (recorded now, not applied now): at the freeze transition, the direct reference in `docs/frozen/FLEET_DATA_MODEL_V1.md` §12 (L207) must be explicitly dispositioned by one of the following governed freeze mechanisms, selected and justified in the freeze-transition change set under the then-binding Governance:
+
+1. controlled update of the direct reference to the newly effective authority;
+2. explicitly justified retention of the old version-specific reference; or
+3. another binding supersession mechanism that resolves the reference unambiguously.
+
+This change set records the requirement only. It does not select or execute any of these actions and does not modify `FLEET_DATA_MODEL_V1.md` or any other `docs/frozen/*` file. The action is applied only when v1.1 is actually frozen and supersession is activated.
 
 ## 3. Open freeze dependencies (not successor classifications)
 
@@ -125,7 +145,7 @@ These are not defects of the classifications above; they must be handled in the 
 
 - project_owner approval, freeze-transition change set, `SUPERSEDED` marking of v1.0, R3 closure and predecessor-file treatment (v1.1 §16).
 - Resolution of D1 (canonical authority is still PROPOSED).
-- Freeze-time Rule Index/reference updates for `PERSISTENCE_PROVENANCE_V1.md`, `GAME_WIPE_MODEL_V1.md` (including the mandatory L193 disposition in §2.2) and `VECTOR_VERSIONING_V1.md`.
+- Freeze-time Rule Index/reference updates for `PERSISTENCE_PROVENANCE_V1.md`, `GAME_WIPE_MODEL_V1.md` (including the mandatory L193 disposition in §2.2), `FLEET_DATA_MODEL_V1.md` (including the mandatory L207 disposition in §2.5) and `VECTOR_VERSIONING_V1.md`.
 - Approval of `VECTOR_GOVERNANCE_V1_1.md` (R1) and its formalization of approval-evidence rules.
 - Code implementation of snapshot/provenance storage and the visible `PTU_PREVIEW` label.
 - Intentional: the German `DATA_CONTEXT_MODEL_V1.md` and the English v1.1 retain their own languages.
