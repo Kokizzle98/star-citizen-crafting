@@ -101,7 +101,7 @@ Evidence:
 - §14 (L232-247) and acceptance criteria 10 and 12 (L291, L293) require strict LIVE/PTU isolation, one active channel, no cross-channel fallback, a visible compact dataset label and Completeness Filter handling instead of substitution. v1.1 §6.7 and §8.3 preserve this; a `PRODUCTION_USER_STATE_SNAPSHOT` is user-state input, not LIVE reference data.
 - §2 (L17) and §15 (L256) distinguish owned lots and quantities from dataset-derived values and external game-data completeness. This matches the typed Dataset Context / User State Context separation in v1.1 §6.
 - §15 (L252-255) forbids guessing and fabricated defaults. This is consistent with v1.1 §7.3, §7.4 and §9.
-- Inventory UX defines no PTU-native inventory and no preview. A PTU Preview never mutates Inventory and never presents Production ownership as PTU ownership (v1.1 §7.2.3, §7.2.4, §7.6); the visible `PTU_PREVIEW` label is additive to §14.
+- Inventory UX defines no PTU-native inventory and no preview. A PTU Preview never mutates Inventory and never presents Production ownership as PTU ownership (v1.1 §7.2 items 3 and 4, §7.6); the visible `PTU_PREVIEW` label is additive to §14.
 - The specification names no version-specific authority, so no direct-reference disposition is required.
 
 No binding rule is contradicted and no Rule Index or reference change is required because of v1.1.
