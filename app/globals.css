@@ -123,3 +123,34 @@
     grid-template-columns: 1fr;
   }
 }
+
+.vector-group-list {
+  display: grid;
+  gap: .75rem;
+  margin-top: 1rem;
+}
+
+.vector-group-context {
+  display: grid;
+  gap: .35rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: .5rem;
+  background: rgba(4, 19, 27, .72);
+}
+
+.vector-group-context strong {
+  color: var(--cyan);
+  font-size: 1.1rem;
+}
+
+.vector-group-context__role {
+  color: var(--success);
+  font-size: .76rem;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+
+.vector-group-context p {
+  margin: .35rem 0 0;
+}
