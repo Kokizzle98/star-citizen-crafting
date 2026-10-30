@@ -9,6 +9,8 @@
 
 This record is evidence only. It does not supersede, approve or freeze anything. `VECTOR_VERSIONING_V1.md` v1.0 remains the sole binding VERSIONING authority.
 
+**Historical-state note:** The lifecycle/status statements above record the pre-transition assessment state at the time this assessment was performed. They are retained as historical evidence and do not describe the post-transition state after successful completion of the governed Versioning v1.1 freeze transition. The governed freeze-transition record at the end of this document records the approved transition and its effectiveness condition.
+
 ## 1. Classification method
 
 Each dependent FROZEN specification receives exactly one classification:
@@ -171,6 +173,8 @@ These are not defects of the classifications above; they must be handled in the 
 | (none) | §6, §7, §16 | New: typed contexts, PTU Preview boundary, supersession lifecycle |
 
 ## 6. Deferred after this change set
+
+**Historical pre-transition note:** The following bullets record actions that were deferred when this assessment was prepared. The approved freeze-transition change set now performs the Versioning v1.1 promotion, v1.0 supersession registration, R3 closure and dependent-reference updates. Items concerning later proposal freezes remain deferred.
 
 - project_owner approval, freeze-transition change set, `SUPERSEDED` marking of v1.0, R3 closure and predecessor-file treatment (v1.1 §16).
 - Canonical Data Model freeze and its reconciliation with the then-FROZEN v1.1 (D1 dispositioned at proposal level by V11-PF-02; the canonical authority is still PROPOSED).

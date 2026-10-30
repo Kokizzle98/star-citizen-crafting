@@ -592,4 +592,8 @@ The dependent-specification impact assessment is recorded in `docs/reviews/VERSI
 
 ### 16.6 Predecessor-file treatment
 
-The exact treatment of the predecessor file `VECTOR_VERSIONING_V1.md` (edit, move, annotate or leave in place) at the future freeze transition follows the then-binding Governance and the approved transition plan. This specification does not authorize editing or moving that file, marking v1.0 `SUPERSEDED`, marking v1.1 `FROZEN`, or changing R3 to resolved.
+For this governed freeze transition, `VECTOR_VERSIONING_V1.md` v1.0 remains physically unchanged in `docs/frozen/` for historical traceability. `RULE_INDEX.md` registers v1.0 as `SUPERSEDED` in full by Versioning v1.1.
+
+This disposition becomes effective only upon successful governed merge of this atomic transition change set to `main`. If that merge does not complete successfully, Versioning v1.0 remains the binding authority and the supersession is ineffective.
+
+Any later successor to Versioning v1.1 requires its own governed lifecycle disposition.
