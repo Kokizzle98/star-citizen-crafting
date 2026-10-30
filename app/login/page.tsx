@@ -1,12 +1,35 @@
+﻿import { redirect } from 'next/navigation'
+import { LoginForm } from '@/components/auth/LoginForm'
+import { safeRelativePath } from '@/lib/auth/redirect'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+
 export const dynamic = 'force-dynamic'
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams?: {
+    next?: string
+  }
+}
+
+export default async function LoginPage({
+  searchParams,
+}: LoginPageProps) {
+  const nextPath = safeRelativePath(searchParams?.next ?? null, '/vector')
+  const supabase = createSupabaseServerClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (user) {
+    redirect(nextPath)
+  }
+
   return (
-    <main className="vector-login">
-      <section
-        className="vector-login__panel"
-        aria-labelledby="vector-login-title"
-      >
+    <section
+      className="vector-login"
+      aria-labelledby="vector-login-title"
+    >
+      <div className="vector-login__panel">
         <div className="vector-login__brand" aria-hidden="true">
           VECTOR
         </div>
@@ -16,25 +39,21 @@ export default function LoginPage() {
         <h1 id="vector-login-title">Anmeldung</h1>
 
         <p className="vector-login__description">
-          Der VECTOR-Zugang ist vorbereitet. Es wurde jedoch noch kein
-          primärer Anmeldeweg für Citizen ID freigegeben.
+          Melde dich mit deinem bestehenden VECTOR-Konto an.
         </p>
 
-        <div className="vector-login__status" role="status">
-          <span className="vector-login__status-dot" aria-hidden="true" />
-          Anmeldung derzeit nicht verfügbar
-        </div>
+        <LoginForm nextPath={nextPath} />
 
         <p className="vector-login__notice">
-          Die vorhandene Citizen-ID-Verknüpfung ist ausschließlich für
-          bereits angemeldete Konten vorgesehen und wird hier nicht als
-          primärer Login verwendet.
+          Citizen ID und weitere Spielidentitäten werden nach der Anmeldung
+          mit dem VECTOR-Konto verknüpft. Sie ersetzen nicht den primären
+          E-Mail- und Passwortzugang.
         </p>
 
         <a className="vector-login__back" href="/">
           Zurück zur Startseite
         </a>
-      </section>
-    </main>
+      </div>
+    </section>
   )
 }
