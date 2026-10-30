@@ -500,37 +500,75 @@ This section defines the lifecycle only. It does not perform, authorize or pre-a
 1. `VECTOR_VERSIONING_V1.md` v1.0 remains the sole binding VERSIONING authority until supersession is effective.
 2. This document, while PROPOSED, is non-binding wherever it exists, including after a merge to `develop` or `main` as a PROPOSED document. Such a merge never supersedes v1.0 and never resolves R3.
 3. Supersession is full-document and atomic. At no point are v1.0 and v1.1 both authoritative.
+4. References in this document to supersession becoming effective "upon completion of §16" mean successful completion of the governed freeze transition (§16.2 phase `GOVERNED_TRANSITION_ACTION`, ending with merge into `main`, and §16.4) under the then-binding Governance. Satisfying the `PRE_PROMOTION_READINESS` items does not by itself make the transition effective. This document records its proposed acceptance criteria; evidence shows whether they are met; the then-binding Governance and the authorized approval process decide promotion; and effectiveness follows only from the successful governed transition. If the transition is not approved, is incomplete or fails, v1.0 remains FROZEN and authoritative. This document cannot make itself authoritative by declaring its own criteria complete.
 
-### 16.2 Required freeze-transition evidence
+### 16.2 Freeze-transition acceptance criteria and evidence
 
-Supersession becomes effective only when all of the following are complete:
+Each item below has a process phase and an authority category. The process phase states when the item occurs; the authority category (defined in §16.3) states where the requirement comes from. They are independent.
 
-1. documented `project_owner` approval (`Approved By` recorded);
-2. completed review on `develop`, including cross-spec consistency review against applicable FROZEN specifications and a completed impact assessment with no open freeze blocker;
-3. a freeze-transition change set that records the approval/frozen date, linked review or pull-request evidence, the predecessor, the supersession scope (full document) and the affected dependent specifications;
-4. the simultaneous `docs/RULE_INDEX.md` transition (§16.4);
-5. required validation and release gates passed;
-6. governed promotion to `main` as FROZEN.
+Process phases:
 
-Items 3 and 4 are part of the same change set. A PROPOSED document merely present on `main` fulfils none of these conditions.
+- `PRE_PROMOTION_READINESS`: completed before the promotion decision is requested or approved. It contains reviews, the impact assessment, gate results, the prepared (not yet approved or merged) change set, and the recorded expected approver and requested decision.
+- `GOVERNED_TRANSITION_ACTION`: performed in the approved freeze-transition change set and complete when that change set is merged into `main`. It contains approval, status and metadata changes, the Rule Index transition, reference dispositions and the merge.
+- `POST_TRANSITION_EVIDENCE`: available only after the transition has completed. It contains retained merge and approval records and verification of the effective status.
 
-### 16.3 Source of each requirement
+Items categorized `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` are acceptance criteria for this proposal only; they are one-time transition criteria, not ongoing rules after freeze. Satisfying the readiness items does not by itself make the transition effective, and nothing in this section makes this document authoritative.
 
-Requirements are labelled by source, because the proposed governance is not binding:
+Phase `PRE_PROMOTION_READINESS`:
 
-| Requirement | Source |
+1. completed review on `develop` (`DERIVED_FROM_GOV_V1`: §3.2, §3.3; v1.0 §13);
+2. completed cross-spec consistency review against applicable FROZEN specifications (`PROPOSAL_LOCAL_ACCEPTANCE_CRITERION`);
+3. a completed impact assessment with no open freeze blocker (`PROPOSAL_LOCAL_ACCEPTANCE_CRITERION`);
+4. the proposed freeze-transition change set prepared, but not yet approved or merged, containing the draft approval/frozen-date fields, linked review or pull-request evidence, the predecessor, the supersession scope (full document), the affected dependent specifications with their planned reference dispositions, and the draft Rule Index transition (§16.4) (`PROPOSAL_LOCAL_ACCEPTANCE_CRITERION`; identifying the superseded version is `GOV-V1_BINDING`: §5.4);
+5. required validation and release gates passed on the prepared change set before it is merged (`GOV-V1_BINDING`: §8);
+6. the expected approver (`project_owner`) and the requested decision recorded (`PROPOSAL_LOCAL_ACCEPTANCE_CRITERION`; the role name is a Rule Index convention, not a Governance v1 requirement).
+
+Phase `GOVERNED_TRANSITION_ACTION`:
+
+7. approval recorded, with `Approved By` (approval is `GOV-V1_BINDING`: §3.1, §5; the role name is `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION`);
+8. this document assigned FROZEN status and effective lifecycle metadata (`Frozen on`, `Approved By`, `Supersedes` naming v1.0 in full) and the predecessor/successor relationship recorded (identifying the superseded version is `GOV-V1_BINDING`: §5.4; FROZEN status is `DERIVED_FROM_GOV_V1`: §3.1, §5; the remaining metadata is `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION`);
+9. the Rule Index lifecycle transition applied simultaneously in the same change set (§16.4) (`PROPOSAL_LOCAL_ACCEPTANCE_CRITERION`);
+10. dependent-reference dispositions selected and applied where required, under the then-binding Governance (`PROPOSAL_LOCAL_ACCEPTANCE_CRITERION`);
+11. the change set merged through the authorized process into `main` (merge into `main` is `GOV-V1_BINDING`: §3.1, §3.3, §5.6; that the merged rule is FROZEN is `DERIVED_FROM_GOV_V1`: §3.1, §5).
+
+Phase `POST_TRANSITION_EVIDENCE`:
+
+12. merge and approval evidence retained (`GOV-V1_BINDING`: §6, traceability);
+13. the effective status verified: v1.1 FROZEN and v1.0 `SUPERSEDED` in the Rule Index on `main` (`PROPOSAL_LOCAL_ACCEPTANCE_CRITERION`).
+
+Items 7 to 11 are performed in one change set: items 7 to 10 are part of it when it is merged, and item 11 completes it. Supersession becomes effective only if the governed transition completes successfully. If the transition is not approved, is incomplete or fails, v1.0 remains FROZEN and authoritative. A PROPOSED document merely present on `main` fulfils none of these items.
+
+### 16.3 Source and authority category of each requirement
+
+Each requirement is labelled with an authority category and its exact source. Governance v1 is the only current authority; proposed documents are not binding. Authority categories are independent of the process phases defined in §16.2.
+
+| Category | Meaning |
 |---|---|
-| A FROZEN rule is not silently overwritten; a material change creates a new version; the successor identifies the superseded version | **[GOV-V1 binding]** `VECTOR_GOVERNANCE_V1.md` §5.1, §5.2, §5.4 |
-| The former rule remains in Git history and may be marked `SUPERSEDED` | **[GOV-V1 binding]** §5.3 |
-| A proposed rule becomes Production-authoritative only after merge into `main` as FROZEN | **[GOV-V1 binding]** §5.6, §3.2 |
-| Successor document, documented rationale, review on `develop`, merge through the normal release process into `main` | **[GOV-V1 binding]** §11 |
-| Traceability including the replacement relationship | **[GOV-V1 binding]** §6 |
-| Release gates before merging `develop` into `main` | **[GOV-V1 binding]** §8 |
-| `Approved By` and explicit `Supersedes` metadata; Authority Scope metadata | **[GOV-V1.1 recommended, non-binding]** |
-| Impact analysis for affected FROZEN rules | **[GOV-V1.1 recommended, non-binding]** |
-| Rule Index update in the same change set as the lifecycle change | **[GOV-V1.1 recommended, non-binding]** |
+| `GOV-V1_BINDING` | Stated literally by FROZEN `VECTOR_GOVERNANCE_V1.md`, at the strength the text states (must, may or should). |
+| `DERIVED_FROM_GOV_V1` | An interpretation or operational consequence supported by Governance v1 but not stated literally. |
+| `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` | A criterion for evaluating and promoting this proposal. Not general authority; satisfied once and recorded as transition evidence; not an ongoing rule after freeze. |
+| `V1_1_FUTURE_BINDING_RULE` | A substantive rule carried by this document (§§2-15) that becomes binding only if v1.1 is governedly approved, frozen and made effective. |
 
-Items marked non-binding are adopted here as project practice for this successor only and do not make `VECTOR_GOVERNANCE_V1_1.md` authoritative. Until that proposal is itself promoted, FROZEN Governance v1.0 does not mention `RULE_INDEX.md` or `Approved By` metadata.
+| Requirement | Category | Source |
+|---|---|---|
+| A FROZEN rule is not silently overwritten; a material change creates a new version; the successor identifies the superseded version | `GOV-V1_BINDING` | `VECTOR_GOVERNANCE_V1.md` §5.1, §5.2, §5.4 |
+| The former rule remains in Git history and may be marked `SUPERSEDED` | `GOV-V1_BINDING` | §5.3 (permissive: "may") |
+| A proposed rule becomes Production-authoritative only after merge into `main` | `GOV-V1_BINDING` | §5.6, §3.2 |
+| The merged rule must be FROZEN and approved | `DERIVED_FROM_GOV_V1` | §3.1 ("FROZEN rules present in `main`"), §5 ("binding after approval"); §5.6 does not itself say "FROZEN" |
+| Approval before a rule is binding; only reviewed and release-approved changes enter `main` | `GOV-V1_BINDING` | §3.1, §5; Governance v1 does not name the approver |
+| Successor document, documented rationale, review on `develop`, merge through the normal release process into `main` | `DERIVED_FROM_GOV_V1` | §3.2, §3.3; §11 governs amendments to Governance itself and is applied here by analogy and through the "normal VECTOR governance process" in v1.0 §13 |
+| Traceability through Git commits and, where appropriate, pull requests | `GOV-V1_BINDING` | §6, first paragraph ("must be traceable") |
+| A change should include reason, consequences and the replacement relationship | `GOV-V1_BINDING` (recommendation only) | §6 list ("should include"); creates no MUST |
+| Release gates before merging `develop` into `main` | `GOV-V1_BINDING` | §8 |
+| `Approved By` (expected `project_owner`), `Supersedes` and Authority Scope metadata | `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` | Rule Index metadata convention (`RULE_INDEX.md` §4, L45-57; itself PROPOSED, "should declare"); Governance v1 requires only that the successor identify the superseded version (§5.4) |
+| Impact analysis for affected FROZEN rules; no open freeze blocker | `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` | Recommended by proposed `VECTOR_GOVERNANCE_V1_1.md` §9 item 3 (non-binding); not in Governance v1 |
+| Cross-spec consistency review against applicable FROZEN specifications | `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` | This proposal; not in Governance v1 |
+| Rule Index update in the same change set as the lifecycle change | `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` | Recommended by proposed `VECTOR_GOVERNANCE_V1_1.md` §9 item 6 (non-binding); Governance v1 does not mention `RULE_INDEX.md` |
+| Disposition of direct references to v1.0 in dependent FROZEN specifications (`PERSISTENCE_PROVENANCE_V1.md` L137, `GAME_WIPE_MODEL_V1.md` L193, `FLEET_DATA_MODEL_V1.md` L207) | `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` | `docs/reviews/VERSIONING_V1_1_IMPACT_ASSESSMENT.md` §§2.1, 2.2, 2.5 |
+| Marking v1.0 `SUPERSEDED` at freeze | `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` | Governance v1 §5.3 permits ("may") but does not require |
+| Full-document atomic supersession; the substantive rules of §§2-15 | `V1_1_FUTURE_BINDING_RULE` | This document, binding only after governed freeze and effectiveness |
+
+Items categorized `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` are recorded acceptance criteria for this proposal. They are not generally authoritative while this document is PROPOSED, do not amend FROZEN Governance, and impose no rules on other specifications. Each is evidenced in the process phase assigned in §16.2: readiness items before the promotion decision is requested or approved, transition actions within the approved change set, and verification evidence after the transition. They are one-time transition criteria and do not automatically become ongoing production rules after freeze. The authority to approve and promote remains with the then-binding Governance and the authorized approver; this document cannot make itself authoritative by declaring its own criteria complete, and satisfying readiness items does not by itself make the transition effective. Adopting a recommendation of the proposed `VECTOR_GOVERNANCE_V1_1.md` as a criterion here does not make that proposal authoritative. FROZEN Governance v1.0 does not mention `RULE_INDEX.md`, `Approved By` metadata or the role `project_owner`.
 
 ### 16.4 Required Rule Index transition
 

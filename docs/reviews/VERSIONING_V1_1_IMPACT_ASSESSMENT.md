@@ -65,9 +65,9 @@ This change set records the requirement only. It does not select or execute any 
 
 ### 2.3 `VECTOR_GOVERNANCE_V1.md` - no successor change
 
-Evidence: §5.1-§5.6 (L129-140), §6 (L150+), §8 (L177+) and §11 (L214-223) are sufficient to govern this successor. v1.1 §16 only applies them.
+Evidence: §5.1-§5.6 (L129-140), §6 (L150+) and §8 (L177+) are sufficient to govern this successor. §11 (L214-223) governs amendments to Governance itself and applies to this successor by analogy and through v1.0 §13 ("normal VECTOR governance process"). v1.1 §16 applies these and additionally records proposal-local acceptance criteria (§16.3), which are not Governance requirements.
 
-Observation (not a change request): §5.6 states that a proposed rule becomes Production-authoritative "only after merge into `main`", without saying "as FROZEN". Read with §3.1 ("FROZEN rules present in `main`") and §5 ("A FROZEN rule is binding after approval") this requires approval and FROZEN status. v1.1 §16 states the stricter reading explicitly. Clarification of this wording belongs to the separately tracked `VECTOR_GOVERNANCE_V1_1.md` (R1/R5), not to this task.
+Observation (not a change request): §5.6 states that a proposed rule becomes Production-authoritative "only after merge into `main`", without saying "as FROZEN". Read with §3.1 ("FROZEN rules present in `main`") and §5 ("A FROZEN rule is binding after approval") this supports, but does not literally state, approval and FROZEN status as requirements (`DERIVED_FROM_GOV_V1`). v1.1 §16 states that reading explicitly. Clarification of this wording belongs to the separately tracked `VECTOR_GOVERNANCE_V1_1.md` (R1/R5), not to this task.
 
 ### 2.4 `VECTOR_VERSIONING_V1.md` - reference update at freeze
 
@@ -108,7 +108,7 @@ These are not defects of the classifications above; they must be handled in the 
 |---|---|---|
 | F1 Supersession header | v1.1 header; §1; §16.1-16.2 require approval, freeze evidence, governed promotion as FROZEN, simultaneous Rule Index transition, v1.0 `SUPERSEDED`; a PROPOSED file on `main` never supersedes | Addressed |
 | F2 Full vs partial | Full-document successor (header, §1, §16.1.3); "sections 6.3 and 13 only" removed; all v1.0 rules carried forward | Addressed |
-| F3 Approval evidence | Header placeholders; §16.2-16.3 distinguish GOV-V1 binding rules from GOV-V1.1 recommendations | Addressed (evidence itself deferred) |
+| F3 Approval evidence | Header placeholders; §16.2 assigns each item a process phase (`PRE_PROMOTION_READINESS`, `GOVERNED_TRANSITION_ACTION`, `POST_TRANSITION_EVIDENCE`) and §16.2-16.3 categorize each requirement as `GOV-V1_BINDING`, `DERIVED_FROM_GOV_V1`, `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` or `V1_1_FUTURE_BINDING_RULE` | Addressed (evidence itself deferred) |
 | F4 Required metadata | §5 restores "Required metadata" with the verbatim v1.0 list | Addressed |
 | F5 Isolation scope | §6.7 documents the intentional clarification; snapshot defined as cross-context user-state provenance | Addressed |
 | F6 Retained material | §§2-5, 8-15 carry forward v1.0 §§2-13 incl. examples and the material-amendment clause (see §5 table) | Addressed |
