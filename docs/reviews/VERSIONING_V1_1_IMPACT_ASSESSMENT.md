@@ -98,7 +98,7 @@ These are not defects of the classifications above; they must be handled in the 
 
 | # | Dependency | Handling |
 |---|---|---|
-| D1 | v1.1 §7.3 references `CANONICAL_DATA_MODEL_V1.md` (PROPOSED) for canonical identity/mapping, and the typed vocabulary is mirrored in proposed `DATA_CONTEXT_MODEL_V1.md` | A PROPOSED document is not Production-authoritative. The freeze review must either sequence the freeze after the referenced canonical authority is FROZEN or explicitly decide the reference treatment |
+| D1 | v1.1 §7.3 and §7.5 reference `CANONICAL_DATA_MODEL_V1.md` (PROPOSED) for canonical identity/mapping and field names, and the typed vocabulary is mirrored in proposed `DATA_CONTEXT_MODEL_V1.md` | Dispositioned at proposal level by owner selection V11-PF-02 (§7): the references are non-binding forward references with a strict fail-closed interim contract defined in v1.1 §7.3, so the v1.1 freeze is not sequenced after the Canonical Data Model. Its own freeze must reconcile with the then-FROZEN v1.1 (its freeze list L1024 already requires Versioning reconciliation) |
 | D2 | project_owner approval and freeze-transition evidence (v1.1 §16.2) | Future governed task |
 | D3 | Rule Index transition at freeze (v1.1 §16.4) | Future change set, same as D2 |
 
@@ -144,8 +144,72 @@ These are not defects of the classifications above; they must be handled in the 
 ## 6. Deferred after this change set
 
 - project_owner approval, freeze-transition change set, `SUPERSEDED` marking of v1.0, R3 closure and predecessor-file treatment (v1.1 §16).
-- Resolution of D1 (canonical authority is still PROPOSED).
+- Canonical Data Model freeze and its reconciliation with the then-FROZEN v1.1 (D1 dispositioned at proposal level by V11-PF-02; the canonical authority is still PROPOSED).
 - Freeze-time Rule Index/reference updates for `PERSISTENCE_PROVENANCE_V1.md`, `GAME_WIPE_MODEL_V1.md` (including the mandatory L193 disposition in §2.2), `FLEET_DATA_MODEL_V1.md` (including the mandatory L207 disposition in §2.5) and `VECTOR_VERSIONING_V1.md`.
 - Approval of `VECTOR_GOVERNANCE_V1_1.md` (R1) and its formalization of approval-evidence rules.
 - Code implementation of snapshot/provenance storage and the visible `PTU_PREVIEW` label.
 - Intentional: the German `DATA_CONTEXT_MODEL_V1.md` and the English v1.1 retain their own languages.
+
+## 7. Owner decisions (non-normative evidence)
+
+This section records design directions selected by the repository owner on 2026-10-30 for the remaining pre-freeze questions. The records are evidence only. They are not project-owner freeze approval, not approval of any future freeze-transition change set, not promotion authorization, not resolution of R3 and not activation of supersession. The repository does not identify the holder of the `project_owner` role, so each freeze-transition approver is recorded as `TO_BE_RECORDED`. The status values in this section are evidence-only values within this impact assessment; they are not Rule Index statuses, document lifecycle states or Governance approval states. `OWNER_SELECTED` means the repository owner selected the design direction. `IMPLEMENTED_PENDING_REVIEW` means the selected direction is reflected in the current PROPOSED repository text but has not yet passed a fresh review covering the implementation. `NOT_EXECUTED` means no governed freeze-transition action, lifecycle promotion, R3 resolution or supersession activation has occurred.
+
+### V11-PF-01
+
+| Field | Value |
+|---|---|
+| Decision ID | V11-PF-01 |
+| Question | Must `DATA_CONTEXT_MODEL_V1.md` be frozen together with `VECTOR_VERSIONING_V1_1.md`? |
+| Selected option | 1B: v1.1 is prepared for freeze before the Data Context Model, which stays `PROPOSED` |
+| Rationale | v1.1 is internally complete for the R3 boundary and does not normatively depend on the Data Context Model. The governed promotion of v1.1 is the incorporation event for the R3 boundary |
+| Authority basis | Governance v1 §5.6; Rule Index §3 rule 4; review record L108; Rule Index L79 and L182 (PROPOSED). The selection carries no Production authority |
+| Affected documents | `VECTOR_VERSIONING_V1_1.md`; `DATA_CONTEXT_MODEL_V1.md`; `RULE_INDEX.md`; this record |
+| Required follow-up | Reconcile the Data Context Model with the then-FROZEN v1.1 before its own freeze and update its "vorgeschlagenen" wording (L70, L134) at that time |
+| Owner selection | Confirmed by repository owner on 2026-10-30 |
+| Owner selection evidence | Repository-owner instruction dated 2026-10-30 |
+| Freeze-transition approver | TO_BE_RECORDED for the governed freeze-transition change set |
+| Evidence | Decision brief at head `e03ec30`; implementation in the PROPOSED text of the change set that adds this section, not yet reviewed |
+| Date | 2026-10-30 |
+| Owner decision status | OWNER_SELECTED |
+| Proposal implementation status | IMPLEMENTED_PENDING_REVIEW |
+| Freeze-transition status | NOT_EXECUTED |
+
+### V11-PF-02
+
+| Field | Value |
+|---|---|
+| Decision ID | V11-PF-02 |
+| Question | How is D1, the dependency on the `PROPOSED` `CANONICAL_DATA_MODEL_V1.md`, dispositioned? |
+| Selected option | 2C with a strict fail-closed interim contract |
+| Rationale | R3 concerns the preview boundary, not canonical identity. Safety is preserved or strengthened; nothing is weakened to allow an earlier freeze |
+| Authority basis | `PERSISTENCE_PROVENANCE_V1.md` §3 L39-43 (FROZEN); FROZEN forward-reference precedent in `VECTOR_VERSIONING_V1.md` L183 and `FLEET_DATA_MODEL_V1.md` L223; Rule Index §3 rule 4 |
+| Affected documents | `VECTOR_VERSIONING_V1_1.md` §7.3 and §7.5; this record. `CANONICAL_DATA_MODEL_V1.md` is unchanged |
+| Required follow-up | The Canonical Data Model's own freeze must reconcile with the then-FROZEN v1.1 |
+| Owner selection | Confirmed by repository owner on 2026-10-30 |
+| Owner selection evidence | Repository-owner instruction dated 2026-10-30 |
+| Freeze-transition approver | TO_BE_RECORDED for the governed freeze-transition change set |
+| Evidence | Decision brief at head `e03ec30`; implementation in the PROPOSED text of the change set that adds this section, not yet reviewed |
+| Date | 2026-10-30 |
+| Owner decision status | OWNER_SELECTED |
+| Proposal implementation status | IMPLEMENTED_PENDING_REVIEW |
+| Freeze-transition status | NOT_EXECUTED |
+
+### V11-PF-03
+
+| Field | Value |
+|---|---|
+| Decision ID | V11-PF-03 |
+| Question | What is the formal closed-state value for R3? |
+| Selected option | 3A: `RESOLVED` |
+| Rationale | It is the only existing candidate; the proposed Governance v1.1 uses it for R1 and v1.1 uses "resolved" for R3 |
+| Authority basis | Proposed `VECTOR_GOVERNANCE_V1_1.md` L448 and §5.6 as precedent only (PROPOSED); Rule Index §11 and L57 |
+| Affected documents | `RULE_INDEX.md` R3 row; `VECTOR_VERSIONING_V1_1.md` §16.4; this record |
+| Required follow-up | R3 changes from `OPEN` to `RESOLVED` only within the governed freeze-transition change set that promotes v1.1 as FROZEN on `main`, updates the Rule Index in the same change set, records approval and transition evidence, and completes successfully. R3 remains `OPEN` throughout the draft PR and all pre-promotion preparation |
+| Owner selection | Confirmed by repository owner on 2026-10-30 |
+| Owner selection evidence | Repository-owner instruction dated 2026-10-30 |
+| Freeze-transition approver | TO_BE_RECORDED for the governed freeze-transition change set; whoever authorizes that change set authorizes the R3 transition, with the approval PR as durable evidence |
+| Evidence | Decision brief at head `e03ec30`; implementation in the PROPOSED text of the change set that adds this section, not yet reviewed |
+| Date | 2026-10-30 |
+| Owner decision status | OWNER_SELECTED |
+| Proposal implementation status | IMPLEMENTED_PENDING_REVIEW |
+| Freeze-transition status | NOT_EXECUTED |

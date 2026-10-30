@@ -274,12 +274,23 @@ A reference-only PTU Preview does not consume Production User State. It uses `PT
 
 ### 7.3 Cross-channel canonical entity mapping
 
-Mapping an asset recorded in Production User State to a canonical entity represented in the PTU Dataset Context follows the identity and resolution rules of `CANONICAL_DATA_MODEL_V1.md`. This specification does not define or redefine canonical identity rules.
+Mapping an asset recorded in Production User State to a canonical entity represented in the PTU Dataset Context follows the identity and resolution rules of the canonical data model authority. `CANONICAL_DATA_MODEL_V1.md` is currently PROPOSED, so references to it in this specification are non-binding forward references until it is FROZEN. This specification does not define or redefine the canonical identity model.
+
+Until a FROZEN canonical data model authority exists, the following interim contract applies to a `PTU_PREVIEW_EVALUATION`:
+
+- internal VECTOR identifiers and deterministic mappings remain governed by the applicable FROZEN rules (`PERSISTENCE_PROVENANCE_V1.md` §3);
+- uncertain external identity matches are never guessed;
+- non-deterministic or ambiguous mappings remain unresolved and require review;
+- `SOURCE_DATA_MISSING` and `REVIEW_REQUIRED` are used in this specification with the meanings given below, for its own PTU Preview resolution contract; a future FROZEN canonical data model authority may define them more broadly but must preserve this fail-closed behavior;
+- no LIVE reference data is substituted for a PTU representation; and
+- mapping and resolution provenance is required (§7.5).
+
+Any later canonical authority used by this specification must preserve at least the fail-closed safety guarantees required here. Adopting weaker behavior requires a governed successor or amendment to this specification before that behavior may be used.
 
 Fail-closed behavior for a `PTU_PREVIEW_EVALUATION`:
 
-1. If the canonical entity has no representation in the PTU Dataset Context, no LIVE reference data is substituted. The entity is treated as unresolved under the applicable canonical unresolved state (for example `SOURCE_DATA_MISSING`) and the dependent result is not valid.
-2. If identity is ambiguous or evidence is contradictory, the outcome is `REVIEW_REQUIRED` (or the applicable canonical unresolved/quarantine state). The mapping is not guessed.
+1. If the canonical entity has no representation in the PTU Dataset Context, or required source data is missing, no LIVE reference data is substituted. The mapping outcome is `SOURCE_DATA_MISSING`: for this specification it means that the required PTU representation or source data is absent, and the dependent result is not valid.
+2. If identity is ambiguous, non-deterministic or evidence is contradictory, the mapping outcome is `REVIEW_REQUIRED`: for this specification it means that the mapping is unresolved and must be reviewed before it is used. The mapping is not guessed. A canonical authority may define a stricter unresolved or quarantine outcome, which then also satisfies this item.
 3. Mapping provenance is preserved: every canonical entity mapping used is recorded with its outcome and evidence reference (§7.5).
 
 ### 7.4 No-Guess consequence for previews
@@ -288,7 +299,7 @@ A `PTU_PREVIEW_EVALUATION` with missing required inputs receives an explicit inc
 
 ### 7.5 Mandatory result and snapshot provenance
 
-Every persisted `PTU_PREVIEW_EVALUATION` result, and every such result presented externally (UI, API or export), must carry the following provenance. Names reuse existing VECTOR authorities where they exist (`dataset_revision_id`, `channel`, `sc_build`, `resolver_version`, `taxonomy_version` from `CANONICAL_DATA_MODEL_V1.md`; `vector_version`, `release_sc_build`, `*_dataset_revision`, `*_source_revision` from §5).
+Every persisted `PTU_PREVIEW_EVALUATION` result, and every such result presented externally (UI, API or export), must carry the following provenance. The field names below are required by this specification. The names `dataset_revision_id`, `channel`, `sc_build`, `resolver_version` and `taxonomy_version` are intended to match the proposed `CANONICAL_DATA_MODEL_V1.md`, which is currently PROPOSED, so that reference is a non-binding forward reference until that document is FROZEN; the names `vector_version`, `release_sc_build`, `*_dataset_revision` and `*_source_revision` come from §5. Any later alignment must preserve at least the provenance required here; weaker provenance requires a governed successor or amendment to this specification.
 
 ```text
 result_context                 RESULT_CONTEXT_PTU_PREVIEW
@@ -572,7 +583,7 @@ Items categorized `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` are recorded acceptance 
 
 ### 16.4 Required Rule Index transition
 
-At the freeze transition, `docs/RULE_INDEX.md` must, in the same change set: list v1.1 with its new lifecycle state; list v1.0 as `SUPERSEDED` with v1.1 as its replacement; record the disposition of R3 as determined by the then-binding Governance; and update the dependent-specification references (§16.5). Until then, the Rule Index lists v1.0 as `FROZEN`, v1.1 as `PROPOSED`, R2 as `IN_PROGRESS` and R3 as `OPEN`.
+At the freeze transition, `docs/RULE_INDEX.md` must, in the same change set: list v1.1 with its new lifecycle state; list v1.0 as `SUPERSEDED` with v1.1 as its replacement; set R3 to `RESOLVED`, only in that same change set and only on successful completion of the governed transition (R3 remains `OPEN` until then); and update the dependent-specification references (§16.5). Until then, the Rule Index lists v1.0 as `FROZEN`, v1.1 as `PROPOSED`, R2 as `IN_PROGRESS` and R3 as `OPEN`.
 
 ### 16.5 Dependent specifications
 

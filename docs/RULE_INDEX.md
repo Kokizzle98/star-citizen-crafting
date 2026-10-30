@@ -76,7 +76,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | Specification | Intended authority scope | Status | Freeze blockers / next action |
 |---|---|---|---|
 | `VECTOR_GOVERNANCE_V1_1.md` | Global governance, lifecycle, rule authority and FROZEN conflict resolution | `PROPOSED` | Successor to `VECTOR_GOVERNANCE_V1.md` v1.0; required to resolve R1 |
-| `DATA_CONTEXT_MODEL_V1.md` | Build classification, LIVE/PTU dataset contexts, Production User State, PTU Preview, epochs | `PROPOSED` | Align its PTU Preview model with proposed `VECTOR_VERSIONING_V1_1.md` and applicable FROZEN specifications; proposals do not resolve R3 |
+| `DATA_CONTEXT_MODEL_V1.md` | Build classification, LIVE/PTU dataset contexts, Production User State, PTU Preview, epochs | `PROPOSED` | Not a prerequisite for promoting `VECTOR_VERSIONING_V1_1.md`; must be reconciled with the then-FROZEN v1.1 and applicable FROZEN specifications before its own freeze; proposals do not resolve R3 |
 | `DATASET_PIPELINE_V1.md` | `DATASET_PIPELINE` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; align mutable-state boundaries with applicable FROZEN rules before freeze |
 | `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; complete remaining cross-spec alignment before freeze |
 | `VECTOR_VERSIONING_V1_1.md` | `VERSIONING` | `PROPOSED` | Full-document successor proposal to v1.0; supersession NOT EFFECTIVE until approval, freeze-transition evidence, simultaneous Rule Index transition and governed promotion to `main` as FROZEN. A PROPOSED file on `main` never supersedes v1.0. R3 remains open. See `reviews/VERSIONING_V1_1_IMPACT_ASSESSMENT.md` |
@@ -179,7 +179,7 @@ A concise repository-root `AGENTS.md` should later point contributors and coding
 |---|---|---|
 | R1 deterministic FROZEN precedence | `IN_PROGRESS` | `RULE_INDEX.md` + `VECTOR_GOVERNANCE_V1_1.md`; resolved only after approval/freeze |
 | R2 absent referenced policies | `IN_PROGRESS` | `RULE_INDEX.md` planned registry + later dedicated specs |
-| R3 LIVE/PTU preview boundary | `OPEN` | `VECTOR_VERSIONING_V1_1.md` full-document successor proposal + `DATA_CONTEXT_MODEL_V1.md`; approval, freeze-transition evidence and governed promotion to `main` as FROZEN (with simultaneous Rule Index transition) required; remains `OPEN` until then |
+| R3 LIVE/PTU preview boundary | `OPEN` | `VECTOR_VERSIONING_V1_1.md` full-document successor proposal; its governed promotion as FROZEN on `main` is the incorporation event for the boundary. `DATA_CONTEXT_MODEL_V1.md` follows and must be reconciled with the then-FROZEN v1.1 before its own freeze. R3 becomes `RESOLVED` only within the freeze-transition change set that promotes v1.1, updates this index in the same change set and records approval and transition evidence; it remains `OPEN` until then |
 | R4 migration gates and paths | `OPEN` | `MIGRATION_TEST_CONTRACT_V1.md` + README/repository layout |
 | R5 freeze lifecycle / ADR location | `OPEN` | `VECTOR_GOVERNANCE_V1.md` |
 | R6 contributor/agent entry point | `OPEN` | repository-root `AGENTS.md` |

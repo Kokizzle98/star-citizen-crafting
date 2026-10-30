@@ -385,6 +385,7 @@ Vor FROZEN sind insbesondere abzugleichen:
 - bestehende Formulierungen in `PERSISTENCE_PROVENANCE_V1.md`;
 - bestehende Formulierungen in `GAME_WIPE_MODEL_V1.md`;
 - bestehende Dataset-Isolation in `VECTOR_VERSIONING_V1.md` und relevanten UX-Spezifikationen;
+- das dann FROZEN `VECTOR_VERSIONING_V1_1.md` (PTU-Preview-Begriffe, Snapshot-Vertrag und Provenienz);
 - die modernisierte Provider-Architecture-Nachfolgeentscheidung.
 
 Ziel der v1 ist ausdruecklich ein schlankes Modell: volle Unterstuetzung fuer LIVE/PTU-Datasets, produktiver User State ohne PTU-Duplikationspflicht und sichere Kenntnis weiterer Build Channels fuer spaetere Watcher-/Provenienzfaelle.
