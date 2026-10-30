@@ -27,7 +27,7 @@ This governed freeze-transition copy becomes authoritative only upon successful 
 - supersedes Versioning v1.0 in full and atomically;
 - shares no authority with v1.0 after effectiveness. There is no partial or sectional supersession and no state in which both versions are binding.
 
-Do not treat this document as a Production-authoritative rule.
+Until this change set is successfully merged to `main`, do not treat this document as a Production-authoritative rule.
 
 ## 2. Canonical Internal Identifier
 

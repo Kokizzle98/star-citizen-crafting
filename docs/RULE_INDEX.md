@@ -105,7 +105,7 @@ Global invariants are cross-domain constraints. Their authoritative definition m
 | Invariant | Current authority | Scope |
 |---|---|---|
 | FROZEN governance / Production authority | `VECTOR_GOVERNANCE_V1.md` | Global |
-| LIVE/PTU dataset isolation | `VECTOR_VERSIONING_V1.md` | All dataset-derived values and calculations |
+| LIVE/PTU dataset isolation | `VECTOR_VERSIONING_V1_1.md` | All dataset-derived values and calculations |
 | Provenance preservation | `PERSISTENCE_PROVENANCE_V1.md` | Imported/derived/user-state provenance as applicable |
 | No-guess behavior | Distributed across current FROZEN rules; consolidation planned | Missing/uncertain source, location, identity, resolver and channel decisions |
 | Critical-action fail-closed behavior | `PLATFORM_CRITICAL_ACTIONS_V1.md` | Platform-critical destructive actions |
