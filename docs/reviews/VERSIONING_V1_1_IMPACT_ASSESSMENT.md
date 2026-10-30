@@ -257,7 +257,7 @@ This section records design directions selected by the repository owner on 2026-
 | Owner selection | Confirmed by repository owner on 2026-10-30 |
 | Owner selection evidence | Repository-owner instruction dated 2026-10-30 |
 | Freeze-transition approver | TO_BE_RECORDED for the governed freeze-transition change set |
-| Evidence | Implementation in PROPOSED text (`VECTOR_VERSIONING_V1_1.md` §16.3 and this record); not yet reviewed at the implementing head |
+| Evidence | Max review `5710560897` reviewed head `6429485` and identified the need for human judgment on Governance v1 §5.5. V11-PF-04 was selected and implemented only afterward; commit `2840ad4` contains the implementation (`VECTOR_VERSIONING_V1_1.md` §16.3 and this record). Review `5710560897` therefore does not review or validate that implementation, and no earlier review is retroactive evidence. A fresh review of an implementing head is required before this record may become `IMPLEMENTED_REVIEW_PASSED` |
 | Date | 2026-10-30 |
 | Owner decision status | OWNER_SELECTED |
 | Proposal implementation status | IMPLEMENTED_PENDING_REVIEW |
