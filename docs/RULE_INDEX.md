@@ -63,7 +63,8 @@ The following registry reflects the current known VECTOR rule set and must be re
 | Specification | Authority scope | Status | Notes / dependencies |
 |---|---|---|---|
 | `VECTOR_GOVERNANCE_V1.md` | Global governance, rule lifecycle, repository/release authority | `FROZEN` | Current Production authority; proposed successor: `VECTOR_GOVERNANCE_V1_1.md` |
-| `VECTOR_VERSIONING_V1.md` | VECTOR version, SC build and dataset versioning/isolation | `FROZEN` | Current and sole binding VERSIONING authority; PTU Preview boundary remains unresolved pending governed promotion of proposed `VECTOR_VERSIONING_V1_1.md` |
+| `VECTOR_VERSIONING_V1_1.md` | VECTOR version, SC build and dataset versioning/isolation, typed contexts and PTU Preview boundary | `FROZEN` | Sole binding VERSIONING authority after successful governed merge of the freeze-transition change set to `main`; full-document successor to v1.0 |
+| `VECTOR_VERSIONING_V1.md` | Historical VECTOR version, SC build and dataset versioning/isolation authority | `SUPERSEDED` | Superseded in full by `VECTOR_VERSIONING_V1_1.md`; predecessor file remains physically unchanged for historical traceability |
 | `INVENTORY_UX_V1.md` | Personal Inventory UX and interaction behavior | `FROZEN` | Uses current location, keyboard and dataset-context invariants |
 | `FLEET_DATA_MODEL_V1.md` | User ship identity, ownership and fleet data semantics | `FROZEN` | Fleet planning remains separately specified/planned |
 | `PERSISTENCE_PROVENANCE_V1.md` | Persistence classes, provenance and game-state history | `FROZEN` | Requires alignment with proposed Data Context Model before that proposal can freeze |
@@ -79,7 +80,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `DATA_CONTEXT_MODEL_V1.md` | Build classification, LIVE/PTU dataset contexts, Production User State, PTU Preview, epochs | `PROPOSED` | Not a prerequisite for promoting `VECTOR_VERSIONING_V1_1.md`; must be reconciled with the then-FROZEN v1.1 and applicable FROZEN specifications before its own freeze; proposals do not resolve R3 |
 | `DATASET_PIPELINE_V1.md` | `DATASET_PIPELINE` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; align mutable-state boundaries with applicable FROZEN rules before freeze |
 | `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; complete remaining cross-spec alignment before freeze |
-| `VECTOR_VERSIONING_V1_1.md` | `VERSIONING` | `PROPOSED` | Full-document successor proposal to v1.0; supersession NOT EFFECTIVE until approval, freeze-transition evidence, simultaneous Rule Index transition and governed promotion to `main` as FROZEN. A PROPOSED file on `main` never supersedes v1.0. R3 remains open. See `reviews/VERSIONING_V1_1_IMPACT_ASSESSMENT.md` |
+
 | `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile staging requirement with README; bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
 
@@ -126,7 +127,7 @@ PTU Dataset Context (all channel-dependent reference/calculation inputs)
 
 A PTU Preview never mixes LIVE reference data into the PTU calculation, never mutates Production User State, never asserts PTU-native state, and never treats Production ownership as PTU ownership, inventory, wallet or reputation. Provenance of both the PTU dataset revision and the Production User State snapshot must be preserved.
 
-The complete normative boundary is defined only in `VECTOR_VERSIONING_V1_1.md` (PROPOSED); `DATA_CONTEXT_MODEL_V1.md` describes the v1 state model. Neither proposal overrides FROZEN v1.0. `VECTOR_VERSIONING_V1_1.md` is a full-document successor; supersession becomes effective only after documented `project_owner` approval, freeze-transition evidence, a simultaneous Rule Index transition and governed promotion to `main` as FROZEN. R3 remains open until then. Dependent-specification impact is recorded in `reviews/VERSIONING_V1_1_IMPACT_ASSESSMENT.md`.
+The complete normative boundary is defined in FROZEN `VECTOR_VERSIONING_V1_1.md`. `DATA_CONTEXT_MODEL_V1.md` remains PROPOSED and does not override the FROZEN Versioning authority. Versioning v1.1 is the full-document successor to Versioning v1.0; v1.0 is registered as `SUPERSEDED`, R3 is `RESOLVED`, and dependent-specification transition evidence is recorded in `reviews/VERSIONING_V1_1_IMPACT_ASSESSMENT.md`.
 
 ## 10. Historical and review records
 
@@ -179,7 +180,7 @@ A concise repository-root `AGENTS.md` should later point contributors and coding
 |---|---|---|
 | R1 deterministic FROZEN precedence | `IN_PROGRESS` | `RULE_INDEX.md` + `VECTOR_GOVERNANCE_V1_1.md`; resolved only after approval/freeze |
 | R2 absent referenced policies | `IN_PROGRESS` | `RULE_INDEX.md` planned registry + later dedicated specs |
-| R3 LIVE/PTU preview boundary | `OPEN` | `VECTOR_VERSIONING_V1_1.md` full-document successor proposal; its governed promotion as FROZEN on `main` is the incorporation event for the boundary. `DATA_CONTEXT_MODEL_V1.md` follows and must be reconciled with the then-FROZEN v1.1 before its own freeze. R3 becomes `RESOLVED` only within the freeze-transition change set that promotes v1.1, updates this index in the same change set and records approval and transition evidence; it remains `OPEN` until then |
+| R3 LIVE/PTU preview boundary | `RESOLVED` | Resolved by the governed full-document promotion of `VECTOR_VERSIONING_V1_1.md` as FROZEN and the simultaneous supersession registration of v1.0. `DATA_CONTEXT_MODEL_V1.md` remains PROPOSED and must reconcile with FROZEN v1.1 before its own freeze |
 | R4 migration gates and paths | `OPEN` | `MIGRATION_TEST_CONTRACT_V1.md` + README/repository layout |
 | R5 freeze lifecycle / ADR location | `OPEN` | `VECTOR_GOVERNANCE_V1.md` |
 | R6 contributor/agent entry point | `OPEN` | repository-root `AGENTS.md` |

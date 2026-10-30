@@ -204,7 +204,7 @@ Binding rules:
 - no LIVE/PTU cross-channel fallback is permitted;
 - changing `LIVE | PTU` changes the dataset context for fleet catalog/master-data derived information;
 - missing data in the active channel is handled by the Completeness Filter;
-- the canonical VECTOR release identifier still references the approved LIVE build according to VECTOR Versioning v1.
+- the canonical VECTOR release identifier still references the approved LIVE build according to VECTOR Versioning v1.1.
 
 A concrete user-owned ship remains a user asset; changing the dataset channel does not create a second owned ship. Dataset-dependent interpretation of that ship may differ by channel/build.
 

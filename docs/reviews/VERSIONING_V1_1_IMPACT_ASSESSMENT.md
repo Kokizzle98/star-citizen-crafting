@@ -262,3 +262,17 @@ This section records design directions selected by the repository owner on 2026-
 | Owner decision status | OWNER_SELECTED |
 | Proposal implementation status | IMPLEMENTED_REVIEW_PASSED |
 | Freeze-transition status | NOT_EXECUTED |
+
+## Governed freeze-transition approval
+
+- **Owner approval:** Approved by the repository owner on 2026-10-30.
+- **Approved transition:** Full-document promotion of `VECTOR_VERSIONING_V1_1.md` v1.1 to FROZEN.
+- **Predecessor disposition:** `VECTOR_VERSIONING_V1.md` v1.0 remains physically unchanged and is registered as `SUPERSEDED` in `RULE_INDEX.md`.
+- **Supersession scope:** Full document, atomic.
+- **R3 disposition:** `RESOLVED` upon successful completion of the governed transition.
+- **Dependent references:** `PERSISTENCE_PROVENANCE_V1.md`, `GAME_WIPE_MODEL_V1.md` and `FLEET_DATA_MODEL_V1.md` are updated to reference Versioning v1.1 in this same change set.
+- **V11-PF-01 through V11-PF-04:** Owner decisions remain unchanged.
+- **ADR disposition:** No ADR is required for this promotion under V11-PF-04.
+- **Unchanged proposals:** `DATA_CONTEXT_MODEL_V1.md`, `CANONICAL_DATA_MODEL_V1.md` and `DATASET_PIPELINE_V1.md` remain `PROPOSED`.
+- **Effectiveness condition:** FROZEN authority, supersession and R3 resolution become effective only upon successful governed merge of this atomic transition change set to `main`.
+- **Fail-closed condition:** Before that successful merge, or if the transition fails or is cancelled, Versioning v1.0 remains authoritative, supersession remains ineffective and R3 remains open.

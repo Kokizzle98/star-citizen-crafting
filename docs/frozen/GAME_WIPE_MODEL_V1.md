@@ -190,7 +190,7 @@ Wipe interpretation is build-aware but must respect VECTOR dataset isolation.
 - Target/default master data used during reset/recalculation comes from exactly one applicable dataset context.
 - A missing value in one channel must not fall back to another channel.
 - Completeness rules apply before build-derived defaults or calculations are treated as valid.
-- The canonical VECTOR release identifier continues to reference the approved LIVE build according to `VECTOR_VERSIONING_V1.md`.
+- The canonical VECTOR release identifier continues to reference the approved LIVE build according to `VECTOR_VERSIONING_V1_1.md`.
 
 ## 11. Dry run
 
