@@ -220,6 +220,14 @@ The current checkpoint lives in `docs/handover/VECTOR_RESTART_HANDOVER.md`. This
 
 Avoid checkpoint churn.
 
+Anchor rotation policy:
+
+- Recovery checkpoints use a checkpoint-local anchor, not a permanent project anchor.
+- Allowed work-package paths define the permitted delta after that anchor.
+- The anchor and allowed paths must be rotated together, with branch, work package, state expectations and `NEXT STEP`, when a new material checkpoint begins.
+- An anchor is rotated only after the new base state is verified.
+- Routine commits inside the same allowed work-package scope do not rotate the anchor.
+
 ## 13. Recovery and drift handling
 
 See `docs/handover/VECTOR_RESTART_HANDOVER.md`.
@@ -228,6 +236,10 @@ See `docs/handover/VECTOR_RESTART_HANDOVER.md`.
 - Chat replay is not the primary mechanism.
 - Drift detection is mandatory before continuing.
 - Never resolve drift by assumption.
+- Recovery is compatible when the expected branch matches, the anchor is an ancestor of HEAD, the anchor-to-HEAD delta stays inside the allowed paths, and working-tree, remote and PR state match.
+- Later commits inside the same allowed work-package scope do not automatically cause drift.
+- An unexpected path, branch or state mismatch causes drift.
+- Storing an exact expected HEAD in the handover is normally avoided because a handover commit would self-invalidate it. An exact HEAD may be recorded as historical evidence, but the operational recovery invariant remains anchor plus allowed delta.
 
 ## 14. AI Usage Baseline: 2026-10-29 to 2026-10-30
 

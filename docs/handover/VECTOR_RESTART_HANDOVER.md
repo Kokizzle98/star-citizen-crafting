@@ -14,8 +14,15 @@ This document is operational and non-normative.
 - Work package: `Restart Safety + AI Efficiency v1`
 - Branch: `docs/restart-safety-ai-efficiency-v1`
 - Base: `develop`
-- Branch baseline: `c768aa6`
+- Expected anchor commit: `c768aa6`
 - Working-tree expectation at work-package start: `CLEAN`
+
+Allowed active-work-package paths:
+
+- `docs/handover/VECTOR_RESTART_HANDOVER.md`
+- `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`
+
+The expected anchor is intentionally not an exact expected HEAD. Later work-package commits may advance HEAD. HEAD remains compatible only when the anchor is an ancestor of HEAD and the complete anchor-to-HEAD delta is limited to the allowed paths. Any unexpected changed path produces `RECOVERY_STATE = DRIFT_DETECTED`. The anchor and the allowed path set are local to the current checkpoint.
 
 ### Previous stable Versioning checkpoint
 
@@ -117,13 +124,15 @@ Out of scope:
 4. Verify the current repository root.
 5. Run `git status --short`.
 6. Run `git branch --show-current`.
-7. Run `git rev-parse --short HEAD`.
+7. Run `git rev-parse --short HEAD` (informational; HEAD is not compared literally).
 8. Run `git fetch origin`.
-9. Compare the expected branch and HEAD with the actual state.
-10. Verify upstream/remote state when applicable.
-11. If an active PR is referenced, verify PR head, draft state and checks.
-12. Compare EXPECTED versus ACTUAL.
-13. Produce exactly one recovery result:
+9. Verify the expected branch against the actual branch.
+10. Run `git merge-base --is-ancestor c768aa6 HEAD` and require exit code `0`.
+11. Run `git diff --name-only c768aa6 HEAD` and compare every returned path against the allowed active-work-package path set. Treat any unexpected path as `RECOVERY_STATE = DRIFT_DETECTED`.
+12. Verify the working-tree expectation.
+13. Verify upstream and remote state when applicable.
+14. Verify active PR head, draft state and checks when applicable.
+15. Produce exactly one recovery result:
 
 `RECOVERY_STATE = MATCH`
 
@@ -133,19 +142,39 @@ or
 
 ### MATCH behavior
 
-When all relevant state matches:
+`RECOVERY_STATE = MATCH` requires all applicable invariants to pass:
+
+- expected branch matches;
+- the anchor is an ancestor of HEAD;
+- every changed path between the anchor and HEAD is in the allowed path set;
+- the working tree matches the checkpoint expectation;
+- applicable upstream, remote and PR state matches the checkpoint.
+
+When MATCH:
 
 - do not reconstruct old chat history;
 - continue directly at `NEXT STEP`.
 
 ### DRIFT_DETECTED behavior
 
-When any material state differs:
+`RECOVERY_STATE = DRIFT_DETECTED` includes at least:
+
+- wrong branch;
+- anchor is not an ancestor of HEAD;
+- unexpected changed path after the anchor;
+- unexpected dirty working tree;
+- material upstream or remote mismatch;
+- material active-PR mismatch.
+
+Later commits alone are not drift when the anchor remains an ancestor and the complete delta stays inside the allowed path set.
+
+When drift is detected:
 
 - STOP;
 - show expected versus actual;
 - do not guess which state is correct;
-- reconstruct only the delta necessary to explain the drift;
+- reconstruct only the delta necessary to explain the mismatch;
+- do not continue at `NEXT STEP` until the drift is reconciled;
 - update the handover only after the actual state has been reconciled.
 
 ## 8. CHECKPOINT POLICY
@@ -172,6 +201,37 @@ When any material state differs:
 - trivial mechanical commit without a state transition.
 
 Avoid checkpoint churn.
+
+### Anchor rotation
+
+`expected_anchor_commit` identifies the verified starting point of the current checkpoint or active work package. It is checkpoint-local, not a permanent project anchor.
+
+Every new checkpoint created because of a material `CHECKPOINT_REQUIRED` transition must update together:
+
+- checkpoint date;
+- active work package;
+- expected branch;
+- expected anchor commit;
+- allowed path set;
+- state expectations;
+- `NEXT STEP`.
+
+These values form one coherent recovery checkpoint and must not be updated independently in a way that creates an inconsistent checkpoint.
+
+- Rotation replaces the old anchor with the verified starting commit of the new checkpoint.
+- Rotation occurs only after the actual repository state has been verified.
+- The old anchor remains available through Git history but is no longer used for active recovery after rotation.
+- A checkpoint must never silently inherit an outdated anchor or allowed path set.
+
+Rotation is required at least when:
+
+- a new major work package starts on another branch;
+- a merge establishes a new stable base;
+- a freeze or lifecycle transition establishes a new verified state;
+- the active work package is completed and another begins;
+- another `CHECKPOINT_REQUIRED` transition materially changes the recovery baseline.
+
+Routine commits and citation-only fixes inside the same work package do not rotate the anchor merely because HEAD advances.
 
 ## 9. AI WORK MODE
 
