@@ -152,7 +152,7 @@ These are not defects of the classifications above; they must be handled in the 
 
 ## 7. Owner decisions (non-normative evidence)
 
-This section records design directions selected by the repository owner on 2026-10-30 for the remaining pre-freeze questions. The records are evidence only. They are not project-owner freeze approval, not approval of any future freeze-transition change set, not promotion authorization, not resolution of R3 and not activation of supersession. The repository does not identify the holder of the `project_owner` role, so each freeze-transition approver is recorded as `TO_BE_RECORDED`. The status values in this section are evidence-only values within this impact assessment; they are not Rule Index statuses, document lifecycle states or Governance approval states. `OWNER_SELECTED` means the repository owner selected the design direction. `IMPLEMENTED_PENDING_REVIEW` means the selected direction is reflected in the current PROPOSED repository text but has not yet passed a fresh review covering the implementation. `NOT_EXECUTED` means no governed freeze-transition action, lifecycle promotion, R3 resolution or supersession activation has occurred.
+This section records design directions selected by the repository owner on 2026-10-30 for the remaining pre-freeze questions. The records are evidence only. They are not project-owner freeze approval, not approval of any future freeze-transition change set, not promotion authorization, not resolution of R3 and not activation of supersession. The repository does not identify the holder of the `project_owner` role, so each freeze-transition approver is recorded as `TO_BE_RECORDED`. The status values in this section are evidence-only values within this impact assessment; they are not Rule Index statuses, document lifecycle states or Governance approval states. `OWNER_SELECTED` means the repository owner selected the design direction. `IMPLEMENTED_REVIEW_PASSED` means the owner-selected direction is reflected in the current PROPOSED repository text, the substantive implementation was reviewed at the exact commit cited in the record's Evidence row, and that review reported no active or open issues. This status is proposal-level evidence only: it is not project-owner freeze approval, does not authorize promotion, does not resolve R3, does not execute supersession and does not change any document lifecycle state. `NOT_EXECUTED` means no governed freeze-transition action, lifecycle promotion, R3 resolution or supersession activation has occurred. The cited review covers the substantive implementation at commit `1e363a2`. A later evidence-only update that records this result does not retroactively alter the scope of that review and must not be represented as reviewed by it. A final review of the complete later PR head may still be requested; its review ID does not need to be added recursively to these records, and the durable evidence remains the implementation commit and its directly associated review.
 
 ### V11-PF-01
 
@@ -168,10 +168,10 @@ This section records design directions selected by the repository owner on 2026-
 | Owner selection | Confirmed by repository owner on 2026-10-30 |
 | Owner selection evidence | Repository-owner instruction dated 2026-10-30 |
 | Freeze-transition approver | TO_BE_RECORDED for the governed freeze-transition change set |
-| Evidence | Decision brief at head `e03ec30`; implementation in the PROPOSED text of the change set that adds this section, not yet reviewed |
+| Evidence | Implementation commit `1e363a2`; Copilot review `5707029494` at that head returned `Approval recommended` (no active review issues block approval; no open issues); normal checks passed; no conflict with `develop`; PR #9 remained Draft. Decision brief at head `e03ec30` |
 | Date | 2026-10-30 |
 | Owner decision status | OWNER_SELECTED |
-| Proposal implementation status | IMPLEMENTED_PENDING_REVIEW |
+| Proposal implementation status | IMPLEMENTED_REVIEW_PASSED |
 | Freeze-transition status | NOT_EXECUTED |
 
 ### V11-PF-02
@@ -188,10 +188,10 @@ This section records design directions selected by the repository owner on 2026-
 | Owner selection | Confirmed by repository owner on 2026-10-30 |
 | Owner selection evidence | Repository-owner instruction dated 2026-10-30 |
 | Freeze-transition approver | TO_BE_RECORDED for the governed freeze-transition change set |
-| Evidence | Decision brief at head `e03ec30`; implementation in the PROPOSED text of the change set that adds this section, not yet reviewed |
+| Evidence | Implementation commit `1e363a2`; Copilot review `5707029494` at that head returned `Approval recommended` (no active review issues block approval; no open issues); normal checks passed; no conflict with `develop`; PR #9 remained Draft. Decision brief at head `e03ec30` |
 | Date | 2026-10-30 |
 | Owner decision status | OWNER_SELECTED |
-| Proposal implementation status | IMPLEMENTED_PENDING_REVIEW |
+| Proposal implementation status | IMPLEMENTED_REVIEW_PASSED |
 | Freeze-transition status | NOT_EXECUTED |
 
 ### V11-PF-03
@@ -208,8 +208,8 @@ This section records design directions selected by the repository owner on 2026-
 | Owner selection | Confirmed by repository owner on 2026-10-30 |
 | Owner selection evidence | Repository-owner instruction dated 2026-10-30 |
 | Freeze-transition approver | TO_BE_RECORDED for the governed freeze-transition change set; whoever authorizes that change set authorizes the R3 transition, with the approval PR as durable evidence |
-| Evidence | Decision brief at head `e03ec30`; implementation in the PROPOSED text of the change set that adds this section, not yet reviewed |
+| Evidence | Implementation commit `1e363a2`; Copilot review `5707029494` at that head returned `Approval recommended` (no active review issues block approval; no open issues); normal checks passed; no conflict with `develop`; PR #9 remained Draft. Decision brief at head `e03ec30` |
 | Date | 2026-10-30 |
 | Owner decision status | OWNER_SELECTED |
-| Proposal implementation status | IMPLEMENTED_PENDING_REVIEW |
+| Proposal implementation status | IMPLEMENTED_REVIEW_PASSED |
 | Freeze-transition status | NOT_EXECUTED |
