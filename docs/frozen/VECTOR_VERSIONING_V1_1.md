@@ -1,33 +1,33 @@
 # VECTOR Versioning v1.1
 
-- **Status:** PROPOSED
+- **Status:** FROZEN
 - **Version:** 1.1
 - **Authority Scope:** VERSIONING
-- **Approved By:** pending project_owner approval
-- **Predecessor:** `VECTOR_VERSIONING_V1.md` v1.0 (FROZEN; remains the sole binding VERSIONING authority until the supersession lifecycle in §16 is completed)
+- **Approved By:** project_owner
+- **Predecessor:** `VECTOR_VERSIONING_V1.md` v1.0 (formerly FROZEN; superseded in full upon successful completion of the governed transition in §16)
 - **Supersedes:** `VECTOR_VERSIONING_V1.md` v1.0 in full, effective only upon completion of §16
 - **Supersession scope:** full document
-- **Supersession state:** NOT EFFECTIVE
-- **Frozen on:** pending
-- **Approval evidence:** pending (see §16.2)
+- **Supersession state:** EFFECTIVE UPON SUCCESSFUL GOVERNED MERGE TO `main`
+- **Frozen on:** 2026-10-30, effective upon successful governed merge to `main`
+- **Approval evidence:** Repository-owner approval recorded on 2026-10-30; transition evidence is retained in the governed freeze-transition change set and pull-request history (see §16.2)
 - **Affected dependent specifications:** see §16.5 and `docs/reviews/VERSIONING_V1_1_IMPACT_ASSESSMENT.md`
-- **Freeze readiness:** not yet approved for freeze; see `docs/RULE_INDEX.md` and the impact assessment for remaining blockers
+- **Freeze readiness:** APPROVED; governed freeze transition approved by the repository owner on 2026-10-30 and effective upon successful governed merge to `main`
 - **Scope:** VECTOR application versioning, Star Citizen build and dataset provenance, typed dataset/user-state/result contexts, LIVE/PTU isolation, PTU Preview boundary and UI presentation
 
 ## 1. Purpose and authority
 
-This specification is a proposed **complete, full-document successor** to the FROZEN VECTOR Versioning v1.0. It carries forward every still-valid v1.0 rule (§§2-5 and §§8-14) and adds the typed context model and the PTU Preview boundary (§§6-7), so that after a governed promotion exactly one VERSIONING document is authoritative.
+This specification is the **complete, full-document successor** to VECTOR Versioning v1.0. It carries forward every still-valid v1.0 rule (§§2-5 and §§8-14) and adds the typed context model and the PTU Preview boundary (§§6-7), so that after a governed promotion exactly one VERSIONING document is authoritative.
 
 Once effective, this document defines the binding versioning model for VECTOR. It separates application evolution from Star Citizen dataset evolution while retaining a reproducible relationship between a VECTOR release and its approved LIVE data baseline.
 
-Until the lifecycle in §16 is complete, `VECTOR_VERSIONING_V1.md` v1.0 is the only binding VERSIONING authority. This PROPOSED document:
+This governed freeze-transition copy becomes authoritative only upon successful merge to `main`. Until that effectiveness condition is met, `VECTOR_VERSIONING_V1.md` v1.0 remains the binding VERSIONING authority. Upon successful completion of §16, this FROZEN document:
 
-- has no binding effect on `develop`, on `main`, or in any deployment;
-- does not resolve R3 and does not authorize behavior that conflicts with a FROZEN rule;
-- does not supersede v1.0, in whole or in part, merely because it exists on `develop` or is merged to `main` as a PROPOSED document;
-- shares no authority with v1.0. There is no partial or sectional supersession.
+- becomes the sole binding VERSIONING authority;
+- resolves R3 through the simultaneously applied Rule Index transition;
+- supersedes Versioning v1.0 in full and atomically;
+- shares no authority with v1.0 after effectiveness. There is no partial or sectional supersession and no state in which both versions are binding.
 
-Do not treat this document as a Production-authoritative rule.
+Until this change set is successfully merged to `main`, do not treat this document as a Production-authoritative rule.
 
 ## 2. Canonical Internal Identifier
 
@@ -485,7 +485,7 @@ Binding rules:
 
 Subject to the lifecycle in §16, VECTOR Versioning v1.1 carries forward the decisions of v1.0, including the GitHub README MAJOR-release documentation rule, and adds the typed context and PTU Preview boundary decisions.
 
-Proposed binding decisions:
+Binding decisions:
 
 - canonical format: `Vector_{VersionNumber}_SC_{LIVEBuild}`;
 - the SC component always references LIVE;
@@ -508,8 +508,8 @@ This section defines the lifecycle only. It does not perform, authorize or pre-a
 
 ### 16.1 Authority until completion
 
-1. `VECTOR_VERSIONING_V1.md` v1.0 remains the sole binding VERSIONING authority until supersession is effective.
-2. This document, while PROPOSED, is non-binding wherever it exists, including after a merge to `develop` or `main` as a PROPOSED document. Such a merge never supersedes v1.0 and never resolves R3.
+1. `VECTOR_VERSIONING_V1.md` v1.0 remains the sole binding VERSIONING authority until this governed change set is successfully merged to `main`; afterward v1.1 is the sole binding VERSIONING authority.
+2. Before completion of the governed freeze transition, this document was non-binding wherever it existed. Its prior presence on `develop` or `main` as a PROPOSED document did not supersede v1.0 or resolve R3.
 3. Supersession is full-document and atomic. At no point are v1.0 and v1.1 both authoritative.
 4. References in this document to supersession becoming effective "upon completion of §16" mean successful completion of the governed freeze transition (§16.2 phase `GOVERNED_TRANSITION_ACTION`, ending with merge into `main`, and §16.4) under the then-binding Governance. Satisfying the `PRE_PROMOTION_READINESS` items does not by itself make the transition effective. This document records its proposed acceptance criteria; evidence shows whether they are met; the then-binding Governance and the authorized approval process decide promotion; and effectiveness follows only from the successful governed transition. If the transition is not approved, is incomplete or fails, v1.0 remains FROZEN and authoritative. This document cannot make itself authoritative by declaring its own criteria complete.
 
@@ -584,7 +584,7 @@ Items categorized `PROPOSAL_LOCAL_ACCEPTANCE_CRITERION` are recorded acceptance 
 
 ### 16.4 Required Rule Index transition
 
-At the freeze transition, `docs/RULE_INDEX.md` must, in the same change set: list v1.1 with its new lifecycle state; list v1.0 as `SUPERSEDED` with v1.1 as its replacement; set R3 to `RESOLVED`, only in that same change set and only on successful completion of the governed transition (R3 remains `OPEN` until then); and update the dependent-specification references (§16.5). Until then, the Rule Index lists v1.0 as `FROZEN`, v1.1 as `PROPOSED`, R2 as `IN_PROGRESS` and R3 as `OPEN`.
+This governed freeze-transition change set updates `docs/RULE_INDEX.md` atomically: v1.1 is listed as `FROZEN`; v1.0 is listed as `SUPERSEDED` with v1.1 as its replacement; R3 is set to `RESOLVED`; and the dependent-specification references are updated (§16.5). These lifecycle changes become effective only upon successful governed merge to `main`. R2 remains `IN_PROGRESS` and is outside this transition scope.
 
 ### 16.5 Dependent specifications
 
@@ -592,4 +592,8 @@ The dependent-specification impact assessment is recorded in `docs/reviews/VERSI
 
 ### 16.6 Predecessor-file treatment
 
-The exact treatment of the predecessor file `VECTOR_VERSIONING_V1.md` (edit, move, annotate or leave in place) at the future freeze transition follows the then-binding Governance and the approved transition plan. This specification does not authorize editing or moving that file, marking v1.0 `SUPERSEDED`, marking v1.1 `FROZEN`, or changing R3 to resolved.
+For this governed freeze transition, `VECTOR_VERSIONING_V1.md` v1.0 remains physically unchanged in `docs/frozen/` for historical traceability. `RULE_INDEX.md` registers v1.0 as `SUPERSEDED` in full by Versioning v1.1.
+
+This disposition becomes effective only upon successful governed merge of this atomic transition change set to `main`. If that merge does not complete successfully, Versioning v1.0 remains the binding authority and the supersession is ineffective.
+
+Any later successor to Versioning v1.1 requires its own governed lifecycle disposition.

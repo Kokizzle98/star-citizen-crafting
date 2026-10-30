@@ -300,10 +300,10 @@ ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,Capsulo,radar_minaimassistdistance
 ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,Capsulo,radar_minaimassistdistance
 ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,Capsulo,radar_maxaimassistdistance
 ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,Capsulo,radar_maxaimassistdistance
-ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,,radar_minaimassistdistance
-ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,,radar_minaimassistdistance
-ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,,radar_maxaimassistdistance
-ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,,radar_maxaimassistdistance
+ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,Lephari,radar_minaimassistdistance
+ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,Lephari,radar_minaimassistdistance
+ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,Lephari,radar_maxaimassistdistance
+ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,Lephari,radar_maxaimassistdistance
 ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,Socoria,radar_minaimassistdistance
 ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,Socoria,radar_minaimassistdistance
 ptu,REVIEW,CRAFT_STAT_BASELINE_MISSING,Socoria,radar_maxaimassistdistance
@@ -810,6 +810,9 @@ ptu,REVIEW,CRAFT_STAT_BASELINE_REVIEW,"Karna ""Brimstone"" Rifle",weapon_recoil_
 ptu,REVIEW,CRAFT_STAT_BASELINE_REVIEW,"Karna ""Alpine Sunset"" Rifle",weapon_recoil_smoothness
 ptu,REVIEW,CRAFT_STAT_BASELINE_REVIEW,"Karna ""Alpine Sunset"" Rifle",weapon_recoil_handling
 ptu,REVIEW,CRAFT_STAT_BASELINE_REVIEW,"Karna ""Alpine Sunset"" Rifle",weapon_recoil_kick
+ptu,REVIEW,CRAFT_STAT_BASELINE_REVIEW,"Skarnov ""Raider Camo"" Rifle",weapon_recoil_smoothness
+ptu,REVIEW,CRAFT_STAT_BASELINE_REVIEW,"Skarnov ""Raider Camo"" Rifle",weapon_recoil_handling
+ptu,REVIEW,CRAFT_STAT_BASELINE_REVIEW,"Skarnov ""Raider Camo"" Rifle",weapon_recoil_kick
 ptu,REVIEW,CRAFT_STAT_BASELINE_REVIEW,Killshot Rifle,weapon_recoil_smoothness
 ptu,REVIEW,CRAFT_STAT_BASELINE_REVIEW,Killshot Rifle,weapon_recoil_handling
 ptu,REVIEW,CRAFT_STAT_BASELINE_REVIEW,Killshot Rifle,weapon_recoil_kick

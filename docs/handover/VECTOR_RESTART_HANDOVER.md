@@ -11,23 +11,24 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Restart Safety + AI Efficiency v1`
-- Branch: `docs/restart-safety-ai-efficiency-v1`
-- Base: `develop`
+- Work package: `VECTOR Versioning v1.1 Freeze Transition`
+- Branch: `docs/versioning-v1-1-freeze-transition`
+- Base: `main`
 - Checkpoint date: `2026-10-30`
-- Work-package base (historical): `c768aa6`
-- Active checkpoint anchor: `28ff61406111edb61597ac1addd018817ef25c92`
+- Work-package base (historical): `7f004e89b343da8550ebd8109c0bbb0928c32957`
+- Active checkpoint anchor: `d46b839e461e26a99888cc38d8035a8a61bda781`
 - Working-tree expectation: `CLEAN`
-- Active PR: `#10`
+- Active PR: `#11`
 - PR state: `OPEN / DRAFT`
-- PR base: `develop`
+- PR base: `main`
 
-The work-package base is the historical branch origin and is not the active recovery comparison anchor. The active checkpoint anchor is the verified repository state produced by the previous recovery-control remediation. Current HEAD is the actual branch tip.
+The work-package base is the verified `develop` origin for this transition branch. The active checkpoint anchor is the reviewed PR #11 head before the grouped Low-finding remediation. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
+- `docs/RULE_INDEX.md`
+- `docs/frozen/VECTOR_VERSIONING_V1_1.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`
 
 Recovery control block:
 
@@ -314,4 +315,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Run one Lite re-review of the current PR #10 head after deterministic validation. Do not modify PR #9.
+NEXT STEP: Commit and push the grouped PR #11 Low-finding remediation, record the exact new PR #11 head as the checkpoint control revision, validate Head/Checkpoint equality and green checks, then run exactly one Lite re-review. Do not reopen PR #9 or PR #10.

@@ -245,6 +245,7 @@ RADAR_AIM_ASSIST,radar_maxaimassistdistance,7034e330-3d22-4e89-83cb-c01815dbb875
 RADAR_AIM_ASSIST,radar_maxaimassistdistance,e0c51f49-8910-4c99-92e5-ba7eca915bbb,Singe Cannon (S1),weapon,WeaponGun,Gun,combatRange.max,50.0,combatRange,7,leaf=max; scopeTokenHits=1; score=7,ACCEPTED
 RADAR_AIM_ASSIST,radar_maxaimassistdistance,40b94722-48be-406a-9843-5c77772e4ab4,Singe Cannon (S2),weapon,WeaponGun,Gun,combatRange.max,50.0,combatRange,7,leaf=max; scopeTokenHits=1; score=7,ACCEPTED
 RADAR_AIM_ASSIST,radar_maxaimassistdistance,f15b742b-1457-4eb7-b7aa-078816297d29,Singe Cannon (S3),weapon,WeaponGun,Gun,combatRange.max,50.0,combatRange,7,leaf=max; scopeTokenHits=1; score=7,ACCEPTED
+RADAR_AIM_ASSIST,radar_maxaimassistdistance,ce5baed0-3269-495e-b38b-f7af7b3bd9c6,"Skarnov ""Raider Camo"" Rifle",weapon,WeaponPersonal,Medium,combatRange.max,50.0,combatRange,7,leaf=max; scopeTokenHits=1; score=7,ACCEPTED
 RADAR_AIM_ASSIST,radar_maxaimassistdistance,43269af0-736e-4232-8cfe-271367b28ee1,Sledge I Mass Driver Cannon,weapon,WeaponGun,Gun,combatRange.max,50.0,combatRange,7,leaf=max; scopeTokenHits=1; score=7,ACCEPTED
 RADAR_AIM_ASSIST,radar_maxaimassistdistance,c657c03c-6ac6-4da6-ab70-bfab52804444,Sledge II Mass Driver Cannon,weapon,WeaponGun,Gun,combatRange.max,50.0,combatRange,7,leaf=max; scopeTokenHits=1; score=7,ACCEPTED
 RADAR_AIM_ASSIST,radar_maxaimassistdistance,ccd05b20-4042-4c49-a4c0-4a94f6d841ee,Sledge III Mass Driver Cannon,weapon,WeaponGun,Gun,combatRange.max,50.0,combatRange,7,leaf=max; scopeTokenHits=1; score=7,ACCEPTED

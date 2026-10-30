@@ -134,7 +134,7 @@ VECTOR distinguishes a game-data build from a persistent game-state epoch.
 
 A game/data build identifies the Star Citizen build/dataset context used for master data and interpretation.
 
-The canonical VECTOR release identifier follows `VECTOR_VERSIONING_V1.md` and always references the approved LIVE build.
+The canonical VECTOR release identifier follows `VECTOR_VERSIONING_V1_1.md` and always references the approved LIVE build.
 
 ### 6.2 Game-state epoch
 

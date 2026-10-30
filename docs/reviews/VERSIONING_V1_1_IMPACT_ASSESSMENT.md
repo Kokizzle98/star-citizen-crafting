@@ -9,6 +9,8 @@
 
 This record is evidence only. It does not supersede, approve or freeze anything. `VECTOR_VERSIONING_V1.md` v1.0 remains the sole binding VERSIONING authority.
 
+**Historical-state note:** The lifecycle/status statements above record the pre-transition assessment state at the time this assessment was performed. They are retained as historical evidence and do not describe the post-transition state after successful completion of the governed Versioning v1.1 freeze transition. The governed freeze-transition record at the end of this document records the approved transition and its effectiveness condition.
+
 ## 1. Classification method
 
 Each dependent FROZEN specification receives exactly one classification:
@@ -172,6 +174,8 @@ These are not defects of the classifications above; they must be handled in the 
 
 ## 6. Deferred after this change set
 
+**Historical pre-transition note:** The following bullets record actions that were deferred when this assessment was prepared. The approved freeze-transition change set now performs the Versioning v1.1 promotion, v1.0 supersession registration, R3 closure and dependent-reference updates. Items concerning later proposal freezes remain deferred.
+
 - project_owner approval, freeze-transition change set, `SUPERSEDED` marking of v1.0, R3 closure and predecessor-file treatment (v1.1 §16).
 - Canonical Data Model freeze and its reconciliation with the then-FROZEN v1.1 (D1 dispositioned at proposal level by V11-PF-02; the canonical authority is still PROPOSED).
 - Freeze-time Rule Index/reference updates for `PERSISTENCE_PROVENANCE_V1.md`, `GAME_WIPE_MODEL_V1.md` (including the mandatory L193 disposition in §2.2), `FLEET_DATA_MODEL_V1.md` (including the mandatory L207 disposition in §2.5) and `VECTOR_VERSIONING_V1.md`.
@@ -262,3 +266,17 @@ This section records design directions selected by the repository owner on 2026-
 | Owner decision status | OWNER_SELECTED |
 | Proposal implementation status | IMPLEMENTED_REVIEW_PASSED |
 | Freeze-transition status | NOT_EXECUTED |
+
+## Governed freeze-transition approval
+
+- **Owner approval:** Approved by the repository owner on 2026-10-30.
+- **Approved transition:** Full-document promotion of `VECTOR_VERSIONING_V1_1.md` v1.1 to FROZEN.
+- **Predecessor disposition:** `VECTOR_VERSIONING_V1.md` v1.0 remains physically unchanged and is registered as `SUPERSEDED` in `RULE_INDEX.md`.
+- **Supersession scope:** Full document, atomic.
+- **R3 disposition:** `RESOLVED` upon successful completion of the governed transition.
+- **Dependent references:** `PERSISTENCE_PROVENANCE_V1.md`, `GAME_WIPE_MODEL_V1.md` and `FLEET_DATA_MODEL_V1.md` are updated to reference Versioning v1.1 in this same change set.
+- **V11-PF-01 through V11-PF-04:** Owner decisions remain unchanged.
+- **ADR disposition:** No ADR is required for this promotion under V11-PF-04.
+- **Unchanged proposals:** `DATA_CONTEXT_MODEL_V1.md`, `CANONICAL_DATA_MODEL_V1.md` and `DATASET_PIPELINE_V1.md` remain `PROPOSED`.
+- **Effectiveness condition:** FROZEN authority, supersession and R3 resolution become effective only upon successful governed merge of this atomic transition change set to `main`.
+- **Fail-closed condition:** Before that successful merge, or if the transition fails or is cancelled, Versioning v1.0 remains authoritative, supersession remains ineffective and R3 remains open.

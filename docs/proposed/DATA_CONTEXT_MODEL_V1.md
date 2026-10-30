@@ -67,7 +67,7 @@ LIVE und PTU werden getrennt extrahiert, normalisiert, validiert, versioniert un
 
 ### 4.1 Kanonisches Vokabular
 
-Die folgenden Begriffe sind mit dem vorgeschlagenen `VECTOR_VERSIONING_V1_1.md` abgestimmt und werden je Konzept eindeutig verwendet:
+Die folgenden Begriffe sind mit dem FROZEN `VECTOR_VERSIONING_V1_1.md` abgestimmt und werden je Konzept eindeutig verwendet:
 
 ```text
 Dataset Context          LIVE_DATASET_CONTEXT | PTU_DATASET_CONTEXT
@@ -131,7 +131,7 @@ Dabei gilt:
 - eine PTU-Preview darf Production Actual Loadout, Inventory, Fleet oder andere Production-User-State-Daten nicht mutieren;
 - Preview-Ergebnisse muessen den verwendeten PTU-Dataset-Kontext in ihrer Berechnungsprovenienz behalten.
 
-Das erzeugt weder eine Kopie des persoenlichen Inventars fuer PTU noch einen PTU-Native-State. `RESULT_CONTEXT_PTU_PREVIEW` und `PTU_NATIVE_STATE` sind verschiedene Kontexte. Der Production User State geht in eine PTU Preview ausschliesslich als unveraenderlicher, read-only `PRODUCTION_USER_STATE_SNAPSHOT` ein; Snapshot-Identitaet, Erfassungszeitpunkt bzw. Revision und Provenienz sind im vorgeschlagenen `VECTOR_VERSIONING_V1_1.md` definiert.
+Das erzeugt weder eine Kopie des persoenlichen Inventars fuer PTU noch einen PTU-Native-State. `RESULT_CONTEXT_PTU_PREVIEW` und `PTU_NATIVE_STATE` sind verschiedene Kontexte. Der Production User State geht in eine PTU Preview ausschliesslich als unveraenderlicher, read-only `PRODUCTION_USER_STATE_SNAPSHOT` ein; Snapshot-Identitaet, Erfassungszeitpunkt bzw. Revision und Provenienz sind im FROZEN `VECTOR_VERSIONING_V1_1.md` definiert.
 
 ## 8. Production User State
 
