@@ -175,7 +175,7 @@ Fail-closed: recovery produces `RECOVERY_STATE = DRIFT_DETECTED` when the LVCR c
 19. Any unexpected path is `RECOVERY_STATE = DRIFT_DETECTED`.
 20. Verify the working-tree expectation.
 21. Verify upstream and remote state when applicable.
-22. Verify active PR head, draft state and checks when applicable.
+22. For an active unmerged PR, obtain its current remote head as an exact 40-character commit OID from the hosting service and require local `HEAD` to equal that remote PR head. If the remote PR head cannot be determined or differs from local `HEAD`, emit `RECOVERY_STATE = DRIFT_DETECTED`. Then verify draft state and checks when applicable.
 23. Emit exactly one recovery result:
 
 `RECOVERY_STATE = MATCH`
@@ -195,7 +195,7 @@ or
 - the active anchor is an ancestor of HEAD;
 - every anchor-to-HEAD path is inside the trusted allowed scope;
 - the working-tree expectation matches;
-- applicable upstream, remote and PR expectations match.
+- for an active unmerged PR, its remote head can be determined and exactly equals local `HEAD`; applicable draft-state, check, upstream and other remote expectations match.
 
 When MATCH:
 
@@ -216,7 +216,7 @@ When MATCH:
 - unexpected path after the anchor;
 - unexpected dirty working tree;
 - material upstream or remote mismatch;
-- material PR mismatch.
+- active remote PR head missing, undeterminable or different from local `HEAD`, or another material PR mismatch.
 
 Later commits alone are not drift when all invariants above still pass.
 
