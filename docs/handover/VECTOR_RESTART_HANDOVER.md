@@ -314,4 +314,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Commit and push the grouped checkpoint-control remediation, record its exact commit as the PR #10 checkpoint control revision after deterministic validation, and then run one Lite re-review. Do not modify PR #9.
+NEXT STEP: Run one Lite re-review of the current PR #10 head after deterministic validation. Do not modify PR #9.
