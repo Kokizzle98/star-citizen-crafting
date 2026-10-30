@@ -310,7 +310,7 @@ resolution_status
 
 In v1, this layer contains the single Production User State, including mutable player/game-derived state such as inventory, in-game ownership and Actual Loadouts. Its identity is independent from the selected reference dataset revision.
 
-A PTU Preview may read Production User State as a read-only selection/input context with one PTU Reference Dataset. It must not mutate that state or represent it as PTU-native ownership, inventory, wallet, reputation or other PTU-native mutable state. `PTU_PREVIEW` and `PTU_NATIVE_STATE` are distinct contexts; PTU-native mutable state is a future extension, not an active v1 assumption.
+A PTU Preview may read Production User State as a read-only selection/input context with one PTU Reference Dataset. It must not mutate that state or represent it as PTU-native ownership, inventory, wallet, reputation or other PTU-native mutable state. `RESULT_CONTEXT_PTU_PREVIEW` and `PTU_NATIVE_STATE` are distinct contexts; PTU-native mutable state is a future extension, not an active v1 assumption.
 
 The logical model can support a future `PTU_NATIVE_STATE` as an independently channel-isolated state context without changing canonical entity identity or reference-data revision semantics. That extension requires explicit implementation and governance before its state or wipe operations are active.
 

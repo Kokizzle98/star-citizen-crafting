@@ -803,7 +803,7 @@ In v1, mutable game state is the Production User State. Reference stats are reso
 
 This avoids repeating full reference payloads in every inventory record.
 
-`PTU_PREVIEW` and `PTU_NATIVE_STATE` are distinct. PTU-native mutable state is not an active v1 assumption; it is a future extension requiring explicit implementation and governance under VECTOR rules. The model permits that extension to use an independently channel-isolated state context without changing canonical entity identity or revision-scoped reference data.
+`RESULT_CONTEXT_PTU_PREVIEW` and `PTU_NATIVE_STATE` are distinct. PTU-native mutable state is not an active v1 assumption; it is a future extension requiring explicit implementation and governance under VECTOR rules. The model permits that extension to use an independently channel-isolated state context without changing canonical entity identity or revision-scoped reference data.
 
 ## 19. Wipe boundary
 
@@ -889,7 +889,7 @@ catalog_category_id
 facet_code/value
 relation subject/type/object
 channel/context
-owner + channel for mutable state
+owner + mutable-state context (in v1: PRODUCTION_USER_STATE; a channel-scoped owner key applies only to the future PTU_NATIVE_STATE, which is not active in v1)
 ```
 
 Final indexes are selected after representative query plans are measured.
