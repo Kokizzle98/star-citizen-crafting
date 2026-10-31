@@ -1,15 +1,16 @@
 ﻿'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 
 const primaryNavigation = [
   { href: '/vector', icon: '⌂', label: 'Dashboard' },
-  { href: '/inventory', icon: '▤', label: 'Inventory' },
-  { href: '/fabricator', icon: '◇', label: 'Fabricator' },
-  { href: '/blueprints', icon: '▱', label: 'Blueprints' },
 ]
 
 const futureNavigation = [
+  { icon: '▤', label: 'Inventory' },
+  { icon: '◇', label: 'Fabricator' },
+  { icon: '▱', label: 'Blueprints' },
   { icon: '△', label: 'Fleet' },
   { icon: '↔', label: 'Trading' },
 ]
@@ -21,6 +22,8 @@ export function VectorSidebar({
   collapsed: boolean
   onToggle: () => void
 }) {
+  const pathname = usePathname()
+
   return (
     <aside
       className="vector-sidebar"
@@ -36,28 +39,34 @@ export function VectorSidebar({
           className="vector-sidebar__toggle"
           type="button"
           onClick={onToggle}
-          aria-label={
-            collapsed
-              ? 'Navigation ausklappen'
-              : 'Navigation einklappen'
-          }
-          aria-pressed={collapsed}
+          aria-label="Navigation"
+          aria-expanded={!collapsed}
         >
           {collapsed ? '»' : '«'}
         </button>
       </div>
 
       <nav className="vector-sidebar__nav" aria-label="Module">
-        {primaryNavigation.map((item) => (
-          <Link href={item.href} key={item.href}>
-            <span className="vector-sidebar__icon" aria-hidden="true">
-              {item.icon}
-            </span>
-            <span className="vector-sidebar__label">
-              {item.label}
-            </span>
-          </Link>
-        ))}
+        {primaryNavigation.map((item) => {
+          const active =
+            pathname === item.href ||
+            pathname.startsWith(`${item.href}/`)
+
+          return (
+            <Link
+              href={item.href}
+              key={item.href}
+              aria-current={active ? 'page' : undefined}
+            >
+              <span className="vector-sidebar__icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span className="vector-sidebar__label">
+                {item.label}
+              </span>
+            </Link>
+          )
+        })}
 
         <div className="vector-sidebar__divider" />
 

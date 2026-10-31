@@ -1,4 +1,5 @@
-﻿import { createSupabaseServerClient } from '@/lib/supabase/server'
+﻿import Link from 'next/link'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { AccountDrawer } from '@/components/account/AccountDrawer'
 
 type AppRole = 'USER' | 'ONTOLOGY_ADMIN' | 'SYSTEM_ADMIN'
@@ -6,6 +7,7 @@ type AppRole = 'USER' | 'ONTOLOGY_ADMIN' | 'SYSTEM_ADMIN'
 type Membership = {
   group_id: string
   role: 'OWNER' | 'ADMIN' | 'MEMBER'
+  joined_at: string
 }
 
 export async function VectorTopbar() {
@@ -16,7 +18,13 @@ export async function VectorTopbar() {
   } = await supabase.auth.getUser()
 
   if (!user) {
-    return null
+    return (
+      <header className="vector-topbar vector-topbar--anonymous">
+        <Link className="vector-topbar__login" href="/login">
+          Anmelden
+        </Link>
+      </header>
+    )
   }
 
   const [
@@ -33,8 +41,10 @@ export async function VectorTopbar() {
 
     supabase
       .from('group_members')
-      .select('group_id, role')
-      .eq('user_id', user.id),
+      .select('group_id, role, joined_at')
+      .eq('user_id', user.id)
+      .order('joined_at', { ascending: true })
+      .order('group_id', { ascending: true }),
 
     supabase
       .from('game_accounts')
@@ -47,19 +57,34 @@ export async function VectorTopbar() {
     supabase.rpc('get_my_app_role'),
   ])
 
-  const membership = ((memberships ?? []) as Membership[])[0]
+  const allMemberships = (memberships ?? []) as Membership[]
 
+  let membership: Membership | undefined
   let groupName: string | undefined
 
-  if (membership) {
-    const { data: group } = await supabase
+  if (allMemberships.length > 0) {
+    const { data: groups } = await supabase
       .from('groups')
-      .select('name')
-      .eq('id', membership.group_id)
+      .select('id, name')
+      .in(
+        'id',
+        allMemberships.map((item) => item.group_id),
+      )
       .is('archived_at', null)
-      .maybeSingle()
 
-    groupName = group?.name
+    const activeGroups = new Map(
+      (groups ?? []).map(
+        (group: { id: string; name: string }) => [group.id, group.name],
+      ),
+    )
+
+    membership = allMemberships.find((item) =>
+      activeGroups.has(item.group_id),
+    )
+
+    groupName = membership
+      ? activeGroups.get(membership.group_id)
+      : undefined
   }
 
   const nickname =
@@ -87,6 +112,14 @@ export async function VectorTopbar() {
           <strong className="vector-topbar__preview">
             PREVIEW SPÄTER
           </strong>
+        </div>
+
+        <div className="vector-topbar__compact">
+          <span>DATASET</span>
+          <div className="vector-topbar__compact-values">
+            <strong className="vector-topbar__live">● LIVE</strong>
+            <strong className="vector-topbar__preview">PTU</strong>
+          </div>
         </div>
       </div>
 
