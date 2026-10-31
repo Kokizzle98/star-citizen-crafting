@@ -95,32 +95,33 @@ export async function VectorTopbar() {
   return (
     <header className="vector-topbar">
       <div className="vector-topbar__context">
-        <div>
-          <span>CREW</span>
-          <strong>{groupName ?? 'Kein Crew Context'}</strong>
-        </div>
+        <button
+          type="button"
+          className="vector-topbar__control"
+          aria-disabled="true"
+          aria-label={`Crew: ${groupName ?? 'Kein Crew Context'}. Crew-Auswahl folgt später.`}
+          title="Crew-Auswahl folgt in einer späteren Version"
+        >
+          <span className="vector-topbar__control-text">
+            <span>CREW</span>
+            <strong>{groupName ?? 'Kein Crew Context'}</strong>
+          </span>
+          <span aria-hidden="true">▾</span>
+        </button>
 
-        <div>
-          <span>DATASET</span>
-          <strong className="vector-topbar__live">
-            ● LIVE
-          </strong>
-        </div>
-
-        <div>
-          <span>PTU</span>
-          <strong className="vector-topbar__preview">
-            PREVIEW SPÄTER
-          </strong>
-        </div>
-
-        <div className="vector-topbar__compact">
-          <span>DATASET</span>
-          <div className="vector-topbar__compact-values">
+        <button
+          type="button"
+          className="vector-topbar__control"
+          aria-disabled="true"
+          aria-label="Dataset: LIVE. Dataset-Auswahl folgt später."
+          title="Dataset-Auswahl (LIVE/PTU) folgt in einer späteren Version"
+        >
+          <span className="vector-topbar__control-text">
+            <span>DATASET</span>
             <strong className="vector-topbar__live">● LIVE</strong>
-            <strong className="vector-topbar__preview">PTU</strong>
-          </div>
-        </div>
+          </span>
+          <span aria-hidden="true">▾</span>
+        </button>
       </div>
 
       <AccountDrawer

@@ -450,13 +450,46 @@
   color: var(--success);
 }
 
-.vector-topbar__context > .vector-topbar__compact {
-  display: none;
+.vector-topbar__context > .vector-topbar__control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+
+  min-width: 140px;
+  padding: .7rem 1rem;
+
+  border: 0;
+  border-right: 1px solid rgba(24, 73, 91, .58);
+  border-radius: 0;
+
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+
+  cursor: default;
 }
 
-.vector-topbar__compact-values {
+.vector-topbar__control:hover {
+  background: rgba(25, 216, 237, .035);
+}
+
+.vector-topbar__control:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
+}
+
+.vector-topbar__control-text {
   display: flex;
-  gap: .5rem;
+  flex-direction: column;
+  gap: .15rem;
+
+  min-width: 0;
+}
+
+.vector-topbar__control > [aria-hidden='true'] {
+  color: var(--muted);
 }
 
 .vector-topbar--anonymous {
@@ -545,7 +578,7 @@
 
 .vector-account__backdrop {
   position: fixed;
-  inset: 0;
+  inset: 68px 0 0;
   z-index: 80;
 
   background: rgba(0, 7, 11, .62);
@@ -554,7 +587,7 @@
 
 .vector-account__drawer {
   position: fixed;
-  top: 0;
+  top: 68px;
   right: 0;
   bottom: 0;
   z-index: 90;
@@ -867,18 +900,10 @@
     visibility: hidden;
   }
 
-  .vector-topbar__context > div {
+  .vector-topbar__context > div,
+  .vector-topbar__context > .vector-topbar__control {
     min-width: 112px;
     padding-inline: .75rem;
-  }
-
-  .vector-topbar__context > div:nth-child(2),
-  .vector-topbar__context > div:nth-child(3) {
-    display: none;
-  }
-
-  .vector-topbar__context > .vector-topbar__compact {
-    display: flex;
   }
 
   .vector-account__trigger {
@@ -895,8 +920,14 @@
 }
 
 @media (max-width: 620px) {
-  .vector-topbar__context > div {
+  .vector-topbar__context > .vector-topbar__control {
     min-width: 0;
+    gap: .4rem;
+    padding-inline: .5rem;
+  }
+
+  .vector-topbar__context strong {
+    max-width: 90px;
   }
 
   .vector-account__identity {
