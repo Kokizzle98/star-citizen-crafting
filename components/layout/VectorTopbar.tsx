@@ -1,14 +1,9 @@
 ﻿import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { AccountDrawer } from '@/components/account/AccountDrawer'
+import { getCrewContext } from '@/lib/groups/crew-context'
 
 type AppRole = 'USER' | 'ONTOLOGY_ADMIN' | 'SYSTEM_ADMIN'
-
-type Membership = {
-  group_id: string
-  role: 'OWNER' | 'ADMIN' | 'MEMBER'
-  joined_at: string
-}
 
 export async function VectorTopbar() {
   const supabase = createSupabaseServerClient()
@@ -29,22 +24,15 @@ export async function VectorTopbar() {
 
   const [
     { data: profile },
-    { data: memberships },
     { data: game },
     { data: appRole },
+    crewContext,
   ] = await Promise.all([
     supabase
       .from('profiles')
       .select('nickname')
       .eq('id', user.id)
       .maybeSingle(),
-
-    supabase
-      .from('group_members')
-      .select('group_id, role, joined_at')
-      .eq('user_id', user.id)
-      .order('joined_at', { ascending: true })
-      .order('group_id', { ascending: true }),
 
     supabase
       .from('game_accounts')
@@ -55,37 +43,10 @@ export async function VectorTopbar() {
       .maybeSingle(),
 
     supabase.rpc('get_my_app_role'),
+    getCrewContext(user.id),
   ])
 
-  const allMemberships = (memberships ?? []) as Membership[]
-
-  let membership: Membership | undefined
-  let groupName: string | undefined
-
-  if (allMemberships.length > 0) {
-    const { data: groups } = await supabase
-      .from('groups')
-      .select('id, name')
-      .in(
-        'id',
-        allMemberships.map((item) => item.group_id),
-      )
-      .is('archived_at', null)
-
-    const activeGroups = new Map(
-      (groups ?? []).map(
-        (group: { id: string; name: string }) => [group.id, group.name],
-      ),
-    )
-
-    membership = allMemberships.find((item) =>
-      activeGroups.has(item.group_id),
-    )
-
-    groupName = membership
-      ? activeGroups.get(membership.group_id)
-      : undefined
-  }
+  const activeGroup = crewContext.activeGroup
 
   const nickname =
     profile?.nickname ??
@@ -99,12 +60,12 @@ export async function VectorTopbar() {
           type="button"
           className="vector-topbar__control"
           aria-disabled="true"
-          aria-label={`Crew: ${groupName ?? 'Kein Crew Context'}. Crew-Auswahl folgt später.`}
+          aria-label={`Crew: ${activeGroup?.name ?? 'Kein Crew Context'}. Crew-Auswahl folgt später.`}
           title="Crew-Auswahl folgt in einer späteren Version"
         >
           <span className="vector-topbar__control-text">
             <span>CREW</span>
-            <strong>{groupName ?? 'Kein Crew Context'}</strong>
+            <strong>{activeGroup?.name ?? 'Kein Crew Context'}</strong>
           </span>
           <span aria-hidden="true">▾</span>
         </button>
@@ -126,8 +87,8 @@ export async function VectorTopbar() {
 
       <AccountDrawer
         nickname={nickname}
-        groupName={groupName}
-        groupRole={membership?.role}
+        groupName={activeGroup?.name}
+        groupRole={activeGroup?.role}
         isAdmin={(appRole as AppRole) === 'SYSTEM_ADMIN'}
         rsiLinked={Boolean(game)}
       />
