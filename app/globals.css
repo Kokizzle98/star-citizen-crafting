@@ -414,19 +414,11 @@
 
 .vector-topbar__context {
   display: flex;
-  align-items: stretch;
-}
+  align-items: center;
+  gap: .75rem;
 
-.vector-topbar__context > div {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: .15rem;
-
-  min-width: 140px;
-  padding: .7rem 1rem;
-
-  border-right: 1px solid rgba(24, 73, 91, .58);
+  margin-left: auto;
+  padding: .55rem clamp(1rem, 4vw, 3rem) .55rem 1rem;
 }
 
 .vector-topbar__context span {
@@ -456,12 +448,12 @@
   justify-content: space-between;
   gap: .75rem;
 
-  min-width: 140px;
-  padding: .7rem 1rem;
+  min-width: 190px;
+  min-height: 44px;
+  padding: .45rem .85rem;
 
-  border: 0;
-  border-right: 1px solid rgba(24, 73, 91, .58);
-  border-radius: 0;
+  border: 1px solid rgba(24, 73, 91, .72);
+  border-radius: .4rem;
 
   background: transparent;
   color: inherit;
@@ -472,12 +464,13 @@
 }
 
 .vector-topbar__control:hover {
+  border-color: rgba(25, 216, 237, .3);
   background: rgba(25, 216, 237, .035);
 }
 
 .vector-topbar__control:focus-visible {
   outline: 2px solid var(--cyan);
-  outline-offset: -2px;
+  outline-offset: 2px;
 }
 
 .vector-topbar__control-text {
@@ -637,6 +630,7 @@
   gap: .25rem;
 
   padding: 2rem 1.5rem 1.5rem;
+  padding-right: 4rem;
 
   border-bottom: 1px solid var(--line);
 }
@@ -675,14 +669,15 @@
 
 .vector-account__drawer nav section {
   display: grid;
+  gap: .15rem;
 
-  padding: 1.25rem 1.5rem;
+  padding: 1.25rem 1.5rem 1.35rem;
 
   border-bottom: 1px solid rgba(24, 73, 91, .58);
 }
 
 .vector-account__section-title {
-  margin: 0 0 .65rem;
+  margin: 0 0 .5rem;
 
   color: var(--muted);
 
@@ -706,7 +701,9 @@
 
 .vector-account__signout {
   margin-top: auto;
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+
+  border-top: 1px solid rgba(24, 73, 91, .58);
 }
 
 .vector-account__signout button {
@@ -900,10 +897,14 @@
     visibility: hidden;
   }
 
-  .vector-topbar__context > div,
-  .vector-topbar__context > .vector-topbar__control {
-    min-width: 112px;
+  .vector-topbar__context {
+    gap: .5rem;
     padding-inline: .75rem;
+  }
+
+  .vector-topbar__context > .vector-topbar__control {
+    min-width: 120px;
+    padding-inline: .7rem;
   }
 
   .vector-account__trigger {
