@@ -1,0 +1,930 @@
+# VECTOR PRODUCT SNAPSHOT
+
+Branch: main
+Commit: eb6f108284bd3feb1890828a397549380f46d238
+Generated: 2026-10-30 20:41:45 +01:00
+Tracked source files: 38
+
+Excluded: .env files, secrets, datasets, audit exports, generated artifacts, Git metadata, node_modules, build output, legacy/archive content.
+
+====================================================================================================
+FILE: .env.example
+====================================================================================================
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+APP_ORIGIN=http://localhost:3000
+CITIZEN_ID_ENABLED=false
+
+
+
+====================================================================================================
+FILE: .eslintrc.json
+====================================================================================================
+{
+  "extends": ["next/core-web-vitals"]
+}
+
+
+
+====================================================================================================
+FILE: app/account/security/page.tsx
+====================================================================================================
+import { requireUser } from '@/lib/auth/authorization'
+import { LinkRSIButton } from '@/components/account/LinkRSIButton'
+export const metadata={title:'Account & Sicherheit | VECTOR'}
+export default async function Page(){const{supabase,user}=await requireUser();const[{data:identities},{data:games}]=await Promise.all([supabase.from('user_identities').select('provider_code,handle,verification_status').eq('user_id',user.id),supabase.from('game_accounts').select('game_code,handle,verification_status,is_primary').eq('user_id',user.id)]);const citizen=identities?.find(i=>i.provider_code==='CITIZEN_ID'&&i.verification_status==='VERIFIED');const enabled=process.env.CITIZEN_ID_ENABLED==='true';return <section><h1>Account & Sicherheit</h1><h2>Verknüpfte Accounts</h2><p>{citizen?`Verknüpft${citizen.handle?` als ${citizen.handle}`:''}`:'Noch nicht verknüpft'}</p>{!citizen&&<LinkRSIButton enabled={enabled}/>}<h2>Game Accounts</h2><p>{games?.length?`${games.length} Konto/Konten vorhanden.`:'Noch kein Spielkonto verbunden.'}</p></section>}
+
+
+
+====================================================================================================
+FILE: app/admin/identity/page.tsx
+====================================================================================================
+export default function Page(){return <><h1>Identitäten & Accounts</h1><p>PreFlight-Platzhalter. Fachfunktionen folgen nach Freigabe.</p></>}
+
+
+
+====================================================================================================
+FILE: app/admin/items/page.tsx
+====================================================================================================
+export default function Page(){return <><h1>Item-Katalog</h1><p>PreFlight-Platzhalter. Fachfunktionen folgen nach Freigabe.</p></>}
+
+
+
+====================================================================================================
+FILE: app/admin/layout.tsx
+====================================================================================================
+import { requireSystemAdmin } from '@/lib/auth/authorization'
+import { AdminMenu } from '@/components/account/AdminMenu'
+export default async function Layout({children}:{children:React.ReactNode}){await requireSystemAdmin();return <div><AdminMenu/><section>{children}</section></div>}
+
+
+
+====================================================================================================
+FILE: app/admin/locations/page.tsx
+====================================================================================================
+export default function Page(){return <><h1>Locations</h1><p>PreFlight-Platzhalter. Fachfunktionen folgen nach Freigabe.</p></>}
+
+
+
+====================================================================================================
+FILE: app/admin/page.tsx
+====================================================================================================
+export default function Page(){return <><h1>Admin Dashboard</h1><p>PreFlight-Platzhalter. Fachfunktionen folgen nach Freigabe.</p></>}
+
+
+
+====================================================================================================
+FILE: app/api/auth/link/start/route.ts
+====================================================================================================
+import {NextRequest,NextResponse} from 'next/server';import {randomUUID} from 'node:crypto';import {createSupabaseServerClient} from '@/lib/supabase/server';import {createSupabaseAdminClient} from '@/lib/supabase/admin';import {getAuthProvider} from '@/lib/auth/providers';import {safeRelativePath} from '@/lib/auth/redirect'
+export const runtime='nodejs'
+export async function POST(req:NextRequest){const supabase=createSupabaseServerClient();const{data:{user}}=await supabase.auth.getUser();if(!user)return NextResponse.json({error:'AUTH_REQUIRED'},{status:401});const body=await req.json().catch(()=>({}));const providerId=String(body.provider??'');const provider=getAuthProvider(providerId);if(!provider||!provider.enabled)return NextResponse.json({error:'PROVIDER_DISABLED'},{status:503});const id=randomUUID();const admin=createSupabaseAdminClient();const before=(user.identities??[]).map(i=>`${i.provider}:${i.id}`).sort();const{error}=await admin.from('identity_oauth_flows').insert({id,user_id:user.id,operation:'LINK_LOGIN',expected_provider:providerId,pre_link_identity_keys:before,return_path:safeRelativePath(body.next),expires_at:new Date(Date.now()+600000).toISOString()});if(error)return NextResponse.json({error:'FLOW_CREATE_FAILED'},{status:500});const origin=process.env.APP_ORIGIN;if(!origin)return NextResponse.json({error:'APP_ORIGIN_MISSING'},{status:500});const callback=new URL('/auth/callback',origin);callback.searchParams.set('flow',id);const linked=await supabase.auth.linkIdentity({provider:providerId as never,options:{redirectTo:callback.toString()}});if(linked.error||!linked.data?.url){await admin.from('identity_oauth_flows').update({failed_at:new Date().toISOString()}).eq('id',id);return NextResponse.json({error:'LINK_START_FAILED'},{status:400})}const res=NextResponse.json({url:linked.data.url});res.cookies.set('vector_oauth_flow',id,{httpOnly:true,secure:process.env.NODE_ENV==='production',sameSite:'lax',path:'/auth/callback',maxAge:600});res.headers.set('Cache-Control','no-store');return res}
+
+
+
+====================================================================================================
+FILE: app/auth/callback/route.ts
+====================================================================================================
+import {NextRequest,NextResponse} from 'next/server';import {createSupabaseServerClient} from '@/lib/supabase/server';import {createSupabaseAdminClient} from '@/lib/supabase/admin';import {getAuthProvider} from '@/lib/auth/providers';import {safeRelativePath} from '@/lib/auth/redirect'
+export const runtime='nodejs';export const dynamic='force-dynamic'
+function fail(reason:string,cid?:string){const origin=process.env.APP_ORIGIN||'http://localhost:3000';const u=new URL('/auth/error',origin);u.searchParams.set('reason',reason);if(cid)u.searchParams.set('cid',cid);return NextResponse.redirect(u,303)}
+export async function GET(req:NextRequest){const code=req.nextUrl.searchParams.get('code');const flowId=req.nextUrl.searchParams.get('flow');if(req.nextUrl.searchParams.get('error'))return fail('provider');if(!code)return fail('missing_code');if(!flowId||flowId!==req.cookies.get('vector_oauth_flow')?.value)return fail('flow_mismatch');const admin=createSupabaseAdminClient();const{data:flow}=await admin.from('identity_oauth_flows').select('*').eq('id',flowId).is('consumed_at',null).is('failed_at',null).maybeSingle();if(!flow||new Date(flow.expires_at).getTime()<=Date.now())return fail('flow_expired',flowId);const provider=getAuthProvider(flow.expected_provider);if(!provider?.enabled)return fail('provider_disabled',flowId);const supabase=createSupabaseServerClient();const exchanged=await supabase.auth.exchangeCodeForSession(code);if(exchanged.error)return fail('exchange_failed',flowId);const{data:{user}}=await supabase.auth.getUser();if(!user||user.id!==flow.user_id){await supabase.auth.signOut();return fail('identity_mismatch',flowId)}const before=new Set<string>(flow.pre_link_identity_keys??[]);const added=(user.identities??[]).filter(i=>!before.has(`${i.provider}:${i.id}`));if(added.length!==1||added[0].provider!==flow.expected_provider)return fail('unexpected_identity_result',flowId);const identity=added[0];const subject=String(identity.identity_data?.sub??identity.id);const finalized=await admin.rpc('identity_finalize_link_server',{p_user_id:user.id,p_provider_code:provider.vectorCode,p_provider_subject:subject,p_handle:identity.identity_data?.preferred_username??null,p_display_name:identity.identity_data?.name??null,p_make_primary:false,p_flow_id:flowId});if(finalized.error)return fail('mirror_finalize_failed',flowId);const origin=process.env.APP_ORIGIN||req.nextUrl.origin;const res=NextResponse.redirect(new URL(safeRelativePath(flow.return_path),origin),303);res.cookies.set('vector_oauth_flow','',{httpOnly:true,expires:new Date(0),path:'/auth/callback'});res.headers.set('Cache-Control','no-store');res.headers.set('Referrer-Policy','no-referrer');return res}
+
+
+
+====================================================================================================
+FILE: app/auth/signout/route.ts
+====================================================================================================
+import {NextResponse} from 'next/server';import {createSupabaseServerClient} from '@/lib/supabase/server'
+export async function POST(req:Request){const supabase=createSupabaseServerClient();await supabase.auth.signOut();const origin=process.env.APP_ORIGIN||new URL(req.url).origin;return NextResponse.redirect(new URL('/login',origin),303)}
+
+
+
+====================================================================================================
+FILE: app/globals.css
+====================================================================================================
+:root{color-scheme:dark;--bg:#040b10;--panel:#071b25;--line:#18495b;--cyan:#19d8ed;--focus:#54e5f5;--text:#eafaff;--muted:#82a6b4;--success:#55e29d;--warning:#ffcc45;--error:#ff6679}
+*{box-sizing:border-box}html{background:var(--bg)}body{margin:0;background:radial-gradient(circle at 75% 0,rgba(25,216,237,.08),transparent 35%),var(--bg);color:var(--text);font:15px/1.5 Inter,Segoe UI,system-ui,sans-serif;min-height:100vh}a{color:inherit}.skip-link{position:absolute;left:1rem;top:-5rem;background:var(--cyan);color:#001014;padding:.6rem 1rem;z-index:10}.skip-link:focus{top:1rem}.topbar{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:2rem;min-height:78px;padding:0 2rem;border-bottom:1px solid var(--line);background:rgba(4,11,16,.92)}.brand{text-decoration:none;display:flex;flex-direction:column;letter-spacing:.14em}.brand strong{font-size:1.35rem;color:var(--cyan)}.brand span,.release,.eyebrow{font-size:.72rem;color:var(--muted);letter-spacing:.12em}.topbar nav{display:flex;gap:.4rem}.topbar nav a,.topbar nav span{padding:.7rem .9rem;border-radius:.4rem;text-decoration:none}.topbar nav a:hover{background:#0b202c}.topbar nav span{color:#55727d}.shell{max-width:1280px;margin:auto;padding:3rem 2rem}.hero{padding:3rem;border:1px solid var(--line);background:linear-gradient(135deg,rgba(7,27,37,.98),rgba(4,11,16,.8));border-radius:.75rem}.hero h1{font-size:clamp(3rem,8vw,7rem);line-height:.9;margin:.3rem 0;color:var(--cyan);letter-spacing:.08em}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem;margin-top:1rem}.card{min-height:230px;padding:1.4rem;border:1px solid var(--line);border-radius:.65rem;background:var(--panel)}.card h2{margin-top:2rem}.card p{color:var(--muted)}button{border:1px solid var(--line);background:#0b202c;color:var(--text);padding:.7rem 1rem;border-radius:.35rem}button:disabled{opacity:.55}.status{font-size:.7rem;color:var(--warning);letter-spacing:.1em}:focus-visible{outline:2px solid var(--focus);outline-offset:2px}@media(max-width:900px){.topbar{grid-template-columns:1fr auto}.topbar nav{grid-column:1/-1;overflow:auto}.grid{grid-template-columns:1fr 1fr}}@media(max-width:560px){.topbar,.shell{padding-left:1rem;padding-right:1rem}.grid{grid-template-columns:1fr}.hero{padding:2rem 1.25rem}}
+
+
+
+====================================================================================================
+FILE: app/layout.tsx
+====================================================================================================
+import type { Metadata } from 'next'
+import './globals.css'
+import { AppHeader } from '@/components/layout/AppHeader'
+
+export const metadata: Metadata = {
+  title: { default: 'VECTOR', template: '%s | VECTOR' },
+  description: 'VECTOR crew, inventory and crafting platform',
+}
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  return (
+    <html lang="de">
+      <body>
+        <a className="skip-link" href="#main">Zum Inhalt springen</a>
+        <AppHeader />
+        <main id="main" className="shell">{children}</main>
+      </body>
+    </html>
+  )
+}
+
+
+
+====================================================================================================
+FILE: app/login/page.tsx
+====================================================================================================
+export const dynamic = 'force-dynamic'
+
+export default function LoginPage() {
+  return (
+    <main className="vector-login">
+      <section
+        className="vector-login__panel"
+        aria-labelledby="vector-login-title"
+      >
+        <div className="vector-login__brand" aria-hidden="true">
+          VECTOR
+        </div>
+
+        <p className="vector-login__eyebrow">IDENTITY ACCESS</p>
+
+        <h1 id="vector-login-title">Anmeldung</h1>
+
+        <p className="vector-login__description">
+          Der VECTOR-Zugang ist vorbereitet. Es wurde jedoch noch kein
+          primärer Anmeldeweg für Citizen ID freigegeben.
+        </p>
+
+        <div className="vector-login__status" role="status">
+          <span className="vector-login__status-dot" aria-hidden="true" />
+          Anmeldung derzeit nicht verfügbar
+        </div>
+
+        <p className="vector-login__notice">
+          Die vorhandene Citizen-ID-Verknüpfung ist ausschließlich für
+          bereits angemeldete Konten vorgesehen und wird hier nicht als
+          primärer Login verwendet.
+        </p>
+
+        <a className="vector-login__back" href="/">
+          Zurück zur Startseite
+        </a>
+      </section>
+    </main>
+  )
+}
+
+
+
+====================================================================================================
+FILE: app/page.tsx
+====================================================================================================
+const cards = [
+  ['Inventory', 'Persönliche und freigegebene Bestände verwalten.'],
+  ['Fabricator', 'Blueprints, Materialbedarf und Qualitätsziele prüfen.'],
+  ['Fleet', 'Actual und Target Loadouts getrennt planen.'],
+  ['Trading', 'Marktübersicht, Aufträge und UEE-Börse.'],
+]
+
+export default function HomePage() {
+  return (
+    <>
+      <section className="hero" aria-labelledby="vector-title">
+        <p className="eyebrow">RESTART 1.2.0 · DEVELOP</p>
+        <h1 id="vector-title">VECTOR</h1>
+        <p>Die neue Plattform-Baseline. Legacy v1.3.2 bleibt archiviert.</p>
+      </section>
+      <section className="grid" aria-label="VECTOR Module">
+        {cards.map(([title, description]) => (
+          <article className="card" key={title}>
+            <span className="status">PREFLIGHT</span>
+            <h2>{title}</h2>
+            <p>{description}</p>
+            <button type="button" disabled aria-disabled="true">Wird integriert</button>
+          </article>
+        ))}
+      </section>
+    </>
+  )
+}
+
+
+
+====================================================================================================
+FILE: components/account/AdminMenu.tsx
+====================================================================================================
+import Link from 'next/link'
+const links=[['/admin','Dashboard'],['/admin/identity','Identitäten & Accounts'],['/admin/items','Item-Katalog'],['/admin/locations','Locations']]
+export function AdminMenu(){return <aside aria-label="Administration"><strong>Administration</strong>{links.map(([href,label])=><Link key={href} href={href}>{label}</Link>)}</aside>}
+
+
+
+====================================================================================================
+FILE: components/account/LinkRSIButton.tsx
+====================================================================================================
+'use client'
+import { useState } from 'react'
+export function LinkRSIButton({ enabled }: { enabled: boolean }) {
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  async function link() {
+    setLoading(true); setError('')
+    const r = await fetch('/api/auth/link/start', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({provider:'custom:citizen-id',next:'/account/security'}) })
+    const d = await r.json().catch(() => ({}))
+    if (!r.ok || !d.url) { setError(d.error === 'PROVIDER_DISABLED' ? 'Provider im PreFlight deaktiviert.' : 'Verknüpfung konnte nicht gestartet werden.'); setLoading(false); return }
+    location.assign(d.url)
+  }
+  return <><button type="button" onClick={link} disabled={!enabled || loading}>{!enabled?'Demnächst verfügbar':loading?'Verknüpfen…':'Mit RSI verknüpfen'}</button>{error && <p role="alert">{error}</p>}</>
+}
+
+
+
+====================================================================================================
+FILE: components/account/UserMenu.tsx
+====================================================================================================
+import Link from 'next/link'
+export function UserMenu({ nickname, isAdmin, rsiLinked }:{nickname:string,isAdmin:boolean,rsiLinked:boolean}) {
+ return <details><summary>{nickname}</summary><nav aria-label="Benutzerkonto"><strong>{nickname}</strong><Link href="/account/security">Account & Sicherheit</Link><Link href="/account/security">Verknüpfte Accounts</Link><Link href="/account/security">Game Accounts {rsiLinked?'✓':''}</Link>{isAdmin&&<Link href="/admin">Administration</Link>}<form action="/auth/signout" method="post"><button type="submit">Abmelden</button></form></nav></details>
+}
+
+
+
+====================================================================================================
+FILE: components/layout/AppHeader.tsx
+====================================================================================================
+import Link from 'next/link'
+import { HeaderAccountMenu } from '@/components/layout/HeaderAccountMenu'
+
+export function AppHeader() {
+  return (
+    <header className="topbar">
+      <Link className="brand" href="/" aria-label="VECTOR Startseite">
+        <strong>VECTOR</strong><span>GROUP SYSTEM</span>
+      </Link>
+      <nav aria-label="Hauptnavigation">
+        <Link href="/">Dashboard</Link>
+        <span aria-disabled="true">Inventory</span>
+        <span aria-disabled="true">Fabricator</span>
+        <span aria-disabled="true">Fleet</span>
+        <span aria-disabled="true">Trading</span>
+      </nav>
+      <div className="header-end">
+        <div className="release">1.2.0 · DEVELOP</div>
+        <HeaderAccountMenu />
+      </div>
+    </header>
+  )
+}
+
+
+
+====================================================================================================
+FILE: components/layout/HeaderAccountMenu.tsx
+====================================================================================================
+import Link from 'next/link'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { UserMenu } from '@/components/account/UserMenu'
+
+type AppRole = 'USER' | 'ONTOLOGY_ADMIN' | 'SYSTEM_ADMIN'
+
+export async function HeaderAccountMenu() {
+  const supabase = createSupabaseServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return (
+      <Link className="account-login-link" href="/login">
+        Anmelden
+      </Link>
+    )
+  }
+
+  const [
+    { data: profile },
+    { data: game },
+    { data: role, error: roleError },
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('nickname')
+      .eq('id', user.id)
+      .single(),
+
+    supabase
+      .from('game_accounts')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('game_code', 'STAR_CITIZEN')
+      .eq('verification_status', 'VERIFIED')
+      .maybeSingle(),
+
+    supabase.rpc('get_my_app_role'),
+  ])
+
+  if (roleError) {
+    throw roleError
+  }
+
+  return (
+    <UserMenu
+      nickname={profile?.nickname ?? 'Account'}
+      isAdmin={(role as AppRole) === 'SYSTEM_ADMIN'}
+      rsiLinked={Boolean(game)}
+    />
+  )
+}
+
+
+
+====================================================================================================
+FILE: database/migrations/identity/README.md
+====================================================================================================
+# Identity migrations - STAGING ONLY
+
+Source of truth: VECTOR_PREFLIGHT_V1.zip. Execute 010 through 050 only after read-only prechecks against a staging clone. 055 remains disabled unless the real Citizen iD provider and exact redirects are verified. Do not execute these files against production as part of Phase 1 code upload.
+
+
+
+====================================================================================================
+FILE: lib/auth/authorization.ts
+====================================================================================================
+import 'server-only'
+import { redirect } from 'next/navigation'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+
+export async function requireUser() {
+  const supabase = createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+  return { supabase, user }
+}
+export async function getMyAppRole() {
+  const { supabase } = await requireUser()
+  const { data, error } = await supabase.rpc('get_my_app_role')
+  if (error) throw error
+  return data as 'USER' | 'ONTOLOGY_ADMIN' | 'SYSTEM_ADMIN'
+}
+export async function requireSystemAdmin() {
+  const role = await getMyAppRole()
+  if (role !== 'SYSTEM_ADMIN') redirect('/?error=admin_required')
+}
+
+
+
+====================================================================================================
+FILE: lib/auth/providers.ts
+====================================================================================================
+export const AUTH_PROVIDERS = {
+  'custom:citizen-id': {
+    vectorCode: 'CITIZEN_ID',
+    enabled: process.env.CITIZEN_ID_ENABLED === 'true',
+  },
+} as const
+export type AuthProviderId = keyof typeof AUTH_PROVIDERS
+export function getAuthProvider(id: string) { return AUTH_PROVIDERS[id as AuthProviderId] }
+
+
+
+====================================================================================================
+FILE: lib/auth/redirect.ts
+====================================================================================================
+export function safeRelativePath(raw: string | null, fallback = '/') {
+  if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.includes('\\')) return fallback
+  try {
+    const u = new URL(raw, 'https://vector.invalid')
+    return u.origin === 'https://vector.invalid' ? `${u.pathname}${u.search}${u.hash}` : fallback
+  } catch { return fallback }
+}
+
+
+
+====================================================================================================
+FILE: lib/supabase/admin.ts
+====================================================================================================
+import 'server-only'
+import { createClient } from '@supabase/supabase-js'
+
+export function createSupabaseAdminClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.SUPABASE_SECRET_KEY
+  if (!url || !key) throw new Error('SUPABASE_SERVER_ENV_MISSING')
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } })
+}
+
+
+
+====================================================================================================
+FILE: lib/supabase/middleware.ts
+====================================================================================================
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+type CookieToSet = { name: string; value: string; options: CookieOptions }
+
+export async function middleware(request: NextRequest) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  if (!url || !key) return NextResponse.next({ request })
+
+  let response = NextResponse.next({ request })
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: (items: CookieToSet[]) => {
+        items.forEach(({ name, value }) => request.cookies.set(name, value))
+        response = NextResponse.next({ request })
+        items.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
+        )
+      },
+    },
+  })
+
+  await supabase.auth.getUser()
+  return response
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+}
+
+
+
+====================================================================================================
+FILE: lib/supabase/server.ts
+====================================================================================================
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { cookies } from 'next/headers'
+
+type CookieToSet = { name: string; value: string; options: CookieOptions }
+
+export function createSupabaseServerClient() {
+  const store = cookies()
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  if (!url || !key) throw new Error('SUPABASE_PUBLIC_ENV_MISSING')
+
+  return createServerClient(url, key, {
+    cookies: {
+      getAll: () => store.getAll(),
+      setAll: (items: CookieToSet[]) => {
+        try {
+          items.forEach(({ name, value, options }) => store.set(name, value, options))
+        } catch {
+          // Server Components cannot write cookies. Middleware refreshes sessions.
+        }
+      },
+    },
+  })
+}
+
+
+
+====================================================================================================
+FILE: middleware.ts
+====================================================================================================
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
+
+type CookieToSet = { name: string; value: string; options: CookieOptions }
+
+export async function middleware(request: NextRequest) {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  if (!url || !key) return NextResponse.next({ request })
+
+  let response = NextResponse.next({ request })
+  const supabase = createServerClient(url, key, {
+    cookies: {
+      getAll: () => request.cookies.getAll(),
+      setAll: (items: CookieToSet[]) => {
+        items.forEach(({ name, value }) => request.cookies.set(name, value))
+        response = NextResponse.next({ request })
+        items.forEach(({ name, value, options }) =>
+          response.cookies.set(name, value, options),
+        )
+      },
+    },
+  })
+
+  await supabase.auth.getUser()
+  return response
+}
+
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
+}
+
+
+
+====================================================================================================
+FILE: next.config.mjs
+====================================================================================================
+/** @type {import('next').NextConfig} */
+const nextConfig = { reactStrictMode: true, poweredByHeader: false }
+export default nextConfig
+
+
+
+====================================================================================================
+FILE: package.json
+====================================================================================================
+{
+  "name": "vector",
+  "version": "1.2.0",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.mjs",
+    "test:calculation": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.45.4",
+    "next": "14.2.33",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.0",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.33",
+    "typescript": "^5.6.3"
+  }
+}
+
+
+
+====================================================================================================
+FILE: src/calculation/craft-calculation-engine.js
+====================================================================================================
+/**
+ * VECTOR Generic Craft Calculation Engine
+ * Version: VECTOR_CRAFT_CALC_V1
+ * Pure, side-effect-free ES module.
+ */
+
+export const CALC_VERSION = 'VECTOR_CRAFT_CALC_V1';
+
+export class CalculationError extends Error {
+  constructor(code, message, details = {}) {
+    super(message);
+    this.name = 'CalculationError';
+    this.code = code;
+    this.details = details;
+  }
+}
+
+const finite = (value, code, label) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) throw new CalculationError(code, `${label} muss numerisch sein.`, { value });
+  return number;
+};
+
+export function interpolateModifier(segment, quality) {
+  const q = finite(quality, 'CALC_QUALITY_INVALID', 'Qualitaet');
+  if (q < 0 || q > 1000) throw new CalculationError('CALC_QUALITY_OUT_OF_RANGE', 'Qualitaet muss zwischen 0 und 1000 liegen.', { quality: q });
+
+  const startQuality = finite(segment.startQuality ?? segment.start_quality, 'CALC_MODIFIER_INVALID', 'startQuality');
+  const endQuality = finite(segment.endQuality ?? segment.end_quality, 'CALC_MODIFIER_INVALID', 'endQuality');
+  const modifierStart = finite(segment.modifierStart ?? segment.modifier_start, 'CALC_MODIFIER_INVALID', 'modifierStart');
+  const modifierEnd = finite(segment.modifierEnd ?? segment.modifier_end, 'CALC_MODIFIER_INVALID', 'modifierEnd');
+
+  if (endQuality < startQuality) throw new CalculationError('CALC_MODIFIER_INVALID', 'Quality-Intervall ist umgekehrt.', { startQuality, endQuality });
+  if (q < startQuality || q > endQuality) throw new CalculationError('CALC_QUALITY_OUTSIDE_SEGMENT', 'Qualitaet liegt nicht im Modifier-Segment.', { quality: q, startQuality, endQuality });
+
+  if (startQuality === endQuality) {
+    if (modifierStart !== modifierEnd) throw new CalculationError('CALC_MODIFIER_INVALID', 'Ein Punktsegment darf keine Kurve enthalten.', { segment });
+    return modifierStart;
+  }
+
+  const t = (q - startQuality) / (endQuality - startQuality);
+  return modifierStart + t * (modifierEnd - modifierStart);
+}
+
+export function selectModifierSegment(segments, quality) {
+  const q = finite(quality, 'CALC_QUALITY_INVALID', 'Qualitaet');
+  const matches = (segments || []).filter(segment => {
+    const start = Number(segment.startQuality ?? segment.start_quality);
+    const end = Number(segment.endQuality ?? segment.end_quality);
+    return q >= start && q <= end;
+  });
+  if (!matches.length) throw new CalculationError('CALC_MODIFIER_RANGE_GAP', 'Kein Modifier-Segment deckt die Qualitaet ab.', { quality: q });
+  if (matches.length > 1) throw new CalculationError('CALC_MODIFIER_RANGE_OVERLAP', 'Mehrere Modifier-Segmente decken die Qualitaet ab.', { quality: q, matches: matches.length });
+  return matches[0];
+}
+
+export function combineEffects(baseValue, effects, constraints = {}) {
+  const base = finite(baseValue, 'CALC_BASELINE_INVALID', 'Baseline');
+  const setEffects = effects.filter(effect => effect.operation === 'SET');
+  if (setEffects.length > 1) throw new CalculationError('CALC_MULTIPLE_SET_MODIFIERS', 'Mehrere SET-Modifier fuer dieselbe Property sind unzulaessig.');
+
+  let working = setEffects.length ? finite(setEffects[0].value, 'CALC_MODIFIER_INVALID', 'SET-Wert') : base;
+  const additive = effects.filter(effect => effect.operation === 'ADDITIVE').reduce((sum, effect) => sum + finite(effect.value, 'CALC_MODIFIER_INVALID', 'Additiver Modifier'), 0);
+  working += additive;
+
+  const multiplicativeDelta = effects
+    .filter(effect => effect.operation === 'MULTIPLICATIVE')
+    .reduce((sum, effect) => sum + (finite(effect.value, 'CALC_MODIFIER_INVALID', 'Multiplikativer Modifier') - 1), 0);
+  const combinedMultiplier = 1 + multiplicativeDelta;
+  const unclampedValue = working * combinedMultiplier;
+
+  let craftedValue = unclampedValue;
+  if (constraints.minimumValue != null) craftedValue = Math.max(craftedValue, finite(constraints.minimumValue, 'CALC_CONSTRAINT_INVALID', 'minimumValue'));
+  if (constraints.maximumValue != null) craftedValue = Math.min(craftedValue, finite(constraints.maximumValue, 'CALC_CONSTRAINT_INVALID', 'maximumValue'));
+
+  return {
+    baseValue: base,
+    craftedValue,
+    unclampedValue,
+    wasClamped: craftedValue !== unclampedValue,
+    combinedAdditive: additive,
+    combinedMultiplier,
+    absoluteDelta: craftedValue - base,
+    percentDelta: base === 0 ? null : ((craftedValue - base) / Math.abs(base)) * 100
+  };
+}
+
+function normalizeOperation(modifier) {
+  if (modifier.operation) return String(modifier.operation).toUpperCase();
+  return modifier.additive === true ? 'ADDITIVE' : 'MULTIPLICATIVE';
+}
+
+function groupByProperty(modifiers) {
+  const grouped = new Map();
+  for (const modifier of modifiers || []) {
+    const propertyKey = modifier.propertyKey ?? modifier.property_key;
+    if (!propertyKey) throw new CalculationError('CALC_MODIFIER_INVALID', 'Modifier ohne propertyKey.', { modifier });
+    if (!grouped.has(propertyKey)) grouped.set(propertyKey, []);
+    grouped.get(propertyKey).push(modifier);
+  }
+  return grouped;
+}
+
+function formatNumber(value, precision, locale = 'de-DE') {
+  if (value == null) return '—';
+  return Number(value).toLocaleString(locale, { minimumFractionDigits: 0, maximumFractionDigits: precision });
+}
+
+export function calculateCraft(request) {
+  const {
+    channel = 'LIVE', gameVersion = '', blueprintId = '', productEntityClass = '',
+    baselines = {}, modifiers = [], qualities = {}, statDefinitions = {}, locale = 'de-DE'
+  } = request || {};
+
+  const grouped = groupByProperty(modifiers);
+  const stats = [];
+  const warnings = [];
+  let calculated = 0;
+
+  for (const [propertyKey, propertyModifiers] of grouped.entries()) {
+    const baseline = baselines[propertyKey];
+    if (!baseline || baseline.status !== 'RESOLVED' || baseline.value == null) {
+      const status = baseline?.status || 'SOURCE_UNAVAILABLE';
+      stats.push({ propertyKey, status, baseValue: null, craftedValue: null, absoluteDelta: null, percentDelta: null, messageKey: 'fabricator.stat.sourceUnavailable' });
+      warnings.push({ code: 'CALC_BASELINE_UNAVAILABLE', propertyKey, baselineStatus: status });
+      continue;
+    }
+
+    const effects = [];
+    for (const modifier of propertyModifiers) {
+      const slotKey = String(modifier.slotKey ?? modifier.slot_index ?? modifier.slotIndex ?? '');
+      const quality = qualities[slotKey] ?? modifier.quality;
+      if (quality == null) throw new CalculationError('CALC_QUALITY_MISSING', `Qualitaet fuer Slot ${slotKey} fehlt.`, { propertyKey, slotKey });
+      if (modifier.minimumQuality != null && Number(quality) < Number(modifier.minimumQuality)) {
+        throw new CalculationError('CALC_MINIMUM_QUALITY_NOT_MET', 'Mindestqualitaet nicht erreicht.', { propertyKey, slotKey, quality, minimumQuality: modifier.minimumQuality });
+      }
+      const segment = modifier.segments ? selectModifierSegment(modifier.segments, quality) : modifier;
+      effects.push({ operation: normalizeOperation(modifier), value: interpolateModifier(segment, quality), slotKey, quality: Number(quality) });
+    }
+
+    const definition = statDefinitions[propertyKey] || {};
+    const result = combineEffects(baseline.value, effects, {
+      minimumValue: definition.minimumValue,
+      maximumValue: definition.maximumValue
+    });
+    const precision = definition.displayPrecision ?? 2;
+    calculated += 1;
+    stats.push({
+      propertyKey,
+      displayName: definition.displayName || propertyKey,
+      status: 'RESOLVED',
+      baseline,
+      effects,
+      operationSummary: {
+        multiplicativeModifiers: effects.filter(x => x.operation === 'MULTIPLICATIVE').length,
+        additiveModifiers: effects.filter(x => x.operation === 'ADDITIVE').length,
+        combinedMultiplier: result.combinedMultiplier,
+        combinedAdditive: result.combinedAdditive
+      },
+      ...result,
+      display: {
+        base: formatNumber(result.baseValue, precision, locale),
+        crafted: formatNumber(result.craftedValue, precision, locale),
+        delta: `${result.absoluteDelta >= 0 ? '+' : ''}${formatNumber(result.absoluteDelta, precision, locale)}`,
+        percentDelta: result.percentDelta == null ? '—' : `${result.percentDelta >= 0 ? '+' : ''}${formatNumber(result.percentDelta, 2, locale)} %`
+      }
+    });
+  }
+
+  const status = !stats.length ? 'BLOCKED' : calculated === stats.length ? 'COMPLETE' : calculated > 0 ? 'PARTIAL' : 'BLOCKED';
+  return { calculationVersion: CALC_VERSION, channel, gameVersion, blueprintId, productEntityClass, status, stats, warnings };
+}
+
+
+
+====================================================================================================
+FILE: src/data.js
+====================================================================================================
+export const DataStore={channel:localStorage.getItem('sc_channel')||'LIVE',manifest:null,blueprints:[],items:null,versions:{}};
+async function json(path){const r=await fetch(path,{cache:'no-store'});if(!r.ok)throw Error(`${path}: ${r.status}`);return r.json()}
+export async function initData(){DataStore.manifest=await json('data/scmdb/local-mirror-manifest.json');const files=[];for(const g of Object.values(DataStore.manifest.datasets||{}))for(const a of Object.values(g||{}))if(Array.isArray(a))files.push(...a);for(const ch of ['LIVE','PTU']){const needle='-'+ch.toLowerCase()+'.';const bp=files.find(f=>f.startsWith('crafting_blueprints-')&&f.toLowerCase().includes(needle));const it=files.find(f=>f.startsWith('crafting_items-')&&f.toLowerCase().includes(needle));if(bp&&it)DataStore.versions[ch]={bp,it,version:bp.replace('crafting_blueprints-','').replace('.json','')}}if(!DataStore.versions[DataStore.channel])DataStore.channel=DataStore.versions.LIVE?'LIVE':'PTU';await setChannel(DataStore.channel)}
+export async function setChannel(ch){const v=DataStore.versions[ch];if(!v)throw Error(`No ${ch} dataset`);[DataStore.blueprints,DataStore.items]=await Promise.all([json('data/scmdb/'+v.bp),json('data/scmdb/'+v.it)]);DataStore.blueprints=DataStore.blueprints.blueprints||DataStore.blueprints.items||DataStore.blueprints.data||DataStore.blueprints;DataStore.channel=ch;localStorage.setItem('sc_channel',ch);return v}
+export function itemFor(bp){return (DataStore.items?.items||[]).find(x=>x.entityClass===bp.productEntityClass)||null}
+
+
+
+====================================================================================================
+FILE: src/engine.js
+====================================================================================================
+import{clamp,optionName,optionKind,required}from'./model.js';
+const ALIAS={health_maxhealth:{label:'Integrity',unit:'HP',op:'MULTIPLY',paths:['integrity','health','maxHealth','healthMax','durability.health']},itemresource_powergeneration:{label:'Power Output',unit:'Pips',op:'ADD',paths:['powerOutput','powerGeneration','power']},shield_maxhealth:{label:'Shield Strength',unit:'HP',op:'MULTIPLY',paths:['maxShieldHealth','shieldHealth','shield.maxHealth']},weapon_damage:{label:'Damage / Shot',unit:'',op:'MULTIPLY',paths:['damagePerShot','damage']},weapon_firerate:{label:'Fire Rate',unit:'RPM',op:'MULTIPLY',paths:['fireRate','rpm']}};
+const flatKey=s=>String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+function defFor(k,n){const f=flatKey(k+' '+n);if(/healthmaxhealth|integrity/.test(f))return['health_maxhealth',ALIAS.health_maxhealth];if(/powergeneration|powerpips|poweroutput/.test(f))return['itemresource_powergeneration',ALIAS.itemresource_powergeneration];if(/shield.*health|shieldstrength/.test(f))return['shield_maxhealth',ALIAS.shield_maxhealth];if(/firerate/.test(f))return['weapon_firerate',ALIAS.weapon_firerate];if(/damage|impactforce/.test(f))return['weapon_damage',ALIAS.weapon_damage];return[k||flatKey(n),{label:n||k,unit:'',op:'MULTIPLY',paths:[]}]}
+function deepNumbers(o,out={},path='',depth=0){if(!o||depth>5)return out;if(Array.isArray(o))return out;for(const[k,v]of Object.entries(o)){const p=path?path+'.'+k:k;if(typeof v==='number')out[flatKey(p)]=v;else if(v&&typeof v==='object')deepNumbers(v,out,p,depth+1)}return out}
+function baseFor(item,key,def){const nums=deepNumbers(item);for(const p of def.paths){const needle=flatKey(p);for(const[k,v]of Object.entries(nums))if(k.endsWith(needle)||k.includes(needle))return v}return null}
+export function modifierValue(m,q){const a=Number(m.modifierAtStart??m.startValue??m.value??1),b=Number(m.modifierAtEnd??m.endValue??m.value??a),s=Number(m.startQuality??0),e=Number(m.endQuality??1000);if(e===s)return a;const t=(clamp(q,s,e)-s)/(e-s);return a+(b-a)*t}
+export function resolvedSlots(bp,qualities={}){const slots=bp?.tiers?.[0]?.slots||[];return slots.map((s,i)=>{const id='s'+i,o=s.options?.[0]||{},q=clamp(qualities[id]??500),mods=s.modifiers||[];const grouped=new Map();for(const m of mods){const[key,def]=defFor(m.propertyKey,m.propertyName);if(!grouped.has(key))grouped.set(key,{key,def,mods:[]});grouped.get(key).mods.push(m)}const active=[];for(const g of grouped.values()){const m=g.mods.find(x=>q>=Number(x.startQuality??0)&&q<=Number(x.endQuality??1000));if(m)active.push({key:g.key,label:g.def.label,unit:g.def.unit,op:g.def.op,value:modifierValue(m,q),range:[Number(m.startQuality??0),Number(m.endQuality??1000)]})}return{id,name:s.name||`Slot ${i+1}`,option:o,material:optionName(o),kind:optionKind(o),need:required(o),quality:q,active}})}
+export function result(bp,item,qualities){const slots=resolvedSlots(bp,qualities),groups=new Map();for(const s of slots)for(const a of s.active){if(!groups.has(a.key))groups.set(a.key,{...a,contributors:[]});groups.get(a.key).contributors.push({...a,slotId:s.id})}const stats=[];for(const[key,g]of groups){const def=defFor(key,g.label)[1],base=baseFor(item,key,def);if(base==null){stats.push({key,label:g.label,unit:g.unit,status:'MISSING',contributors:g.contributors});continue}const crafted=g.op==='ADD'?base+g.contributors.reduce((n,c)=>n+c.value,0):base*(1+g.contributors.reduce((n,c)=>n+(c.value-1),0));stats.push({key,label:g.label,unit:g.unit,status:'OK',base,crafted,delta:crafted-base,percent:base?(crafted-base)/base*100:null,contributors:g.contributors})}return{slots,stats}}
+export function craftability(bp,inventory){const slots=bp?.tiers?.[0]?.slots||[],missing=[];for(const s of slots){const o=s.options?.[0]||{},name=optionName(o),kind=optionKind(o),need=required(o);const have=inventory.filter(x=>x.material===name).reduce((n,x)=>n+(kind==='COUNT'?Number(x.amount)||Number(x.amount_micro_scu)||0:Number(x.amount_micro_scu??Math.round((Number(x.amount)||0)*1e6))),0);if(have<need)missing.push({name,need,have,kind})}return{status:missing.length===0?'READY':missing.length<slots.length?'PARTIAL':'MISSING',missing}}
+export function weightedQuality(material,need,kind,inventory,mode='MAX'){let lots=inventory.filter(x=>x.material===material).map(x=>({...x,stock:kind==='COUNT'?Number(x.amount)||Number(x.amount_micro_scu)||0:Number(x.amount_micro_scu??Math.round((Number(x.amount)||0)*1e6))})).filter(x=>x.stock>0);lots.sort(mode==='SAVE'?(a,b)=>(a.quality>=951)-(b.quality>=951)||b.quality-a.quality:(a,b)=>b.quality-a.quality);let left=need,sum=0,used=0,allocation=[];for(const l of lots){const take=Math.min(left,l.stock);allocation.push({lot:l,amount:take});sum+=take*Number(l.quality);used+=take;left-=take;if(left<=0)break}return{available:left<=0,quality:used?Math.round(sum/used):500,allocation,missing:Math.max(0,left)}}
+
+
+
+====================================================================================================
+FILE: src/model.js
+====================================================================================================
+export const clamp=(v,a=0,b=1000)=>Math.min(b,Math.max(a,Number(v)||0));
+export const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+export const qClass=q=>q===1000?'PERFECT':q>=951?'PRIME':q>=851?'TARGET':q>=751?'CRAFT':q>=501?'STANDARD':'LOW';
+export function category(bp){const s=[bp.gear,bp.type,bp.subtype,bp.category,bp.productName].filter(Boolean).join(' ').toLowerCase();if(/quantum/.test(s))return'Quantum Drive';if(/shield/.test(s))return'Shield Generator';if(/power plant|powerplant/.test(s))return'Power Plant';if(/cooler|cooling/.test(s))return'Cooler';if(/radar/.test(s))return'Radar';if(/mining/.test(s))return'Mining';if(/salvage|scraper/.test(s))return'Salvage';if(/tractor/.test(s))return'Tractor Beam';if(/magazine|battery|ammo|munition/.test(s))return'Munition';if(/sniper/.test(s))return'FPS Sniper';if(/shotgun/.test(s))return'FPS Shotgun';if(/smg/.test(s))return'FPS SMG';if(/lmg/.test(s))return'FPS LMG';if(/pistol/.test(s))return'FPS Pistol';if(/rifle|weapon/.test(s))return'FPS Waffe';if(/helmet/.test(s))return'Armor · Helmet';if(/backpack/.test(s))return'Armor · Backpack';if(/arms?/.test(s)&&/armor|armour/.test(s))return'Armor · Arms';if(/legs?/.test(s)&&/armor|armour/.test(s))return'Armor · Legs';if(/core/.test(s)&&/armor|armour/.test(s))return'Armor · Core';if(/armor|armour|undersuit/.test(s))return'Armor';return [bp.type,bp.subtype,bp.gear].find(Boolean)||'Sonstiges'}
+export function sizeOf(bp){const n=Number(bp.size??bp.itemSize??bp?.tiers?.[0]?.size);return Number.isFinite(n)?n:null}
+export function optionName(o){return o?.resourceName||o?.itemName||o?.name||'Material'}
+export function optionKind(o){return String(o?.type||'').toLowerCase()==='item'||o?.itemName?'COUNT':'VOLUME'}
+export function required(o){const q=Number(o?.quantity??o?.quantity_scu??o?.Quantity??0)||0;return optionKind(o)==='COUNT'?q:Math.round(q*1e6)}
+function firstImage(o,depth=0){if(!o||typeof o!=='object'||depth>3)return null;for(const k of ['image','imageUrl','image_url','icon','iconUrl','thumbnail','thumbnailUrl','mediaUrl'])if(typeof o[k]==='string'&&o[k].trim())return o[k];for(const [k,v] of Object.entries(o)){if(/image|icon|media|thumbnail/i.test(k)&&v&&typeof v==='object'){const r=firstImage(v,depth+1);if(r)return r}}return null}
+export function imageFor(bp,item){const exact=firstImage(item)||firstImage(bp);if(exact)return exact;const c=category(bp);if(c==='Quantum Drive')return'quantumdrive.png';if(c==='Shield Generator')return'shield.png';if(c==='Power Plant')return'powerplant.png';if(c==='Cooler')return'cooler.png';if(c.startsWith('FPS')||c==='Munition')return'weapon.png';if(c.startsWith('Armor'))return'armor.png';return'utility.png'}
+export const ExternalIdentity={provider:null,entityType:null,externalId:null,externalUuid:null,externalCode:null,externalSlug:null,verified:false,lastVerifiedAt:null};
+
+
+
+====================================================================================================
+FILE: tests/craft-calculation-engine.test.mjs
+====================================================================================================
+import assert from 'node:assert/strict';
+import { calculateCraft, combineEffects, interpolateModifier, selectModifierSegment, CalculationError } from '../src/calculation/craft-calculation-engine.js';
+
+const close = (actual, expected, tolerance = 1e-9) => assert.ok(Math.abs(actual - expected) <= tolerance, `${actual} != ${expected}`);
+
+// Glacier regression: additive deltas of multiplicative slot effects.
+const glacier = calculateCraft({
+  channel: 'LIVE', gameVersion: '4.10.2-live.12913470', blueprintId: 'BP_CRAFT_COOL_AEGS_S01_Glacier_SCItem',
+  productEntityClass: '5748cdbc-5a26-477a-a4ad-b20a593bde59',
+  baselines: {
+    health_maxhealth: { status: 'RESOLVED', value: 230, sourcePath: 'items[1361].health' },
+    itemresource_coolantgeneration: { status: 'RESOLVED', value: 38, sourcePath: 'items[1361].coolingRate' }
+  },
+  qualities: { shell: 934, coolant: 916, pump: 860 },
+  modifiers: [
+    { propertyKey: 'health_maxhealth', slotKey: 'shell', segments: [{ startQuality: 501, endQuality: 1000, modifierStart: 1, modifierEnd: 1.2 }] },
+    { propertyKey: 'itemresource_coolantgeneration', slotKey: 'coolant', segments: [{ startQuality: 501, endQuality: 1000, modifierStart: 1, modifierEnd: 1.15 }] },
+    { propertyKey: 'itemresource_coolantgeneration', slotKey: 'pump', segments: [{ startQuality: 501, endQuality: 1000, modifierStart: 1, modifierEnd: 1.05 }] }
+  ],
+  statDefinitions: {
+    health_maxhealth: { displayPrecision: 0 },
+    itemresource_coolantgeneration: { displayPrecision: 1 }
+  }
+});
+assert.equal(glacier.status, 'COMPLETE');
+const integrity = glacier.stats.find(x => x.propertyKey === 'health_maxhealth');
+const cooling = glacier.stats.find(x => x.propertyKey === 'itemresource_coolantgeneration');
+close(integrity.craftedValue, 230 * (1 + ((934 - 501) / 499) * 0.2));
+close(cooling.craftedValue, 38 * (1 + ((916 - 501) / 499) * 0.15 + ((860 - 501) / 499) * 0.05));
+assert.equal(integrity.display.crafted, '270');
+assert.equal(cooling.display.crafted, '44,1');
+
+// Additive and multiplicative ordering.
+const mixed = combineEffects(100, [
+  { operation: 'ADDITIVE', value: 10 },
+  { operation: 'MULTIPLICATIVE', value: 1.2 },
+  { operation: 'MULTIPLICATIVE', value: 0.95 }
+]);
+close(mixed.craftedValue, 110 * 1.15);
+
+// Missing baseline produces PARTIAL, not zero.
+const partial = calculateCraft({
+  baselines: { a: { status: 'RESOLVED', value: 10 }, b: { status: 'SOURCE_UNAVAILABLE', value: null } },
+  qualities: { x: 500 },
+  modifiers: [
+    { propertyKey: 'a', slotKey: 'x', startQuality: 0, endQuality: 1000, modifierStart: 0.9, modifierEnd: 1.1 },
+    { propertyKey: 'b', slotKey: 'x', startQuality: 0, endQuality: 1000, modifierStart: 0.9, modifierEnd: 1.1 }
+  ]
+});
+assert.equal(partial.status, 'PARTIAL');
+assert.equal(partial.stats.find(x => x.propertyKey === 'b').craftedValue, null);
+
+// Segment validation.
+assert.equal(selectModifierSegment([{ startQuality: 0, endQuality: 500 }, { startQuality: 501, endQuality: 1000 }], 500).endQuality, 500);
+assert.throws(() => selectModifierSegment([{ startQuality: 0, endQuality: 600 }, { startQuality: 500, endQuality: 1000 }], 550), e => e instanceof CalculationError && e.code === 'CALC_MODIFIER_RANGE_OVERLAP');
+close(interpolateModifier({ startQuality: 0, endQuality: 1000, modifierStart: 0.8, modifierEnd: 1.2 }, 750), 1.1);
+
+console.log('VECTOR Generic Craft Calculation Engine: all tests passed');
+
+
+
+====================================================================================================
+FILE: tests/scaffold.test.mjs
+====================================================================================================
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import fs from 'node:fs'
+
+test('VECTOR scaffold keeps safe defaults', () => {
+  const env = fs.readFileSync('.env.example', 'utf8')
+  assert.match(env, /CITIZEN_ID_ENABLED=false/)
+  assert.doesNotMatch(env, /NEXT_PUBLIC_SUPABASE_SECRET/)
+})
+
+
+
+====================================================================================================
+FILE: tsconfig.json
+====================================================================================================
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "legacy",
+    "supabase/functions/**"
+  ]
+}
+
+
+
+====================================================================================================
+FILE: VERSION
+====================================================================================================
+1.2.0
