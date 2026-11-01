@@ -2,6 +2,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { AccountDrawer } from '@/components/account/AccountDrawer'
 import { getCrewContext } from '@/lib/groups/crew-context'
+import { CrewSelector } from '@/components/layout/CrewSelector'
 
 type AppRole = 'USER' | 'ONTOLOGY_ADMIN' | 'SYSTEM_ADMIN'
 
@@ -56,19 +57,10 @@ export async function VectorTopbar() {
   return (
     <header className="vector-topbar">
       <div className="vector-topbar__context">
-        <button
-          type="button"
-          className="vector-topbar__control"
-          aria-disabled="true"
-          aria-label={`Crew: ${activeGroup?.name ?? 'Kein Crew Context'}. Crew-Auswahl folgt später.`}
-          title="Crew-Auswahl folgt in einer späteren Version"
-        >
-          <span className="vector-topbar__control-text">
-            <span>CREW</span>
-            <strong>{activeGroup?.name ?? 'Kein Crew Context'}</strong>
-          </span>
-          <span aria-hidden="true">▾</span>
-        </button>
+        <CrewSelector
+          activeGroupId={crewContext.activeGroupId}
+          availableGroups={crewContext.availableGroups}
+        />
 
         <button
           type="button"
