@@ -39,7 +39,6 @@ export function CrewSelector({ activeGroupId, availableGroups }: Props) {
         return
       }
 
-      setSelectedId(groupId)
       setMessage('Crew wurde gewechselt.')
       startTransition(() => router.refresh())
     } catch {
