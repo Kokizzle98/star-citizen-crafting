@@ -498,12 +498,19 @@
 .vector-topbar__crew select {
   width: 100%;
   min-width: 0;
+  max-width: 240px;
   border: 0;
   background: #04131b;
   color: var(--text);
   font: inherit;
   font-size: .8rem;
   font-weight: 700;
+}
+
+@media (max-width: 620px) {
+  .vector-topbar__crew select {
+    max-width: 90px;
+  }
 }
 
 .vector-topbar__crew select:disabled {
