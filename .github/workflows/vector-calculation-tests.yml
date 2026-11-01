@@ -37,6 +37,9 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install dependencies
+        run: npm ci
+
       - name: Show runtime versions
         run: |
           node --version
