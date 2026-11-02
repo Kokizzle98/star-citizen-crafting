@@ -37,6 +37,8 @@
 
   AUTH_REQUIRED:
     'Deine Anmeldung ist nicht mehr gültig. Bitte melde dich erneut an.',
+  ACTIVE_GROUP_REQUIRED:
+    'Bitte wähle zuerst eine aktive Crew aus.',
   PLAYER_CONTEXT_REQUIRED:
     'Dein Spielerprofil konnte nicht eindeutig bestimmt werden. Der Lot wurde nicht gespeichert.',
   INSERT_NOT_ALLOWED:
