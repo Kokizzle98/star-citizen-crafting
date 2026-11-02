@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { VectorSidebar } from '@/components/layout/VectorSidebar'
+import { UnitPreference } from '@/components/layout/UnitPreference'
 
 export function VectorShell({
   children,
@@ -40,6 +41,7 @@ export function VectorShell({
   }
 
   return (
+    <UnitPreference>
     <div
       className="vector-shell"
       data-sidebar-collapsed={collapsed ? 'true' : 'false'}
@@ -53,5 +55,6 @@ export function VectorShell({
         {children}
       </div>
     </div>
+    </UnitPreference>
   )
 }

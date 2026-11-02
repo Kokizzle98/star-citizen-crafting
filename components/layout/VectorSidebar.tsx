@@ -38,7 +38,7 @@ export function VectorSidebar({
           className="vector-sidebar__toggle"
           type="button"
           onClick={onToggle}
-          aria-label="Navigation"
+          aria-label={collapsed ? 'Navigation ausklappen' : 'Navigation einklappen'}
           aria-expanded={!collapsed}
         >
           {collapsed ? '»' : '«'}
@@ -53,6 +53,7 @@ export function VectorSidebar({
             <Link
               href={item.href}
               key={item.href}
+              aria-label={item.label}
               aria-current={active ? 'page' : undefined}
             >
               <span className="vector-sidebar__icon" aria-hidden="true">
