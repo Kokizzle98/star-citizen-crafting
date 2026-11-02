@@ -35,7 +35,7 @@ export default async function InventoryPage() {
                 {result.rows.map((row) => (
                   <tr key={row.inventory_id}>
                     <td>{row.material}</td>
-                    <td>{row.amount}{row.input_unit && ` ${row.input_unit}`}</td>
+                    <td>{row.amount} SCU</td>
                     <td>{row.quality}</td>
                     <td>{row.location_name}</td>
                     <td>{row.player_name}</td>

@@ -47,9 +47,7 @@ export function VectorSidebar({
 
       <nav className="vector-sidebar__nav" aria-label="Module">
         {primaryNavigation.map((item) => {
-          const active =
-            pathname === item.href ||
-            pathname.startsWith(`${item.href}/`)
+          const active = pathname === item.href
 
           return (
             <Link
@@ -71,6 +69,7 @@ export function VectorSidebar({
 
         <Link
           href="/vector/inventory"
+          aria-label="Inventory"
           aria-current={pathname === '/vector/inventory' ? 'page' : undefined}
         >
           <span className="vector-sidebar__icon" aria-hidden="true">▤</span>
