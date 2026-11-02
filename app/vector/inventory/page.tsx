@@ -1,6 +1,8 @@
 import { getActiveGroupInventory } from '@/lib/inventory/inventory-read'
 import { getLiveMaterialUnits } from '@/lib/inventory/material-units'
 import { InventoryView } from '@/components/inventory/InventoryView'
+import { AddInventoryLotForm } from '@/components/inventory/AddInventoryLotForm'
+import { getInventoryLocationOptions } from '@/lib/inventory/inventory-form-options'
 
 export const metadata = {
   title: 'Inventory',
@@ -8,9 +10,9 @@ export const metadata = {
 
 export default async function InventoryPage() {
   const result = await getActiveGroupInventory()
-  const metadata = result.status === 'success' && result.rows.length > 0
-    ? await getLiveMaterialUnits()
-    : null
+  const [metadata, locations] = result.status === 'success'
+    ? await Promise.all([getLiveMaterialUnits(), getInventoryLocationOptions()])
+    : [null, null]
 
   return (
     <div className="vector-dashboard">
@@ -21,6 +23,10 @@ export default async function InventoryPage() {
         </div>
       </header>
 
+      {result.status === 'success' && metadata?.available && locations?.ok &&
+        <AddInventoryLotForm units={metadata.units} locations={locations.locations} />}
+      {result.status === 'success' && (!metadata?.available || !locations?.ok) &&
+        <p role="status">Materialien oder Locations konnten nicht geladen werden. Lot hinzufügen ist nicht verfügbar.</p>}
       {result.status === 'success' && (
         result.rows.length === 0 ? (
           <p>Für diese Crew ist noch kein Inventory vorhanden.</p>
