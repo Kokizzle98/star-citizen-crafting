@@ -19,3 +19,92 @@ test('formats volume using exact micro SCU without losing precision', () => {
   assert.equal(formatQuantity(rows, 'volume', 'AUTO'), '9223372036854.775809 SCU')
   assert.equal(formatQuantity(rows, 'volume', 'µSCU'), '9223372036854775809 µSCU')
 })
+
+test('formats volume in every explicit global unit mode', () => {
+  const rows = [
+    {
+      amount: '0.025',
+      amount_micro_scu: '25000',
+    },
+  ]
+
+  assert.equal(
+    formatQuantity(rows, 'volume', 'SCU'),
+    '0.025 SCU',
+  )
+
+  assert.equal(
+    formatQuantity(rows, 'volume', 'cSCU'),
+    '2.5 cSCU',
+  )
+
+  assert.equal(
+    formatQuantity(rows, 'volume', 'mSCU'),
+    '25 mSCU',
+  )
+
+  assert.equal(
+    formatQuantity(rows, 'volume', 'µSCU'),
+    '25000 µSCU',
+  )
+})
+
+test('AUTO chooses a readable volume unit deterministically', () => {
+  assert.equal(
+    formatQuantity(
+      [{ amount: '2', amount_micro_scu: '2000000' }],
+      'volume',
+      'AUTO',
+    ),
+    '2 SCU',
+  )
+
+  assert.equal(
+    formatQuantity(
+      [{ amount: '0.025', amount_micro_scu: '25000' }],
+      'volume',
+      'AUTO',
+    ),
+    '2.5 cSCU',
+  )
+
+  assert.equal(
+    formatQuantity(
+      [{ amount: '0.005', amount_micro_scu: '5000' }],
+      'volume',
+      'AUTO',
+    ),
+    '5 mSCU',
+  )
+
+  assert.equal(
+    formatQuantity(
+      [{ amount: '0.0005', amount_micro_scu: '500' }],
+      'volume',
+      'AUTO',
+    ),
+    '500 µSCU',
+  )
+})
+
+test('COUNT remains Stück in every global unit mode', () => {
+  const rows = [
+    {
+      amount: '130',
+      amount_micro_scu: '130',
+    },
+  ]
+
+  for (const mode of [
+    'AUTO',
+    'SCU',
+    'cSCU',
+    'mSCU',
+    'µSCU',
+  ]) {
+    assert.equal(
+      formatQuantity(rows, 'count', mode),
+      '130 Stück',
+    )
+  }
+})

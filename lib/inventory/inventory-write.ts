@@ -1,0 +1,289 @@
+﻿import 'server-only'
+
+import { getCrewContext } from '@/lib/groups/crew-context'
+import type { InventoryErrorCode } from '@/lib/inventory/inventory-error-messages'
+import {
+  normalizeInventoryQuantity,
+  type InventoryInputUnit,
+  type MaterialKind,
+} from '@/lib/inventory/inventory-quantity'
+import { getLiveMaterialUnits } from '@/lib/inventory/material-units'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+
+export type AddInventoryLotInput = {
+  material: string
+  rawAmount: string
+  inputUnit: InventoryInputUnit
+  quality: string
+  locationId: string
+}
+
+export type AddInventoryLotResult =
+  | {
+      ok: true
+      code: 'LOT_CREATED'
+    }
+  | {
+      ok: false
+      code: InventoryErrorCode
+    }
+
+type PreparedInventoryLot = {
+  material: string
+  amount: string
+  amountMicroScu: string
+  inputUnit: InventoryInputUnit
+  quality: number
+  locationId: string
+}
+
+type PrepareInventoryLotResult =
+  | {
+      ok: true
+      value: PreparedInventoryLot
+    }
+  | {
+      ok: false
+      code: InventoryErrorCode
+    }
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function normalizeRequiredText(value: string): string {
+  return value.trim()
+}
+
+function parseQuality(rawQuality: string):
+  | { ok: true; value: number }
+  | { ok: false; code: InventoryErrorCode } {
+  const value = rawQuality.trim()
+
+  if (!value) {
+    return {
+      ok: false,
+      code: 'QUALITY_REQUIRED',
+    }
+  }
+
+  if (!/^\d+$/.test(value)) {
+    return {
+      ok: false,
+      code: 'QUALITY_INVALID',
+    }
+  }
+
+  const quality = Number(value)
+
+  if (!Number.isSafeInteger(quality)) {
+    return {
+      ok: false,
+      code: 'QUALITY_INVALID',
+    }
+  }
+
+  if (quality < 0 || quality > 1000) {
+    return {
+      ok: false,
+      code: 'QUALITY_OUT_OF_RANGE',
+    }
+  }
+
+  return {
+    ok: true,
+    value: quality,
+  }
+}
+
+export function prepareInventoryLot(
+  input: AddInventoryLotInput,
+  materialKind: MaterialKind,
+): PrepareInventoryLotResult {
+  const material = normalizeRequiredText(input.material)
+
+  if (!material) {
+    return {
+      ok: false,
+      code: 'MATERIAL_REQUIRED',
+    }
+  }
+
+  const locationId = normalizeRequiredText(input.locationId)
+
+  if (!locationId) {
+    return {
+      ok: false,
+      code: 'LOCATION_REQUIRED',
+    }
+  }
+
+  if (!UUID_PATTERN.test(locationId)) {
+    return {
+      ok: false,
+      code: 'LOCATION_INVALID',
+    }
+  }
+
+  const quality = parseQuality(input.quality)
+
+  if (!quality.ok) {
+    return quality
+  }
+
+  const quantity = normalizeInventoryQuantity({
+    rawAmount: input.rawAmount,
+    materialKind,
+    inputUnit: input.inputUnit,
+  })
+
+  if (!quantity.ok) {
+    return quantity
+  }
+
+  return {
+    ok: true,
+    value: {
+      material,
+      amount: quantity.value.amount,
+      amountMicroScu: quantity.value.amountMicroScu,
+      inputUnit: quantity.value.inputUnit,
+      quality: quality.value,
+      locationId,
+    },
+  }
+}
+
+function isAuthorizationError(error: {
+  code?: string
+  message?: string
+}): boolean {
+  const message = error.message?.toLowerCase() ?? ''
+
+  return error.code === '42501' ||
+    message.includes('row-level security') ||
+    message.includes('permission denied')
+}
+
+export async function addInventoryLot(
+  input: AddInventoryLotInput,
+): Promise<AddInventoryLotResult> {
+  const supabase = createSupabaseServerClient()
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser()
+
+  if (authError || !user) {
+    return {
+      ok: false,
+      code: 'AUTH_REQUIRED',
+    }
+  }
+
+  const crewContext = await getCrewContext(user.id)
+
+  if (!crewContext.activeGroupId) {
+    return {
+      ok: false,
+      code: 'ACTIVE_GROUP_REQUIRED',
+    }
+  }
+
+  const material = normalizeRequiredText(input.material)
+
+  if (!material) {
+    return {
+      ok: false,
+      code: 'MATERIAL_REQUIRED',
+    }
+  }
+
+  const metadata = await getLiveMaterialUnits()
+  const materialKind = Object.hasOwn(metadata.units, material)
+    ? metadata.units[material]
+    : undefined
+
+  if (!metadata.available || !materialKind) {
+    return {
+      ok: false,
+      code: 'MATERIAL_UNIT_UNKNOWN',
+    }
+  }
+
+  const prepared = prepareInventoryLot(input, materialKind)
+
+  if (!prepared.ok) {
+    return prepared
+  }
+
+  const [
+    { data: gameAccount, error: gameAccountError },
+    { data: location, error: locationError },
+  ] = await Promise.all([
+    supabase
+      .from('game_accounts')
+      .select('handle')
+      .eq('user_id', user.id)
+      .eq('game_code', 'STAR_CITIZEN')
+      .eq('is_primary', true)
+      .eq('verification_status', 'VERIFIED')
+      .is('revoked_at', null)
+      .maybeSingle(),
+    supabase
+      .from('inventory_locations')
+      .select('id')
+      .eq('id', prepared.value.locationId)
+      .eq('is_archived', false)
+      .maybeSingle(),
+  ])
+
+  const playerName =
+    typeof gameAccount?.handle === 'string'
+      ? gameAccount.handle.trim()
+      : ''
+
+  if (gameAccountError || !playerName) {
+    return {
+      ok: false,
+      code: 'PLAYER_CONTEXT_REQUIRED',
+    }
+  }
+
+  if (locationError || !location) {
+    return {
+      ok: false,
+      code: 'LOCATION_INVALID',
+    }
+  }
+
+  const { error: insertError } = await supabase
+    .from('inventory')
+    .insert({
+      player_name: playerName,
+      material: prepared.value.material,
+      amount: prepared.value.amount,
+      amount_micro_scu: prepared.value.amountMicroScu,
+      input_unit: prepared.value.inputUnit,
+      quality: prepared.value.quality,
+      location_id: prepared.value.locationId,
+    })
+
+  if (insertError) {
+    console.error('Inventory lot insert failed', {
+      code: insertError.code,
+    })
+
+    return {
+      ok: false,
+      code: isAuthorizationError(insertError)
+        ? 'INSERT_NOT_ALLOWED'
+        : 'INSERT_FAILED',
+    }
+  }
+
+  return {
+    ok: true,
+    code: 'LOT_CREATED',
+  }
+}
