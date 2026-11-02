@@ -8,7 +8,6 @@ const primaryNavigation = [
 ]
 
 const futureNavigation = [
-  { icon: '▤', label: 'Inventory' },
   { icon: '◇', label: 'Fabricator' },
   { icon: '▱', label: 'Blueprints' },
   { icon: '△', label: 'Fleet' },
@@ -69,6 +68,14 @@ export function VectorSidebar({
         })}
 
         <div className="vector-sidebar__divider" />
+
+        <Link
+          href="/vector/inventory"
+          aria-current={pathname === '/vector/inventory' ? 'page' : undefined}
+        >
+          <span className="vector-sidebar__icon" aria-hidden="true">▤</span>
+          <span className="vector-sidebar__label">Inventory</span>
+        </Link>
 
         {futureNavigation.map((item) => (
           <span

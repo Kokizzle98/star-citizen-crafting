@@ -920,6 +920,30 @@
   color: var(--text);
 }
 
+.vector-inventory-table {
+  margin-top: 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: .55rem;
+}
+
+.vector-inventory-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  text-align: left;
+}
+
+.vector-inventory-table th,
+.vector-inventory-table td {
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.vector-inventory-table th {
+  color: var(--muted);
+}
+
 
 /* ==========================================================================
    VECTOR SHELL RESPONSIVE
