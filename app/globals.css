@@ -223,10 +223,12 @@
   width: var(--sidebar-rail);
 }
 
-.vector-shell[data-sidebar-collapsed='true'] .vector-sidebar:hover,
-.vector-shell[data-sidebar-collapsed='true'] .vector-sidebar:focus-within {
-  width: var(--sidebar-expanded);
-  box-shadow: 18px 0 40px rgba(0, 0, 0, .42);
+.vector-shell[data-sidebar-collapsed='true'] .vector-sidebar__brand {
+  grid-template-columns: 1fr;
+}
+
+.vector-shell[data-sidebar-collapsed='true'] .vector-sidebar__brand a {
+  display: none;
 }
 
 
@@ -353,10 +355,10 @@
 }
 
 .vector-shell[data-sidebar-collapsed='true']
-.vector-sidebar:not(:hover):not(:focus-within)
+.vector-sidebar
 .vector-sidebar__label,
 .vector-shell[data-sidebar-collapsed='true']
-.vector-sidebar:not(:hover):not(:focus-within)
+.vector-sidebar
 .vector-sidebar__brand a {
   opacity: 0;
   visibility: hidden;
@@ -920,36 +922,83 @@
   color: var(--text);
 }
 
+.vector-inventory-table {
+  margin-top: 1rem;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: .55rem;
+}
+
+.vector-inventory-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--panel);
+  text-align: left;
+}
+
+.vector-inventory-table th,
+.vector-inventory-table td {
+  padding: .75rem 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.vector-inventory-table th {
+  color: var(--muted);
+}
+
+.inventory-view__controls {
+  display: flex;
+  gap: .5rem;
+  margin: 1rem 0;
+}
+
+.inventory-view__controls button[aria-pressed='true'] {
+  color: var(--cyan);
+  border-color: var(--cyan);
+}
+
+.inventory-group {
+  margin: .5rem 0;
+  border: 1px solid var(--line);
+  border-radius: .55rem;
+  background: var(--panel);
+}
+
+.inventory-group > summary {
+  cursor: pointer;
+  padding: .85rem 1rem;
+}
+
+.inventory-group > summary > span:first-child {
+  font-weight: 700;
+  margin-right: 1rem;
+}
+
+.inventory-summary {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: .5rem 1.5rem;
+  color: var(--muted);
+}
+
+.inventory-summary strong {
+  color: var(--text);
+}
+
+.inventory-group__children {
+  padding: 0 1rem .5rem;
+}
+
+.inventory-group .vector-inventory-table {
+  margin: 0 1rem 1rem;
+}
+
 
 /* ==========================================================================
    VECTOR SHELL RESPONSIVE
    ========================================================================== */
 
 @media (max-width: 900px) {
-  .vector-shell,
-  .vector-shell[data-sidebar-collapsed='true'] {
-    --sidebar-width: var(--sidebar-rail);
-  }
-
-  .vector-sidebar {
-    width: var(--sidebar-rail);
-  }
-
-  .vector-sidebar:hover,
-  .vector-sidebar:focus-within {
-    width: var(--sidebar-expanded);
-
-    box-shadow: 18px 0 40px rgba(0, 0, 0, .42);
-  }
-
-  .vector-sidebar:not(:hover):not(:focus-within)
-  .vector-sidebar__label,
-  .vector-sidebar:not(:hover):not(:focus-within)
-  .vector-sidebar__brand a {
-    opacity: 0;
-    visibility: hidden;
-  }
-
   .vector-topbar__context {
     gap: .5rem;
     padding-inline: .75rem;

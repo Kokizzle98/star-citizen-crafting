@@ -8,7 +8,6 @@ const primaryNavigation = [
 ]
 
 const futureNavigation = [
-  { icon: '▤', label: 'Inventory' },
   { icon: '◇', label: 'Fabricator' },
   { icon: '▱', label: 'Blueprints' },
   { icon: '△', label: 'Fleet' },
@@ -39,7 +38,7 @@ export function VectorSidebar({
           className="vector-sidebar__toggle"
           type="button"
           onClick={onToggle}
-          aria-label="Navigation"
+          aria-label={collapsed ? 'Navigation ausklappen' : 'Navigation einklappen'}
           aria-expanded={!collapsed}
         >
           {collapsed ? '»' : '«'}
@@ -48,14 +47,13 @@ export function VectorSidebar({
 
       <nav className="vector-sidebar__nav" aria-label="Module">
         {primaryNavigation.map((item) => {
-          const active =
-            pathname === item.href ||
-            pathname.startsWith(`${item.href}/`)
+          const active = pathname === item.href
 
           return (
             <Link
               href={item.href}
               key={item.href}
+              aria-label={item.label}
               aria-current={active ? 'page' : undefined}
             >
               <span className="vector-sidebar__icon" aria-hidden="true">
@@ -69,6 +67,15 @@ export function VectorSidebar({
         })}
 
         <div className="vector-sidebar__divider" />
+
+        <Link
+          href="/vector/inventory"
+          aria-label="Inventory"
+          aria-current={pathname === '/vector/inventory' ? 'page' : undefined}
+        >
+          <span className="vector-sidebar__icon" aria-hidden="true">▤</span>
+          <span className="vector-sidebar__label">Inventory</span>
+        </Link>
 
         {futureNavigation.map((item) => (
           <span

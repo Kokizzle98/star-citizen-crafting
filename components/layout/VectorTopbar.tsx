@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { AccountDrawer } from '@/components/account/AccountDrawer'
 import { getCrewContext } from '@/lib/groups/crew-context'
 import { CrewSelector } from '@/components/layout/CrewSelector'
+import { UnitControl } from '@/components/layout/UnitPreference'
 
 type AppRole = 'USER' | 'ONTOLOGY_ADMIN' | 'SYSTEM_ADMIN'
 
@@ -75,6 +76,7 @@ export async function VectorTopbar() {
           </span>
           <span aria-hidden="true">▾</span>
         </button>
+        <UnitControl />
       </div>
 
       <AccountDrawer
