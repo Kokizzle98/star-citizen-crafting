@@ -195,3 +195,27 @@ test('does not expose owner identity in input or prepared payload', () => {
   assert.equal('user_id' in result.value, false)
   assert.equal('player_name' in result.value, false)
 })
+
+test('write boundary accepts only own LIVE material-unit properties', async () => {
+  const source = await readFile(
+    new URL('../lib/inventory/inventory-write.ts', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(
+    source,
+    /Object\.hasOwn\(metadata\.units,\s*material\)/,
+  )
+})
+
+test('write boundary rejects archived inventory locations', async () => {
+  const source = await readFile(
+    new URL('../lib/inventory/inventory-write.ts', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(
+    source,
+    /\.from\(['"]inventory_locations['"]\)[\s\S]*?\.eq\(['"]id['"],\s*prepared\.value\.locationId\)[\s\S]*?\.eq\(['"]is_archived['"],\s*false\)/,
+  )
+})

@@ -200,7 +200,9 @@ export async function addInventoryLot(
   }
 
   const metadata = await getLiveMaterialUnits()
-  const materialKind = metadata.units[material]
+  const materialKind = Object.hasOwn(metadata.units, material)
+    ? metadata.units[material]
+    : undefined
 
   if (!metadata.available || !materialKind) {
     return {
@@ -232,6 +234,7 @@ export async function addInventoryLot(
       .from('inventory_locations')
       .select('id')
       .eq('id', prepared.value.locationId)
+      .eq('is_archived', false)
       .maybeSingle(),
   ])
 
