@@ -79,7 +79,7 @@ export function prepareInventoryLot(
   }
 }
 
-function isAuthorizationError(error: {
+export function isAuthorizationError(error: {
   code?: string
   message?: string
 }): boolean {

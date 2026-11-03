@@ -25,6 +25,12 @@
 
   LOT_ID_INVALID:
     'Der Inventory-Lot konnte nicht eindeutig bestimmt werden.',
+  LOT_NOT_FOUND:
+    'Der Inventory-Lot wurde nicht gefunden oder kann nicht bearbeitet werden.',
+  UPDATE_NOT_ALLOWED:
+    'Der Inventory-Lot konnte aufgrund der Zugriffsregeln nicht aktualisiert werden.',
+  UPDATE_FAILED:
+    'Der Inventory-Lot konnte nicht aktualisiert werden. Bitte versuche es erneut.',
 
   QUALITY_REQUIRED:
     'Bitte eine Qualität eingeben.',
@@ -52,6 +58,7 @@
 
 export const INVENTORY_SUCCESS_MESSAGES = {
   LOT_CREATED: 'Lot wurde zum Inventory hinzugefügt.',
+  LOT_UPDATED: 'Lot wurde aktualisiert.',
 } as const
 
 export type InventoryErrorCode =

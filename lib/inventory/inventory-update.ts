@@ -25,17 +25,22 @@ export type PrepareInventoryLotUpdateResult =
 
 const MAX_INVENTORY_ID = 9_223_372_036_854_775_807n
 
+export function canonicalizeInventoryId(value: string): string | null {
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) {
+    return null
+  }
+
+  const id = BigInt(value)
+  return id > 0n && id <= MAX_INVENTORY_ID ? id.toString() : null
+}
+
 export function prepareInventoryLotUpdate(
   input: UpdateInventoryLotInput,
   materialKind: MaterialKind,
 ): PrepareInventoryLotUpdateResult {
-  if (!/^\d+$/.test(input.inventoryId)) {
-    return { ok: false, code: 'LOT_ID_INVALID' }
-  }
+  const inventoryId = canonicalizeInventoryId(input.inventoryId)
 
-  const inventoryId = BigInt(input.inventoryId)
-
-  if (inventoryId <= 0n || inventoryId > MAX_INVENTORY_ID) {
+  if (!inventoryId) {
     return { ok: false, code: 'LOT_ID_INVALID' }
   }
 
@@ -54,6 +59,6 @@ export function prepareInventoryLotUpdate(
 
   return {
     ok: true,
-    value: { inventoryId: inventoryId.toString(), ...fields.value },
+    value: { inventoryId, ...fields.value },
   }
 }
