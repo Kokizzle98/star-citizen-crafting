@@ -13,9 +13,15 @@ const quantitySource = await readFile(
   'utf8',
 )
 
+const validationSource = (await readFile(
+  new URL('../lib/inventory/inventory-lot-validation.ts', import.meta.url),
+  'utf8',
+)).replace(/^import \{[\s\S]*?\} from '\.\/inventory-quantity'\s*$/m, '')
+
 source = source
   .replace(/^\uFEFF?import 'server-only'\s*$/m, '')
   .replace(/^import .*inventory-error-messages.*$/m, '')
+  .replace(/^import .*inventory-lot-validation.*$/m, '')
   .replace(
     /^import \{[\s\S]*?\} from '@\/lib\/inventory\/inventory-quantity'\s*$/m,
     '',
@@ -28,7 +34,7 @@ source = source
     '',
   )
 
-const combined = `${quantitySource}\n${source}`
+const combined = `${quantitySource}\n${validationSource}\n${source}`
 
 const javascript = ts.transpileModule(combined, {
   compilerOptions: {

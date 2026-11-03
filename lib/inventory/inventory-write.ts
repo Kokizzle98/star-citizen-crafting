@@ -2,8 +2,8 @@
 
 import { getCrewContext } from '@/lib/groups/crew-context'
 import type { InventoryErrorCode } from '@/lib/inventory/inventory-error-messages'
+import { prepareInventoryLotFields } from '@/lib/inventory/inventory-lot-validation'
 import {
-  normalizeInventoryQuantity,
   type InventoryInputUnit,
   type MaterialKind,
 } from '@/lib/inventory/inventory-quantity'
@@ -47,52 +47,8 @@ type PrepareInventoryLotResult =
       code: InventoryErrorCode
     }
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-
 function normalizeRequiredText(value: string): string {
   return value.trim()
-}
-
-function parseQuality(rawQuality: string):
-  | { ok: true; value: number }
-  | { ok: false; code: InventoryErrorCode } {
-  const value = rawQuality.trim()
-
-  if (!value) {
-    return {
-      ok: false,
-      code: 'QUALITY_REQUIRED',
-    }
-  }
-
-  if (!/^\d+$/.test(value)) {
-    return {
-      ok: false,
-      code: 'QUALITY_INVALID',
-    }
-  }
-
-  const quality = Number(value)
-
-  if (!Number.isSafeInteger(quality)) {
-    return {
-      ok: false,
-      code: 'QUALITY_INVALID',
-    }
-  }
-
-  if (quality < 0 || quality > 1000) {
-    return {
-      ok: false,
-      code: 'QUALITY_OUT_OF_RANGE',
-    }
-  }
-
-  return {
-    ok: true,
-    value: quality,
-  }
 }
 
 export function prepareInventoryLot(
@@ -108,47 +64,17 @@ export function prepareInventoryLot(
     }
   }
 
-  const locationId = normalizeRequiredText(input.locationId)
+  const fields = prepareInventoryLotFields(input, materialKind)
 
-  if (!locationId) {
-    return {
-      ok: false,
-      code: 'LOCATION_REQUIRED',
-    }
-  }
-
-  if (!UUID_PATTERN.test(locationId)) {
-    return {
-      ok: false,
-      code: 'LOCATION_INVALID',
-    }
-  }
-
-  const quality = parseQuality(input.quality)
-
-  if (!quality.ok) {
-    return quality
-  }
-
-  const quantity = normalizeInventoryQuantity({
-    rawAmount: input.rawAmount,
-    materialKind,
-    inputUnit: input.inputUnit,
-  })
-
-  if (!quantity.ok) {
-    return quantity
+  if (!fields.ok) {
+    return fields
   }
 
   return {
     ok: true,
     value: {
       material,
-      amount: quantity.value.amount,
-      amountMicroScu: quantity.value.amountMicroScu,
-      inputUnit: quantity.value.inputUnit,
-      quality: quality.value,
-      locationId,
+      ...fields.value,
     },
   }
 }

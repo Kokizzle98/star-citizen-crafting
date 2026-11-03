@@ -23,6 +23,9 @@
   MATERIAL_UNIT_UNKNOWN:
     'Für dieses Material ist keine eindeutige Mengeneinheit verfügbar. Der Lot kann deshalb nicht gespeichert werden.',
 
+  LOT_ID_INVALID:
+    'Der Inventory-Lot konnte nicht eindeutig bestimmt werden.',
+
   QUALITY_REQUIRED:
     'Bitte eine Qualität eingeben.',
   QUALITY_INVALID:
