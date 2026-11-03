@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState, type MutableRefObject, type RefObject } from 'react'
 import { useRouter } from 'next/navigation'
 import { submitInventoryLotDelete } from '@/app/vector/inventory/actions'
 import { useUnitPreference } from '@/components/layout/UnitPreference'
@@ -41,6 +41,8 @@ type Editing = {
   locations: InventoryLocationOption[] | null
   editingLotId: string | null
   deletingLotId: string | null
+  deleteCancelRef: RefObject<HTMLButtonElement>
+  deleteTriggerRefs: MutableRefObject<Map<string, HTMLButtonElement>>
   pending: boolean
   setPending: (pending: boolean) => void
   start: (id: string) => void
@@ -68,14 +70,17 @@ function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: Mat
               <td>{materialKind(units, row.material) ? formatQuantity([row], materialKind(units, row.material), mode) : `${row.amount} (Einheit unbekannt)`}</td>
               <td>Q{row.quality}</td><td>{row.location_name}</td>
               <td>{editing.deletingLotId === row.inventory_id && canDelete
-                ? <div>
-                    <p>Lot #{row.inventory_id} ({row.material}) löschen?</p>
-                    <button type="button" disabled={editing.pending} onClick={editing.cancelDelete}>Abbrechen</button>
-                    <button type="button" disabled={editing.pending} onClick={() => editing.confirmDelete(row.inventory_id)}>Löschen</button>
+                ? <div role="group" aria-labelledby={`delete-question-${row.inventory_id}`}>
+                    <p id={`delete-question-${row.inventory_id}`}>Lot #{row.inventory_id} ({row.material}) löschen?</p>
+                    <button type="button" ref={editing.deleteCancelRef} aria-describedby={`delete-question-${row.inventory_id}`} disabled={editing.pending} onClick={editing.cancelDelete}>Abbrechen</button>
+                    <button type="button" aria-describedby={`delete-question-${row.inventory_id}`} disabled={editing.pending} onClick={() => editing.confirmDelete(row.inventory_id)}>Löschen</button>
                   </div>
                 : <>
                     {canEdit && <button type="button" disabled={editing.pending} onClick={() => editing.start(row.inventory_id)}>Bearbeiten</button>}
-                    {canDelete && <button type="button" disabled={editing.pending} onClick={() => editing.startDelete(row.inventory_id)}>Löschen</button>}
+                    {canDelete && <button type="button" ref={(element) => {
+                      if (element) editing.deleteTriggerRefs.current.set(row.inventory_id, element)
+                      else editing.deleteTriggerRefs.current.delete(row.inventory_id)
+                    }} disabled={editing.pending} onClick={() => editing.startDelete(row.inventory_id)}>Löschen</button>}
                   </>}</td>
             </>}
         </tr>
@@ -98,7 +103,18 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
   const [success, setSuccess] = useState<'LOT_UPDATED' | 'LOT_DELETED' | null>(null)
   const [error, setError] = useState<InventoryErrorCode | null>(null)
   const deletePending = useRef(false)
+  const deleteCancelRef = useRef<HTMLButtonElement>(null)
+  const deleteTriggerRefs = useRef(new Map<string, HTMLButtonElement>())
+  const restoreDeleteFocusId = useRef<string | null>(null)
   const router = useRouter()
+  useEffect(() => {
+    if (deletingLotId !== null) {
+      deleteCancelRef.current?.focus()
+    } else if (restoreDeleteFocusId.current !== null) {
+      deleteTriggerRefs.current.get(restoreDeleteFocusId.current)?.focus()
+      restoreDeleteFocusId.current = null
+    }
+  }, [deletingLotId])
   async function confirmDelete(id: string) {
     if (pending || deletePending.current || deletingLotId !== id) return
     deletePending.current = true
@@ -122,12 +138,12 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     }
   }
   const editing: Editing = {
-    currentUserId, locations: locationOptions, editingLotId, deletingLotId, pending, setPending,
+    currentUserId, locations: locationOptions, editingLotId, deletingLotId, deleteCancelRef, deleteTriggerRefs, pending, setPending,
     start: (id) => { setSuccess(null); setError(null); setDeletingLotId(null); setEditingLotId(id) },
     cancel: () => setEditingLotId(null),
     success: () => { setEditingLotId(null); setSuccess('LOT_UPDATED'); router.refresh() },
     startDelete: (id) => { setSuccess(null); setError(null); setEditingLotId(null); setDeletingLotId(id) },
-    cancelDelete: () => { setDeletingLotId(null); setError(null) },
+    cancelDelete: () => { restoreDeleteFocusId.current = deletingLotId; setDeletingLotId(null); setError(null) },
     confirmDelete,
   }
   const { mode } = useUnitPreference()

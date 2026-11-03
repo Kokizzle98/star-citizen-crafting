@@ -131,3 +131,18 @@ test('UI gates ownership, confirmation, mutual exclusion, announcements and pend
   assert.doesNotMatch(view, /window\.(?:confirm|alert)/)
   assert.match(messages, /LOT_DELETED: 'Lot wurde aus dem Inventory gelöscht\.'/)
 })
+
+test('delete confirmation labels controls and manages focus only on open and cancel', () => {
+  assert.match(view, /role="group" aria-labelledby=\{`delete-question-\$\{row\.inventory_id\}`\}/)
+  assert.match(view, /<p id=\{`delete-question-\$\{row\.inventory_id\}`\}>Lot #\{row\.inventory_id\} \(\{row\.material\}\) löschen\?<\/p>/)
+  assert.match(view, /ref=\{editing\.deleteCancelRef\} aria-describedby=\{`delete-question-\$\{row\.inventory_id\}`\}/)
+  assert.match(view, /<button type="button" aria-describedby=\{`delete-question-\$\{row\.inventory_id\}`\} disabled=\{editing\.pending\} onClick=\{\(\) => editing\.confirmDelete\(row\.inventory_id\)\}/)
+  assert.match(view, /useEffect\(\(\) => \{\s*if \(deletingLotId !== null\) \{\s*deleteCancelRef\.current\?\.focus\(\)/)
+  assert.match(view, /deleteTriggerRefs\.current\.get\(restoreDeleteFocusId\.current\)\?\.focus\(\)/)
+  assert.match(view, /restoreDeleteFocusId\.current = null[\s\S]*?\}, \[deletingLotId\]\)/)
+  assert.match(view, /if \(element\) editing\.deleteTriggerRefs\.current\.set\(row\.inventory_id, element\)/)
+  assert.match(view, /cancelDelete: \(\) => \{ restoreDeleteFocusId\.current = deletingLotId; setDeletingLotId\(null\)/)
+  const successBranch = view.match(/if \(result\.ok\) \{([\s\S]*?)\} else setError/)[1]
+  assert.doesNotMatch(successBranch, /restoreDeleteFocusId|\.focus\(/)
+  assert.doesNotMatch(view, /autoFocus|setTimeout|(?:window\.)?(?:confirm|alert)\s*\(/)
+})
