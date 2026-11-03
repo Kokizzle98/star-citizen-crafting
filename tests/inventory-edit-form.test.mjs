@@ -71,6 +71,7 @@ test('inline editor is ownership gated and has immutable material and accessible
   assert.match(form, /\['SCU', 'cSCU', 'mSCU', 'µSCU'\]/)
   assert.match(form, /onClick=\{onCancel\}/)
   assert.match(form, /event\.key === 'Escape'/)
+  assert.match(form, /name="rawAmount"[\s\S]*?autoFocus/)
   assert.match(form, /aria-invalid/)
   assert.match(form, /aria-describedby/)
   assert.match(form, /role="alert"/)

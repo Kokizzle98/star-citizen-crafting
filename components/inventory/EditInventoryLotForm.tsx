@@ -59,7 +59,7 @@ export function EditInventoryLotForm({ row, initial, locations, pending, setPend
     <p>{row.material}</p>
     <input type="hidden" name="inventoryId" value={row.inventory_id} />
     <label htmlFor={id('amount')}>Menge</label>
-    <input id={id('amount')} name="rawAmount" inputMode="decimal" defaultValue={initial.rawAmount} {...errorProps('rawAmount')} />
+    <input id={id('amount')} name="rawAmount" inputMode="decimal" defaultValue={initial.rawAmount} autoFocus {...errorProps('rawAmount')} />
     {fieldError('rawAmount')}
     <label htmlFor={id('unit')}>Einheit</label>
     <select id={id('unit')} name="inputUnit" defaultValue={initial.inputUnit} {...errorProps('inputUnit')}>
