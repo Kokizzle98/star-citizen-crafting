@@ -31,6 +31,10 @@
     'Der Inventory-Lot konnte aufgrund der Zugriffsregeln nicht aktualisiert werden.',
   UPDATE_FAILED:
     'Der Inventory-Lot konnte nicht aktualisiert werden. Bitte versuche es erneut.',
+  DELETE_NOT_ALLOWED:
+    'Der Inventory-Lot konnte aufgrund der Zugriffsregeln nicht gelöscht werden.',
+  DELETE_FAILED:
+    'Der Inventory-Lot konnte nicht gelöscht werden. Bitte versuche es erneut.',
 
   QUALITY_REQUIRED:
     'Bitte eine Qualität eingeben.',
@@ -60,6 +64,7 @@ export const INVENTORY_SUCCESS_MESSAGES = {
   LOT_CREATED: 'Lot wurde zum Inventory hinzugefügt.',
   LOT_MERGED: 'Menge wurde dem bestehenden Lot hinzugefügt.',
   LOT_UPDATED: 'Lot wurde aktualisiert.',
+  LOT_DELETED: 'Lot wurde aus dem Inventory gelöscht.',
 } as const
 
 export type InventoryErrorCode =
