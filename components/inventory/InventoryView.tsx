@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { submitInventoryLotDelete } from '@/app/vector/inventory/actions'
 import { useUnitPreference } from '@/components/layout/UnitPreference'
 import { EditInventoryLotForm } from '@/components/inventory/EditInventoryLotForm'
 import { inventoryEditInitialValue } from '@/lib/inventory/inventory-edit-display'
-import { INVENTORY_SUCCESS_MESSAGES } from '@/lib/inventory/inventory-error-messages'
+import { INVENTORY_ERROR_MESSAGES, INVENTORY_SUCCESS_MESSAGES, type InventoryErrorCode } from '@/lib/inventory/inventory-error-messages'
 import type { InventoryLocationOption } from '@/lib/inventory/inventory-form-options'
 import { formatQuantity, type UnitMode } from '@/lib/inventory/inventory-display'
 import type { InventoryRow } from '@/lib/inventory/inventory-result'
@@ -39,11 +40,15 @@ type Editing = {
   currentUserId: string | null
   locations: InventoryLocationOption[] | null
   editingLotId: string | null
+  deletingLotId: string | null
   pending: boolean
   setPending: (pending: boolean) => void
   start: (id: string) => void
   cancel: () => void
   success: () => void
+  startDelete: (id: string) => void
+  cancelDelete: () => void
+  confirmDelete: (id: string) => void
 }
 
 function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: MaterialUnits; mode: UnitMode; editing: Editing }) {
@@ -53,6 +58,7 @@ function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: Mat
       <tbody>{rows.map((row) => {
         const initial = inventoryEditInitialValue(row, materialKind(units, row.material))
         const canEdit = editing.currentUserId !== null && row.owner_user_id === editing.currentUserId && initial && editing.locations
+        const canDelete = editing.currentUserId !== null && row.owner_user_id === editing.currentUserId
         return <tr key={row.inventory_id}>
           {editing.editingLotId === row.inventory_id && canEdit && editing.locations
             ? <td colSpan={6}><EditInventoryLotForm key={row.inventory_id} row={row} initial={initial} locations={editing.locations}
@@ -61,7 +67,16 @@ function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: Mat
               <td>#{row.inventory_id}</td><td>{row.player_name}</td>
               <td>{materialKind(units, row.material) ? formatQuantity([row], materialKind(units, row.material), mode) : `${row.amount} (Einheit unbekannt)`}</td>
               <td>Q{row.quality}</td><td>{row.location_name}</td>
-              <td>{canEdit && <button type="button" disabled={editing.pending} onClick={() => editing.start(row.inventory_id)}>Bearbeiten</button>}</td>
+              <td>{editing.deletingLotId === row.inventory_id && canDelete
+                ? <div>
+                    <p>Lot #{row.inventory_id} ({row.material}) löschen?</p>
+                    <button type="button" disabled={editing.pending} onClick={editing.cancelDelete}>Abbrechen</button>
+                    <button type="button" disabled={editing.pending} onClick={() => editing.confirmDelete(row.inventory_id)}>Löschen</button>
+                  </div>
+                : <>
+                    {canEdit && <button type="button" disabled={editing.pending} onClick={() => editing.start(row.inventory_id)}>Bearbeiten</button>}
+                    {canDelete && <button type="button" disabled={editing.pending} onClick={() => editing.startDelete(row.inventory_id)}>Löschen</button>}
+                  </>}</td>
             </>}
         </tr>
       })}</tbody>
@@ -78,24 +93,53 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
 }) {
   const [view, setView] = useState<'GLOBAL' | 'LOCATION'>('GLOBAL')
   const [editingLotId, setEditingLotId] = useState<string | null>(null)
+  const [deletingLotId, setDeletingLotId] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
-  const [success, setSuccess] = useState(false)
+  const [success, setSuccess] = useState<'LOT_UPDATED' | 'LOT_DELETED' | null>(null)
+  const [error, setError] = useState<InventoryErrorCode | null>(null)
+  const deletePending = useRef(false)
   const router = useRouter()
+  async function confirmDelete(id: string) {
+    if (pending || deletePending.current || deletingLotId !== id) return
+    deletePending.current = true
+    setPending(true)
+    setError(null)
+    const data = new FormData()
+    data.set('inventoryId', id)
+    try {
+      const result = await submitInventoryLotDelete(data)
+      if (result.ok) {
+        setDeletingLotId(null)
+        setSuccess(result.code)
+        router.refresh()
+      } else setError(result.code)
+    } catch (error) {
+      console.error('Inventory lot delete failed', error)
+      setError('DELETE_FAILED')
+    } finally {
+      deletePending.current = false
+      setPending(false)
+    }
+  }
   const editing: Editing = {
-    currentUserId, locations: locationOptions, editingLotId, pending, setPending,
-    start: (id) => { setSuccess(false); setEditingLotId(id) },
+    currentUserId, locations: locationOptions, editingLotId, deletingLotId, pending, setPending,
+    start: (id) => { setSuccess(null); setError(null); setDeletingLotId(null); setEditingLotId(id) },
     cancel: () => setEditingLotId(null),
-    success: () => { setEditingLotId(null); setSuccess(true); router.refresh() },
+    success: () => { setEditingLotId(null); setSuccess('LOT_UPDATED'); router.refresh() },
+    startDelete: (id) => { setSuccess(null); setError(null); setEditingLotId(null); setDeletingLotId(id) },
+    cancelDelete: () => { setDeletingLotId(null); setError(null) },
+    confirmDelete,
   }
   const { mode } = useUnitPreference()
   const materials = (entries: InventoryRow[]) => groupBy(entries, (row) => row.material)
   const locations = (entries: InventoryRow[]) => groupBy(entries, (row) => row.location_id)
 
   return <section className="inventory-view" aria-label="Crew Inventory">
-    <div role="status">{success ? INVENTORY_SUCCESS_MESSAGES.LOT_UPDATED : null}</div>
+    <div role="status">{success ? INVENTORY_SUCCESS_MESSAGES[success] : null}</div>
+    {error && <div role="alert">{INVENTORY_ERROR_MESSAGES[error]}</div>}
     <div className="inventory-view__controls" role="group" aria-label="Inventory Ansicht">
-      <button type="button" disabled={pending} aria-pressed={view === 'GLOBAL'} onClick={() => { setEditingLotId(null); setView('GLOBAL') }}>GLOBAL</button>
-      <button type="button" disabled={pending} aria-pressed={view === 'LOCATION'} onClick={() => { setEditingLotId(null); setView('LOCATION') }}>LOCATION</button>
+      <button type="button" disabled={pending} aria-pressed={view === 'GLOBAL'} onClick={() => { setEditingLotId(null); setDeletingLotId(null); setError(null); setView('GLOBAL') }}>GLOBAL</button>
+      <button type="button" disabled={pending} aria-pressed={view === 'LOCATION'} onClick={() => { setEditingLotId(null); setDeletingLotId(null); setError(null); setView('LOCATION') }}>LOCATION</button>
     </div>
     {!metadataAvailable && <p role="status">LIVE Materialdaten nicht verfügbar; Einheiten sind unbekannt.</p>}
     {view === 'GLOBAL'

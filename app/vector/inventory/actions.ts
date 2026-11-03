@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { addInventoryLot, type AddInventoryLotResult } from '@/lib/inventory/inventory-write'
 import type { InventoryInputUnit } from '@/lib/inventory/inventory-quantity'
 import { updateInventoryLot, type UpdateInventoryLotResult } from '@/lib/inventory/inventory-update-write'
+import { deleteInventoryLot, type DeleteInventoryLotResult } from '@/lib/inventory/inventory-delete-write'
 
 function text(formData: FormData, key: string): string {
   const value = formData.get(key)
@@ -47,5 +48,11 @@ export async function submitInventoryLotUpdate(formData: FormData): Promise<Upda
     locationId: text(formData, 'locationId'),
   })
   if (result.ok && result.code === 'LOT_UPDATED') revalidatePath('/vector/inventory')
+  return result
+}
+
+export async function submitInventoryLotDelete(formData: FormData): Promise<DeleteInventoryLotResult> {
+  const result = await deleteInventoryLot(text(formData, 'inventoryId'))
+  if (result.ok) revalidatePath('/vector/inventory')
   return result
 }

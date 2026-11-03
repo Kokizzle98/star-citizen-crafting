@@ -75,6 +75,7 @@ test('inline editor is ownership gated and has immutable material and accessible
   assert.match(form, /aria-invalid/)
   assert.match(form, /aria-describedby/)
   assert.match(form, /role="alert"/)
-  assert.match(view, /INVENTORY_SUCCESS_MESSAGES\.LOT_UPDATED/)
+  assert.match(view, /setSuccess\('LOT_UPDATED'\)/)
+  assert.match(view, /INVENTORY_SUCCESS_MESSAGES\[success\]/)
   assert.doesNotMatch(form + view + action, /\.from\s*\(|\.update\s*\(/)
 })
