@@ -3,6 +3,7 @@ import { getLiveMaterialUnits } from '@/lib/inventory/material-units'
 import { InventoryView } from '@/components/inventory/InventoryView'
 import { AddInventoryLotForm } from '@/components/inventory/AddInventoryLotForm'
 import { getInventoryLocationOptions } from '@/lib/inventory/inventory-form-options'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 
 export const metadata = {
   title: 'Inventory',
@@ -10,9 +11,10 @@ export const metadata = {
 
 export default async function InventoryPage() {
   const result = await getActiveGroupInventory()
-  const [metadata, locations] = result.status === 'success'
-    ? await Promise.all([getLiveMaterialUnits(), getInventoryLocationOptions()])
-    : [null, null]
+  const [metadata, locations, auth] = result.status === 'success'
+    ? await Promise.all([getLiveMaterialUnits(), getInventoryLocationOptions(), createSupabaseServerClient().auth.getUser()])
+    : [null, null, null]
+  const currentUserId = auth && !auth.error ? auth.data.user?.id ?? null : null
 
   return (
     <div className="vector-dashboard">
@@ -31,7 +33,8 @@ export default async function InventoryPage() {
         result.rows.length === 0 ? (
           <p>Für diese Crew ist noch kein Inventory vorhanden.</p>
         ) : (
-          <InventoryView rows={result.rows} units={metadata?.units ?? {}} metadataAvailable={metadata?.available ?? false} />
+          <InventoryView rows={result.rows} units={metadata?.units ?? {}} metadataAvailable={metadata?.available ?? false}
+            currentUserId={currentUserId} locations={locations?.ok ? locations.locations : null} />
         )
       )}
       {result.status === 'no_active_crew' && <p>Keine aktive Crew ausgewählt.</p>}
