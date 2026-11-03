@@ -13,8 +13,8 @@ export function inventoryEditInitialValue(
   kind: MaterialKind | undefined,
 ): { rawAmount: string; inputUnit: InventoryInputUnit } | null {
   if (kind === 'count') {
-    return row.input_unit === 'COUNT' && /^[1-9]\d*$/.test(row.amount)
-      ? { rawAmount: row.amount, inputUnit: 'COUNT' } : null
+    return row.input_unit === 'COUNT' && /^[1-9]\d*$/.test(row.amount_micro_scu)
+      ? { rawAmount: row.amount_micro_scu, inputUnit: 'COUNT' } : null
   }
   const unit = row.input_unit
   if (kind !== 'volume' || (unit !== 'SCU' && unit !== 'cSCU' && unit !== 'mSCU' && unit !== 'µSCU') ||

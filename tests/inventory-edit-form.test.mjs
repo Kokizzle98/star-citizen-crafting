@@ -54,7 +54,7 @@ test('initial values are exact for all units and reject inconsistent units', () 
   for (const [unit, rawAmount] of [['SCU', '0.025'], ['cSCU', '2.5'], ['mSCU', '25'], ['µSCU', '25000']]) {
     assert.deepEqual(inventoryEditInitialValue({ ...row, input_unit: unit }, 'volume'), { rawAmount, inputUnit: unit })
   }
-  assert.deepEqual(inventoryEditInitialValue({ ...row, amount: '130', input_unit: 'COUNT' }, 'count'), { rawAmount: '130', inputUnit: 'COUNT' })
+  assert.deepEqual(inventoryEditInitialValue({ ...row, amount: '130.000', amount_micro_scu: '130', input_unit: 'COUNT' }, 'count'), { rawAmount: '130', inputUnit: 'COUNT' })
   assert.equal(inventoryEditInitialValue({ ...row, input_unit: 'COUNT' }, 'volume'), null)
   assert.equal(inventoryEditInitialValue({ ...row, input_unit: 'SCU' }, 'count'), null)
   assert.doesNotMatch(helper, /\bNumber\b|parseFloat|\s\*\s/)
