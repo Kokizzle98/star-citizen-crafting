@@ -44,6 +44,37 @@ test('adapter sends only allowed raw fields to the write boundary and revalidate
   assert.deepEqual(revalidated, ['/vector/inventory'])
 })
 
+test('merged Lot success revalidates the Inventory path', async () => {
+  calls.length = 0
+  revalidated.length = 0
+  writeResult = { ok: true, code: 'LOT_MERGED' }
+
+  const data = new FormData()
+
+  for (const [key, value] of Object.entries({
+    material: 'Beryl',
+    rawAmount: '1',
+    inputUnit: 'SCU',
+    quality: '904',
+    locationId: 'location',
+  })) {
+    data.set(key, value)
+  }
+
+  assert.deepEqual(
+    await submitInventoryLot(data),
+    { ok: true, code: 'LOT_MERGED' },
+  )
+
+  assert.equal(calls.length, 1)
+  assert.deepEqual(
+    revalidated,
+    ['/vector/inventory'],
+  )
+
+  writeResult = { ok: true, code: 'LOT_CREATED' }
+})
+
 test('adapter rejects missing and invalid units without writing', async () => {
   const data = new FormData()
   assert.deepEqual(await submitInventoryLot(data), { ok: false, code: 'UNIT_REQUIRED' })

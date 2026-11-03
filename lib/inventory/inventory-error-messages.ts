@@ -58,6 +58,7 @@
 
 export const INVENTORY_SUCCESS_MESSAGES = {
   LOT_CREATED: 'Lot wurde zum Inventory hinzugefügt.',
+  LOT_MERGED: 'Menge wurde dem bestehenden Lot hinzugefügt.',
   LOT_UPDATED: 'Lot wurde aktualisiert.',
 } as const
 

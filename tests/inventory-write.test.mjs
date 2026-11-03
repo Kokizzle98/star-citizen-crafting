@@ -43,7 +43,10 @@ const javascript = ts.transpileModule(combined, {
   },
 }).outputText
 
-const { prepareInventoryLot } = await import(
+const {
+  prepareInventoryLot,
+  inventoryAddRpcOutcome,
+} = await import(
   `data:text/javascript;base64,${Buffer.from(javascript).toString('base64')}`
 )
 
@@ -223,5 +226,93 @@ test('write boundary rejects archived inventory locations', async () => {
   assert.match(
     source,
     /\.from\(['"]inventory_locations['"]\)[\s\S]*?\.eq\(['"]id['"],\s*prepared\.value\.locationId\)[\s\S]*?\.eq\(['"]is_archived['"],\s*false\)/,
+  )
+})
+
+
+test('maps validated atomic RPC outcomes to application success codes', () => {
+  assert.equal(
+    inventoryAddRpcOutcome({
+      inventory_id: '18',
+      outcome: 'CREATED',
+      amount: '1.5',
+      amount_micro_scu: '1500000',
+    }),
+    'LOT_CREATED',
+  )
+
+  assert.equal(
+    inventoryAddRpcOutcome({
+      inventory_id: '18',
+      outcome: 'MERGED',
+      amount: '2',
+      amount_micro_scu: '2000000',
+    }),
+    'LOT_MERGED',
+  )
+})
+
+test('rejects malformed or unknown atomic RPC results', () => {
+  for (const value of [
+    null,
+    [],
+    {},
+    {
+      inventory_id: '0',
+      outcome: 'CREATED',
+      amount: '1',
+      amount_micro_scu: '1000000',
+    },
+    {
+      inventory_id: '18',
+      outcome: 'UNKNOWN',
+      amount: '1',
+      amount_micro_scu: '1000000',
+    },
+    {
+      inventory_id: '18',
+      outcome: 'MERGED',
+      amount: '0',
+      amount_micro_scu: '0',
+    },
+  ]) {
+    assert.equal(inventoryAddRpcOutcome(value), null)
+  }
+})
+
+test('write boundary uses only the atomic add-or-merge RPC', async () => {
+  const source = await readFile(
+    new URL('../lib/inventory/inventory-write.ts', import.meta.url),
+    'utf8',
+  )
+
+  assert.match(
+    source,
+    /\.rpc\(['"]add_or_merge_inventory_lot['"],\s*\{/,
+  )
+
+  for (const parameter of [
+    'p_material',
+    'p_amount',
+    'p_amount_micro_scu',
+    'p_input_unit',
+    'p_quantity_kind',
+    'p_quality',
+    'p_location_id',
+  ]) {
+    assert.match(
+      source,
+      new RegExp(`\\b${parameter}\\b`),
+    )
+  }
+
+  assert.doesNotMatch(
+    source,
+    /\.from\(['"]inventory['"]\)\s*\.insert\(/,
+  )
+
+  assert.doesNotMatch(
+    source,
+    /p_user_id|p_player_name|p_inventory_id/,
   )
 })
