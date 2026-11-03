@@ -6,11 +6,12 @@
 --   user_id + material + quality + location_id
 --
 -- This migration:
---   1. fails if duplicate Lot identities exist;
---   2. installs inventory_lot_identity_v1_key if missing;
---   3. verifies an existing constraint with that name;
---   4. installs public.add_or_merge_inventory_lot(...);
---   5. grants EXECUTE only to authenticated.
+--   1. fails if legacy Lot units are null or blank;
+--   2. fails if duplicate Lot identities exist;
+--   3. installs inventory_lot_identity_v1_key if missing;
+--   4. verifies an existing constraint with that name;
+--   5. installs public.add_or_merge_inventory_lot(...);
+--   6. grants EXECUTE only to authenticated.
 --
 -- This migration does NOT:
 --   - merge or delete existing Inventory data;
@@ -21,6 +22,24 @@
 -- ============================================================================
 
 begin;
+
+
+-- Fail closed before checking identities; legacy units require manual review.
+do $do$
+begin
+  if exists (
+    select 1
+    from public.inventory
+    where input_unit is null
+       or input_unit ~ '^[[:space:]]*$'
+  ) then
+    raise exception
+      using errcode = 'P0001',
+            message = 'LEGACY_INVENTORY_INPUT_UNIT_MISSING',
+            hint = 'Review legacy Inventory Lot units before applying this migration.';
+  end if;
+end
+$do$;
 
 
 -- ============================================================================
@@ -190,10 +209,20 @@ begin
   end if;
 
 
-  if v_kind not in ('COUNT', 'VOLUME') then
+  if v_kind is null
+     or v_kind ~ '^[[:space:]]*$'
+     or v_kind not in ('COUNT', 'VOLUME') then
     raise exception
       using errcode = '22023',
             message = 'MATERIAL_UNIT_UNKNOWN';
+  end if;
+
+
+  if v_input_unit is null
+     or v_input_unit ~ '^[[:space:]]*$' then
+    raise exception
+      using errcode = '22023',
+            message = 'UNIT_NOT_ALLOWED_FOR_MATERIAL_KIND';
   end if;
 
 
