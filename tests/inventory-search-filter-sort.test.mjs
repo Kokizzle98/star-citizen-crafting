@@ -116,3 +116,35 @@ test('sort modes are deterministic and do not mutate input rows', () => {
 
   assert.deepEqual(rows.map(row => row.inventory_id), original)
 })
+
+const view = await readFile(
+  new URL('../components/inventory/InventoryView.tsx', import.meta.url),
+  'utf8',
+)
+
+test('Inventory UI exposes accessible search filter sort controls and result feedback', () => {
+  assert.match(view, /type="search"/)
+  assert.match(view, /htmlFor="inventory-search"/)
+  assert.match(view, /htmlFor="inventory-player-filter"/)
+  assert.match(view, /htmlFor="inventory-location-filter"/)
+  assert.match(view, /htmlFor="inventory-quality-min"/)
+  assert.match(view, /htmlFor="inventory-quality-max"/)
+  assert.match(view, /htmlFor="inventory-sort"/)
+  assert.match(view, /Filter zurücksetzen/)
+  assert.match(view, /role="status"/)
+  assert.match(view, /visibleRows\.length/)
+})
+
+test('Inventory UI filters before grouping in both views', () => {
+  assert.match(view, /materials\(visibleRows\)/)
+  assert.match(view, /locations\(visibleRows\)/)
+  assert.match(view, /filterInventoryRows\(rows/)
+  assert.match(view, /sortInventoryRows\(filterInventoryRows/)
+})
+
+test('Inventory UI keeps edit delete ownership and focus contracts intact', () => {
+  assert.match(view, /row\.owner_user_id === editing\.currentUserId/)
+  assert.match(view, /restoreEditFocusId/)
+  assert.match(view, /restoreDeleteFocusId/)
+  assert.match(view, /editing\.confirmDelete\(row\.inventory_id\)/)
+})
