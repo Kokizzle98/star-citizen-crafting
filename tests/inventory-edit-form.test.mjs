@@ -79,3 +79,19 @@ test('inline editor is ownership gated and has immutable material and accessible
   assert.match(view, /INVENTORY_SUCCESS_MESSAGES\[success\]/)
   assert.doesNotMatch(form + view + action, /\.from\s*\(|\.update\s*\(/)
 })
+test('edit cancel restores focus to its originating trigger without restoring on success', () => {
+  assert.match(view, /const editTriggerRefs = useRef\(new Map<string, HTMLButtonElement>\(\)\)/)
+  assert.match(view, /const restoreEditFocusId = useRef<string \| null>\(null\)/)
+  assert.match(view, /if \(element\) editing\.editTriggerRefs\.current\.set\(row\.inventory_id, element\)/)
+  assert.match(view, /else editing\.editTriggerRefs\.current\.delete\(row\.inventory_id\)/)
+  assert.match(view, /if \(editingLotId === null && restoreEditFocusId\.current !== null\)/)
+  assert.match(view, /editTriggerRefs\.current\.get\(restoreEditFocusId\.current\)\?\.focus\(\)/)
+  assert.match(view, /restoreEditFocusId\.current = null/)
+  assert.match(view, /cancel: \(\) => \{ restoreEditFocusId\.current = editingLotId; setEditingLotId\(null\) \}/)
+
+  const success = view.match(/success: \(\) => \{([^}]*)\}/)?.[1] ?? ''
+  assert.match(success, /setEditingLotId\(null\)/)
+  assert.match(success, /setSuccess\('LOT_UPDATED'\)/)
+  assert.match(success, /router\.refresh\(\)/)
+  assert.doesNotMatch(success, /restoreEditFocusId|editTriggerRefs|\.focus\(/)
+})
