@@ -111,6 +111,7 @@ export function AddInventoryLotForm({ units, locations }: {
         setResult(null)
         requestAnimationFrame(() => addTriggerRef.current?.focus())
       }}>Abbrechen</button>
+      <div role="status">{pending ? 'Speichern …' : null}</div>
     </form>}
     <div role={result && !result.ok ? 'alert' : 'status'} aria-live="polite">
       {field ? null : message}

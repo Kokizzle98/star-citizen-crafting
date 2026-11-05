@@ -115,5 +115,6 @@ test('add form manages open, cancel and success focus lifecycle', () => {
   assert.match(form, /setOpen\(true\)[\s\S]*?requestAnimationFrame\(\(\) => materialRef\.current\?\.focus\(\)\)/)
   assert.match(form, /if \(next\.ok\) \{[\s\S]*?form\.reset\(\)[\s\S]*?setMaterial\(''\)[\s\S]*?setOpen\(false\)/)
   assert.match(form, /setOpen\(false\)[\s\S]*?setMaterial\(''\)[\s\S]*?setResult\(null\)[\s\S]*?requestAnimationFrame\(\(\) => addTriggerRef\.current\?\.focus\(\)\)/)
+  assert.match(form, /<div role="status">\{pending \? 'Speichern …' : null\}<\/div>/)
   assert.doesNotMatch(form, /window\.(?:confirm|alert)/)
 })
