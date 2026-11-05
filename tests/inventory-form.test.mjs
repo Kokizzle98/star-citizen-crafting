@@ -107,3 +107,13 @@ test('page retains inventory read boundary and loads existing active locations',
   assert.match(options, /\.select\('id, canonical_name'\)/)
   assert.match(options, /\.eq\('is_archived', false\)/)
 })
+test('add form manages open, cancel and success focus lifecycle', () => {
+  assert.match(form, /const addTriggerRef = useRef<HTMLButtonElement>\(null\)/)
+  assert.match(form, /const materialRef = useRef<HTMLSelectElement>\(null\)/)
+  assert.match(form, /ref=\{addTriggerRef\}/)
+  assert.match(form, /ref=\{materialRef\}/)
+  assert.match(form, /setOpen\(true\)[\s\S]*?requestAnimationFrame\(\(\) => materialRef\.current\?\.focus\(\)\)/)
+  assert.match(form, /if \(next\.ok\) \{[\s\S]*?form\.reset\(\)[\s\S]*?setMaterial\(''\)[\s\S]*?setOpen\(false\)/)
+  assert.match(form, /setOpen\(false\)[\s\S]*?setMaterial\(''\)[\s\S]*?setResult\(null\)[\s\S]*?requestAnimationFrame\(\(\) => addTriggerRef\.current\?\.focus\(\)\)/)
+  assert.doesNotMatch(form, /window\.(?:confirm|alert)/)
+})
