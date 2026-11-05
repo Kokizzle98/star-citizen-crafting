@@ -49,6 +49,7 @@ export function AddInventoryLotForm({ units, locations }: {
         form.reset()
         setMaterial('')
         setOpen(false)
+        requestAnimationFrame(() => addTriggerRef.current?.focus())
       }
     } catch (error) {
       console.error('Inventory lot submission failed', error)
