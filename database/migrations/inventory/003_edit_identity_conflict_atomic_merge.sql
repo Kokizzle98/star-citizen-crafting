@@ -29,9 +29,8 @@
 --   UPDATED
 --   MERGED
 --
--- IMPORTANT:
---   Repository draft only until contract tests and SQL review pass.
---   Do not execute this draft in Supabase.
+-- Deployment dependency:
+--   002_inventory_amount_precision.sql must be applied first.
 -- ============================================================================
 
 begin;
