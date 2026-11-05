@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { submitInventoryLot } from '@/app/vector/inventory/actions'
 import { INVENTORY_ERROR_MESSAGES, INVENTORY_SUCCESS_MESSAGES, type InventoryErrorCode } from '@/lib/inventory/inventory-error-messages'
 import type { InventoryLocationOption } from '@/lib/inventory/inventory-form-options'
@@ -24,6 +24,8 @@ export function AddInventoryLotForm({ units, locations }: {
   const [material, setMaterial] = useState('')
   const [result, setResult] = useState<AddInventoryLotResult | null>(null)
   const [pending, setPending] = useState(false)
+  const addTriggerRef = useRef<HTMLButtonElement>(null)
+  const materialRef = useRef<HTMLSelectElement>(null)
   const kind = Object.hasOwn(units, material) ? units[material] : undefined
   const field = result && !result.ok ? errorField(result.code) : null
   const message = result ? (result.ok ? INVENTORY_SUCCESS_MESSAGES[result.code] : INVENTORY_ERROR_MESSAGES[result.code]) : null
@@ -46,6 +48,7 @@ export function AddInventoryLotForm({ units, locations }: {
       if (next.ok) {
         form.reset()
         setMaterial('')
+        setOpen(false)
       }
     } catch (error) {
       console.error('Inventory lot submission failed', error)
@@ -56,11 +59,15 @@ export function AddInventoryLotForm({ units, locations }: {
   }
 
   return <section aria-label="Inventory Lot hinzufügen">
-    {!open && <button type="button" onClick={() => { setResult(null); setOpen(true) }}>Lot hinzufügen</button>}
+    {!open && <button type="button" ref={addTriggerRef} onClick={() => {
+      setResult(null)
+      setOpen(true)
+      requestAnimationFrame(() => materialRef.current?.focus())
+    }}>Lot hinzufügen</button>}
     {open && <form onSubmit={submit} noValidate>
       <div>
         <label htmlFor="lot-material">Material</label>
-        <select id="lot-material" name="material" value={material} {...errorProps('material')}
+        <select ref={materialRef} id="lot-material" name="material" value={material} {...errorProps('material')}
           onChange={(event) => setMaterial(event.target.value)}>
           <option value="">Material auswählen</option>
           {Object.keys(units).sort((a, b) => a.localeCompare(b, 'de')).map((name) =>
@@ -98,7 +105,12 @@ export function AddInventoryLotForm({ units, locations }: {
         {fieldError('locationId')}
       </div>
       <button type="submit" disabled={pending}>Speichern</button>
-      <button type="button" disabled={pending} onClick={() => { setOpen(false); setMaterial(''); setResult(null) }}>Abbrechen</button>
+      <button type="button" disabled={pending} onClick={() => {
+        setOpen(false)
+        setMaterial('')
+        setResult(null)
+        requestAnimationFrame(() => addTriggerRef.current?.focus())
+      }}>Abbrechen</button>
     </form>}
     <div role={result && !result.ok ? 'alert' : 'status'} aria-live="polite">
       {field ? null : message}
