@@ -10,6 +10,11 @@ import { INVENTORY_ERROR_MESSAGES, INVENTORY_SUCCESS_MESSAGES, type InventoryErr
 import type { InventoryLocationOption } from '@/lib/inventory/inventory-form-options'
 import { formatQuantity, type UnitMode } from '@/lib/inventory/inventory-display'
 import type { InventoryRow } from '@/lib/inventory/inventory-result'
+import {
+  filterInventoryRows,
+  sortInventoryRows,
+  type InventorySort,
+} from '@/lib/inventory/inventory-search-filter-sort'
 import type { MaterialUnits } from '@/lib/inventory/material-units'
 
 function groupBy(rows: InventoryRow[], key: (row: InventoryRow) => string) {
@@ -101,6 +106,12 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
   locations: InventoryLocationOption[] | null
 }) {
   const [view, setView] = useState<'GLOBAL' | 'LOCATION'>('GLOBAL')
+  const [query, setQuery] = useState('')
+  const [playerFilter, setPlayerFilter] = useState('')
+  const [locationFilter, setLocationFilter] = useState('')
+  const [qualityMin, setQualityMin] = useState('')
+  const [qualityMax, setQualityMax] = useState('')
+  const [sort, setSort] = useState<InventorySort>('MATERIAL_ASC')
   const [editingLotId, setEditingLotId] = useState<string | null>(null)
   const [deletingLotId, setDeletingLotId] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
@@ -161,6 +172,20 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
   const { mode } = useUnitPreference()
   const materials = (entries: InventoryRow[]) => groupBy(entries, (row) => row.material)
   const locations = (entries: InventoryRow[]) => groupBy(entries, (row) => row.location_id)
+  const players = [...new Set(rows.map((row) => row.player_name))]
+    .sort((a, b) => a.localeCompare(b, 'de', { sensitivity: 'base' }))
+  const filterLocations = [...new Map(
+    rows.map((row) => [row.location_id, row.location_name] as const),
+  ).entries()].sort((a, b) => a[1].localeCompare(b[1], 'de', { sensitivity: 'base' }))
+  const parsedQualityMin = /^(?:0|[1-9]\d{0,2}|1000)$/.test(qualityMin) ? Number(qualityMin) : null
+  const parsedQualityMax = /^(?:0|[1-9]\d{0,2}|1000)$/.test(qualityMax) ? Number(qualityMax) : null
+  const visibleRows = sortInventoryRows(filterInventoryRows(rows, {
+    query,
+    player: playerFilter,
+    locationId: locationFilter,
+    qualityMin: parsedQualityMin,
+    qualityMax: parsedQualityMax,
+  }), sort)
 
   return <section className="inventory-view" aria-label="Crew Inventory">
     <div role="status">{success ? INVENTORY_SUCCESS_MESSAGES[success] : null}</div>
@@ -170,8 +195,116 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
       <button type="button" disabled={pending} aria-pressed={view === 'LOCATION'} onClick={() => { setEditingLotId(null); setDeletingLotId(null); setError(null); setView('LOCATION') }}>LOCATION</button>
     </div>
     {!metadataAvailable && <p role="status">LIVE Materialdaten nicht verfügbar; Einheiten sind unbekannt.</p>}
+    <div className="inventory-filter-controls" aria-label="Inventory durchsuchen, filtern und sortieren">
+      <div className="inventory-filter-controls__field inventory-filter-controls__search">
+        <label htmlFor="inventory-search">Suche</label>
+        <input
+          id="inventory-search"
+          type="search"
+          value={query}
+          placeholder="Material, Spieler oder Location"
+          disabled={pending}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </div>
+
+      <div className="inventory-filter-controls__field">
+        <label htmlFor="inventory-player-filter">Spieler</label>
+        <select
+          id="inventory-player-filter"
+          value={playerFilter}
+          disabled={pending}
+          onChange={(event) => setPlayerFilter(event.target.value)}
+        >
+          <option value="">Alle Spieler</option>
+          {players.map((player) => <option key={player} value={player}>{player}</option>)}
+        </select>
+      </div>
+
+      <div className="inventory-filter-controls__field">
+        <label htmlFor="inventory-location-filter">Location</label>
+        <select
+          id="inventory-location-filter"
+          value={locationFilter}
+          disabled={pending}
+          onChange={(event) => setLocationFilter(event.target.value)}
+        >
+          <option value="">Alle Locations</option>
+          {filterLocations.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+        </select>
+      </div>
+
+      <div className="inventory-filter-controls__field">
+        <label htmlFor="inventory-quality-min">Qualität von</label>
+        <input
+          id="inventory-quality-min"
+          inputMode="numeric"
+          value={qualityMin}
+          placeholder="0"
+          disabled={pending}
+          aria-invalid={qualityMin !== '' && parsedQualityMin === null}
+          onChange={(event) => setQualityMin(event.target.value)}
+        />
+      </div>
+
+      <div className="inventory-filter-controls__field">
+        <label htmlFor="inventory-quality-max">Qualität bis</label>
+        <input
+          id="inventory-quality-max"
+          inputMode="numeric"
+          value={qualityMax}
+          placeholder="1000"
+          disabled={pending}
+          aria-invalid={qualityMax !== '' && parsedQualityMax === null}
+          onChange={(event) => setQualityMax(event.target.value)}
+        />
+      </div>
+
+      <div className="inventory-filter-controls__field">
+        <label htmlFor="inventory-sort">Sortierung</label>
+        <select
+          id="inventory-sort"
+          value={sort}
+          disabled={pending}
+          onChange={(event) => setSort(event.target.value as InventorySort)}
+        >
+          <option value="MATERIAL_ASC">Material A–Z</option>
+          <option value="MATERIAL_DESC">Material Z–A</option>
+          <option value="LOCATION_ASC">Location A–Z</option>
+          <option value="LOCATION_DESC">Location Z–A</option>
+          <option value="QUALITY_ASC">Qualität aufsteigend</option>
+          <option value="QUALITY_DESC">Qualität absteigend</option>
+          <option value="UPDATED_DESC">Zuletzt aktualisiert</option>
+          <option value="UPDATED_ASC">Älteste Aktualisierung</option>
+        </select>
+      </div>
+
+      <button
+        type="button"
+        disabled={pending}
+        onClick={() => {
+          setQuery('')
+          setPlayerFilter('')
+          setLocationFilter('')
+          setQualityMin('')
+          setQualityMax('')
+          setSort('MATERIAL_ASC')
+        }}
+      >
+        Filter zurücksetzen
+      </button>
+    </div>
+
+    <p className="inventory-filter-result" role="status">
+      {visibleRows.length} von {rows.length} {rows.length === 1 ? 'Lot' : 'Lots'}
+    </p>
+
+    {visibleRows.length === 0
+      ? <p className="inventory-filter-empty">Keine Lots entsprechen den aktuellen Filtern.</p>
+      : null}
+
     {view === 'GLOBAL'
-      ? materials(rows).map((materialRows) => <details className="inventory-group" key={materialRows[0].material}>
+      ? materials(visibleRows).map((materialRows) => <details className="inventory-group" key={materialRows[0].material}>
           <summary><span>{materialRows[0].material}</span><Summary rows={materialRows} units={units} mode={mode} /></summary>
           <div className="inventory-group__children">
             {locations(materialRows).map((locationRows) => <details className="inventory-group" key={locationRows[0].location_id}>
@@ -180,7 +313,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
             </details>)}
           </div>
         </details>)
-      : locations(rows).map((locationRows) => <details className="inventory-group" key={locationRows[0].location_id}>
+      : locations(visibleRows).map((locationRows) => <details className="inventory-group" key={locationRows[0].location_id}>
           <summary><span>{locationRows[0].location_name}</span><span>{locationRows.length} {locationRows.length === 1 ? 'Lot' : 'Lots'}</span></summary>
           <div className="inventory-group__children">
             {materials(locationRows).map((materialRows) => <details className="inventory-group" key={materialRows[0].material}>

@@ -957,6 +957,87 @@
   border-color: var(--cyan);
 }
 
+.inventory-filter-controls {
+  display: grid;
+  grid-template-columns: minmax(220px, 2fr) repeat(5, minmax(130px, 1fr)) auto;
+  gap: .75rem;
+  align-items: end;
+  margin: 1rem 0 .5rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: .55rem;
+  background: var(--panel);
+}
+
+.inventory-filter-controls__field {
+  display: flex;
+  flex-direction: column;
+  gap: .35rem;
+  min-width: 0;
+}
+
+.inventory-filter-controls__field label {
+  color: var(--muted);
+  font-size: .68rem;
+  letter-spacing: .06em;
+}
+
+.inventory-filter-controls__field input,
+.inventory-filter-controls__field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: .6rem .7rem;
+  border: 1px solid var(--line);
+  border-radius: .35rem;
+  background: #0b202c;
+  color: var(--text);
+  font: inherit;
+}
+
+.inventory-filter-controls__field input[aria-invalid='true'] {
+  border-color: var(--error);
+}
+
+.inventory-filter-controls__field input:disabled,
+.inventory-filter-controls__field select:disabled {
+  opacity: .55;
+}
+
+.inventory-filter-result {
+  margin: .5rem 0;
+  color: var(--muted);
+}
+
+.inventory-filter-empty {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: .55rem;
+  color: var(--muted);
+  background: var(--panel);
+}
+
+@media (max-width: 1200px) {
+  .inventory-filter-controls {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .inventory-filter-controls__search {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 700px) {
+  .inventory-filter-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-filter-controls__search {
+    grid-column: auto;
+  }
+}
+
 .inventory-group {
   margin: .5rem 0;
   border: 1px solid var(--line);
