@@ -147,7 +147,7 @@ This architecture separates:
 ## Safety Rules
 CITIZEN_ID_ENABLED=false is the default
 Never commit .env.local or server secrets
-Database migrations must be validated in staging first
+Database migrations follow docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md: local and PGlite contract tests, review and CI, then an explicit named Production-migration GO and read-only postchecks (there is currently no separate staging database)
 Production promotion is blocked until checks pass
 Missing or unresolved data must remain visible as review states
 

@@ -71,6 +71,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `GAME_WIPE_MODEL_V1.md` | Star Citizen game-wipe planning/execution semantics | `FROZEN` | LIVE dataset trigger and Production User State target must remain distinct |
 | `PLATFORM_CRITICAL_ACTIONS_V1.md` | Platform-destructive/critical administrative actions | `FROZEN` | Separate from ordinary game wipes |
 | `ROLLBACK_POLICY_V1.md` | Application, database and dataset rollback/recovery | `FROZEN` | Dataset rollback does not imply game-state recovery |
+| `DB_ENVIRONMENT_GOVERNANCE_V1.md` | Supabase database environment identity, data classification, Production read and write gates, migration gates | `FROZEN` | Owner decision 2026-11-11 (`DB-ENV-01` to `DB-ENV-09`); separates technical environment classification from data classification; a separate staging environment is `DEFERRED` |
 
 ## 6. Current PROPOSED registry
 
@@ -80,7 +81,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `DATA_CONTEXT_MODEL_V1.md` | Build classification, LIVE/PTU dataset contexts, Production User State, PTU Preview, epochs | `PROPOSED` | Not a prerequisite for promoting `VECTOR_VERSIONING_V1_1.md`; must be reconciled with the then-FROZEN v1.1 and applicable FROZEN specifications before its own freeze; proposals do not resolve R3 |
 | `DATASET_PIPELINE_V1.md` | `DATASET_PIPELINE` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; align mutable-state boundaries with applicable FROZEN rules before freeze |
 | `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; complete remaining cross-spec alignment before freeze |
-| `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile staging requirement with README; bind paths to actual repository layout |
+| `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile its preview/staging validation (§18) with FROZEN `DB_ENVIRONMENT_GOVERNANCE_V1.md`, which defers a separate staging environment (`DB-ENV-09`); bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
 
 ## 7. PLANNED normative specifications
@@ -109,6 +110,7 @@ Global invariants are cross-domain constraints. Their authoritative definition m
 | No-guess behavior | Distributed across current FROZEN rules; consolidation planned | Missing/uncertain source, location, identity, resolver and channel decisions |
 | Critical-action fail-closed behavior | `PLATFORM_CRITICAL_ACTIONS_V1.md` | Platform-critical destructive actions |
 | Rollback fail-closed behavior | `ROLLBACK_POLICY_V1.md` | Application/database/dataset recovery |
+| Production database write gate | `DB_ENVIRONMENT_GOVERNANCE_V1.md` | Every persistent mutation of the VECTOR Supabase Production environment |
 
 Until No-Guess has one canonical normative home, this index records it as a global invariant only where an existing FROZEN specification explicitly states the applicable no-guess rule. The index does not create new domain behavior by itself.
 
