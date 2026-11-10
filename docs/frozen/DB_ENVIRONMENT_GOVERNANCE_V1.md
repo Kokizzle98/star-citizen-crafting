@@ -1,9 +1,9 @@
 # VECTOR DB Environment Governance v1
 
-**Status:** FROZEN  
-**Version:** 1.0  
-**Authority Scope:** Supabase database environment identity, data classification, and the read and write gates for the VECTOR Supabase environment  
-**Approved By:** project_owner (2026-11-11)  
+**Status:** FROZEN\
+**Version:** 1.0\
+**Authority Scope:** Supabase database environment identity, data classification, and the read and write gates for the VECTOR Supabase environment\
+**Approved By:** project_owner (2026-11-11)\
 **Supersedes:** none
 
 ## 1. Purpose
