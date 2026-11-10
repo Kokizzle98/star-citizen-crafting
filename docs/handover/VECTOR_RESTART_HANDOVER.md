@@ -11,28 +11,25 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Blueprint Ownership / Tracking`
-- Branch: `feat/blueprint-ownership`
+- Work package: `Blueprint Ownership / Tracking` — PR 1 merged (#36); PR 2 not started; this rotation pull request records the DB environment governance
+- Branch: `develop`
 - Base: `develop`
-- Checkpoint date: `2026-11-10`
+- Checkpoint date: `2026-11-11`
 - Work-package base (historical): `1ee9efa90abd7f6c75c6fb620f642a96290b877f`
-- Active checkpoint anchor: `1ee9efa90abd7f6c75c6fb620f642a96290b877f`
+- Active checkpoint anchor: `895c1533508b09d282c678327f72a789e4285ba6`
 - Working-tree expectation: `CLEAN`
-- Active PR: the work-package pull request for `Blueprint Ownership / Tracking` against `develop`; its branch `feat/blueprint-ownership` is the expected branch for the whole work package
+- Active PR: none once the rotation pull request that introduces this block is merged; while that pull request is open, its branch `docs/db-env-governance` is the only permitted deviation from the expected branch
 - PR base: `develop`
 
-The work-package base and anchor are the verified `develop` head after PR #35 (`AGENTS.md` token hygiene and rotation to the idle baseline). The work package is delivered in four sequential pull requests from the same branch family; the allowed scope below is the union for the whole package and does not widen per pull request. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The anchor is the verified `develop` head after PR #36 (squash merge of PR 1). This block is written so that it is valid both on the rotation branch and after its merge into `develop`: the only paths that change after the anchor are the ones listed below. PR 2 starts on its own new branch; its first commit rotates this checkpoint again and names the PR 2 branch and paths. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `lib/blueprints/**`
-- `tests/blueprint-*.test.mjs`
-- `database/migrations/blueprints/**`
-- `app/admin/blueprints/**`
-- `app/vector/blueprints/**`
-- `app/vector/page.tsx`
-- `components/layout/VectorSidebar.tsx`
+- `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`
+- `docs/RULE_INDEX.md`
+- `AGENTS.md`
+- `README.md`
 
 Recovery control block:
 
@@ -59,6 +56,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PRs `#27` to `#33` (SCMDB location pipeline and its handover): merged into `develop`.
 - PR `#34` (Repository Cleanup and Baseline v1: lockfile, handover, dashboard text, `AGENTS.md`/`CLAUDE.md`): merged into `develop` on 2026-11-10.
 - PR `#35` (`AGENTS.md` token hygiene and checkpoint rotation to the idle baseline): merged into `develop` on 2026-11-10.
+- PR `#36` (Blueprint Ownership / Tracking PR 1: SCMDB blueprint catalog and reward readers): squash-merged into `develop` on 2026-11-11 as `895c153`; reviewed feature head `5077c1f`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -130,12 +128,21 @@ Owner-approved reward source-occurrence model for PR 2:
 - `duplicateSourceRows` stays explicitly measurable: stored on the dataset row, recomputed in SQL by the sync and rejected on mismatch, and asserted by a contract test;
 - no reward-row identity is claimed across different dataset revisions; a random UUID alone is not an acceptable identity.
 
-Open environment question for PR 2: the Supabase connector sees exactly one project (`qpbgtzjtwgkwlgpbataq`, "Kokizzle98's Project", organization "Star Citizen Group Crafting", only the default branch `main`). The owner has **not** confirmed that this project is the system called staging. Until the environment mapping is clarified and documented, no SQL is run through the connector, no branch is created and no production or staging mapping is assumed.
+Supabase environment: resolved by the owner on 2026-11-11. `qpbgtzjtwgkwlgpbataq` / branch `main` is the VECTOR Supabase **Production** environment, currently holding test data without retention value. It must not be called staging. The binding rules are `DB-ENV-01` to `DB-ENV-09` in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`.
+
+Read-only prechecks A to D for PR 2 (run on 2026-11-11 against Production under `DB-ENV-03`; select statements on `pg_catalog`, `pg_indexes` and `pg_policies` only, no mutation):
+
+- A — `is_group_member(p_group_id uuid, p_user_id uuid DEFAULT auth.uid())`, `is_group_admin(...)` (same signature), `set_active_group(p_group_id uuid)`, `get_active_group_inventory()` and `get_my_app_role()` all exist, are `SECURITY DEFINER` with `search_path = ''`, and are not defined in this repository. `is_group_admin`, `set_active_group` and `get_active_group_inventory` require `groups.archived_at IS NULL`; **`is_group_member` does not**, so it still returns true for an archived crew. `get_active_group_inventory` is the existing crew-derived read contract: `auth.uid()` required (`AUTH_REQUIRED`), `user_settings.active_group_id` required (`ACTIVE_GROUP_REQUIRED`), membership in a non-archived crew re-validated (`ACTIVE_GROUP_NOT_ALLOWED`), then rows of all `group_members` of that crew;
+- B — primary keys `groups(id)`, `group_members(group_id, user_id)`, `user_settings(user_id)`, `profiles(id)`. Foreign keys: `group_members.user_id` and `user_settings.user_id` and `profiles.id` reference `auth.users(id) ON DELETE CASCADE`; `group_members.group_id` references `groups(id) ON DELETE CASCADE`; `user_settings.active_group_id` references `groups(id) ON DELETE SET NULL`; `profiles.primary_game_account_id` references `game_accounts(id) ON DELETE SET NULL`. Checks: member role `OWNER`/`ADMIN`/`MEMBER`, crew name length 3 to 60, nickname `^[A-Za-z0-9_-]{3,24}$`. Leaving a crew deletes the `group_members` row; there is no membership status column;
+- C — besides the primary-key indexes: `group_members_user_idx (user_id, group_id)` and the case-insensitive unique `profiles_nickname_lower_uidx (lower(nickname))`;
+- D — RLS is enabled and not forced on all four tables. `profiles` policies: `profiles_read` (SELECT, `authenticated`, `true`, so every signed-in user can already read every nickname) and `profiles_update_own` (UPDATE, own row only). There is no INSERT or DELETE policy on `profiles`. The `groups`, `group_members` and `user_settings` policies match the owner's earlier listing.
+
+Consequence for PR 2: the crew blueprint view must re-validate active-crew membership exactly like `get_active_group_inventory` (member **and** crew not archived) and must not rely on `is_group_member` alone. The archived-crew gap in `is_group_member` is a separate pre-existing finding outside this work package. The crew and profile contracts above exist only in Supabase, not as repository migrations; PR 2 contract tests must reproduce them as a test fixture from these precheck results.
 
 Sequential pull requests inside this package:
 
-- PR 1: checkpoint rotation and the `lib/blueprints/` catalog and reward readers with tests; no database, no UI.
-- PR 2: `database/migrations/blueprints/001` with the five tables, RLS and the four functions, plus contract tests; owner validates in staging before production promotion.
+- PR 1: checkpoint rotation and the `lib/blueprints/` catalog and reward readers with tests; no database, no UI. **Merged as #36.**
+- PR 2: `database/migrations/blueprints/001` with the five tables, RLS and the ownership and crew functions, plus contract tests. Applied to Production only after an explicit, named production-migration GO and followed by read-only postchecks (`DB-ENV-06` to `DB-ENV-08`).
 - PR 3: the admin synchronization of the LIVE catalog and reward relations into the database; LIVE only, no PTU import, no end-user UI.
 - PR 4: `/vector/blueprints` with the LIVE catalog, search, filters, the personal manual ownership toggle, the non-colour-only status display, the review hint, the sidebar link and the dashboard text.
 
@@ -336,15 +343,10 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Review and merge PR 1 of `Blueprint Ownership / Tracking` (owner approval required; the checkpoint control revision belongs in that pull request description).
+NEXT STEP: Review and merge the rotation pull request that introduces this block (branch `docs/db-env-governance`; owner approval required; its checkpoint control revision belongs in that pull request description).
 
-PR 2 is blocked until the following read-only staging prechecks are supplied, because the crew and profile contracts they describe are not in the repository and must not be assumed:
+Then the owner evaluates the read-only precheck results A to D in section 5 and confirms or adjusts the PR 2 crew contract. PR 2 stays blocked until that owner decision. When it is given, PR 2 starts on its own new branch from `develop`; its first commit rotates this checkpoint to the PR 2 branch and paths.
 
-1. the definitions of `is_group_member`, `is_group_admin`, `set_active_group`, `get_active_group_inventory` and `get_my_app_role`;
-2. the existing primary keys, foreign keys and constraints of `groups`, `group_members`, `user_settings` and `profiles`;
-3. the existing indexes of those four tables;
-4. the RLS status of those four tables plus the complete RLS policies of `profiles`.
+Still binding for PR 2: no migration is applied to Supabase Production without a separate, explicit, named production-migration GO (`DB-ENV-04`, `DB-ENV-07`), followed by read-only postchecks (`DB-ENV-08`). Every `auth.users` row currently has a matching `profiles` row, so `profiles.nickname` is the display identity; the implementation must still stay defensive: a missing profile must never widen data access, never replace crew membership and never cause an alternative identity to be derived from e-mail, game account or any other field.
 
-Answered already: every `auth.users` row currently has a matching `profiles` row, so `profiles.nickname` is the display identity and no substitute name is required for the current scope. The implementation must still stay defensive: a missing profile must never widen data access, never replace crew membership and never cause an alternative identity to be derived from e-mail, game account or any other field.
-
-Do not implement PR 2 or `get_active_crew_blueprint_status()` before those prechecks exist. Do not reopen SCMDB Location work without a concrete defect, and do not reopen merged PRs.
+Do not implement PR 2 or `get_active_crew_blueprint_status()` before that owner decision. Do not reopen SCMDB Location work without a concrete defect, and do not reopen merged PRs.
