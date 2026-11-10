@@ -33,7 +33,7 @@ export default async function VectorPage() {
       >
         <article className="vector-module-card">
           <span className="vector-module-card__status">
-            NEXT
+            VERFÜGBAR
           </span>
 
           <h2>Inventory</h2>
@@ -67,7 +67,7 @@ export default async function VectorPage() {
 
         <article className="vector-module-card">
           <span className="vector-module-card__status">
-            DATA
+            NEXT
           </span>
 
           <h2>Blueprints</h2>
@@ -78,20 +78,20 @@ export default async function VectorPage() {
           </p>
 
           <span className="vector-module-card__footer">
-            Fabricator Eligibility
+            Ownership / Tracking
           </span>
         </article>
       </section>
 
       <section className="vector-dashboard__status">
         <div>
-          <span>ACTIVE WORK PACKAGE</span>
-          <strong>WP2 · VECTOR Experience</strong>
+          <span>CURRENT STATE</span>
+          <strong>Inventory · SCMDB Locations</strong>
         </div>
 
         <div>
           <span>NEXT PRODUCT MILESTONE</span>
-          <strong>Inventory</strong>
+          <strong>Blueprint Ownership</strong>
         </div>
       </section>
     </div>
