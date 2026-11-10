@@ -41,6 +41,11 @@ globalThis.__inventoryUpdateMocks = {
       }
       return query
     },
+    rpc: (name, payload) => {
+      const call = { rpc: name, payload }
+      calls.push(call)
+      return { select(value) { call.select = value; return this }, async maybeSingle() { return state.update } }
+    },
   }),
   getCrewContext: async () => ({ activeGroupId: state.crew }),
   getLiveMaterialUnits: async () => state.metadata,
@@ -54,10 +59,10 @@ function reset() {
   calls.length = 0
   state = {
     user: { id: 'user-1' }, authError: null, crew: 'crew-1',
-    lot: { data: { id: '12', material: 'Aluminum' }, error: null },
+    lot: { data: { id: '12', material: 'Aluminum', location_id: '44444444-4444-4444-8444-444444444444' }, error: null },
     metadata: { available: true, units: { Aluminum: 'volume', Feynmaline: 'count' } },
     location: { data: { id: locationId }, error: null },
-    update: { data: { id: '12' }, error: null },
+    update: { data: { inventory_id: '12', outcome: 'UPDATED', amount: '0.025', amount_micro_scu: '25000' }, error: null },
   }
 }
 const result = code => ({ ok: false, code })
@@ -83,7 +88,7 @@ test('missing and foreign lots are indistinguishable and stop processing', async
   for (const scenario of ['missing', 'foreign']) {
     reset(); state.lot.data = null
     assert.deepEqual(await updateInventoryLot(input), result('LOT_NOT_FOUND'), scenario)
-    assert.deepEqual(calls, [{ table: 'inventory', select: 'id, material', filters: [['id', '12'], ['user_id', 'user-1']] }])
+    assert.deepEqual(calls, [{ table: 'inventory', select: 'id, material, location_id', filters: [['id', '12'], ['user_id', 'user-1']] }])
   }
 })
 
@@ -108,32 +113,68 @@ test('validates preparation and active location before update', async () => {
   assert.equal(calls.length, 2)
 })
 
+test('accepts a selected active target without inferring the current location', async () => {
+  reset()
+  state.lot.data.location_id = '44444444-4444-4444-8444-444444444444'
+  assert.deepEqual(await updateInventoryLot(input), { ok: true, code: 'LOT_UPDATED' })
+  assert.equal(calls[2].payload.p_location_id, locationId)
+  assert.deepEqual(calls[1].filters, [['id', locationId], ['is_archived', false]])
+  reset()
+  assert.deepEqual(await updateInventoryLot({ ...input, locationId: '' }), result('LOCATION_REQUIRED'))
+  assert.equal(calls.some(call => call.payload), false)
+})
+
+test('retains the unchanged archived location but rejects a different archived target', async () => {
+  reset()
+  state.lot.data.location_id = locationId
+  state.location.data = null
+  assert.deepEqual(await updateInventoryLot(input), { ok: true, code: 'LOT_UPDATED' })
+  assert.equal(calls.length, 2)
+  assert.equal(calls[1].payload.p_location_id, locationId)
+  assert.equal(calls[1].rpc, 'update_or_merge_inventory_lot')
+  reset()
+  state.location.data = null
+  assert.deepEqual(await updateInventoryLot(input), result('LOCATION_INVALID'))
+  assert.deepEqual(calls[1].filters, [['id', locationId], ['is_archived', false]])
+  assert.equal(calls.some(call => call.payload), false)
+  reset()
+  state.lot.data.location_id = locationId.toUpperCase()
+  assert.deepEqual(await updateInventoryLot(input), { ok: true, code: 'LOT_UPDATED' })
+  assert.equal(calls[1].payload.p_location_id, locationId.toUpperCase())
+  reset()
+  state.lot.data.location_id = locationId
+  state.update.data = null
+  assert.deepEqual(await updateInventoryLot(input), result('UPDATE_FAILED'))
+})
+
 test('updates exact volume and count fields using database material and server timestamp', async () => {
   for (const [material, changes, amount, micro, unit] of [
     ['Aluminum', {}, '0.025', '25000', 'cSCU'],
     ['Feynmaline', { rawAmount: '130', inputUnit: 'COUNT' }, '130', '130', 'COUNT'],
   ]) {
     reset(); state.lot.data.material = material
-    const before = Date.now()
     assert.deepEqual(await updateInventoryLot({ ...input, ...changes, material: 'untrusted', updated_at: 'untrusted' }), { ok: true, code: 'LOT_UPDATED' })
-    const after = Date.now()
     const call = calls[2]
-    assert.equal(call.table, 'inventory')
-    assert.equal(call.select, 'id')
-    assert.deepEqual(call.filters, [['id', '12'], ['user_id', 'user-1']])
-    assert.deepEqual(Object.keys(call.payload).sort(), ['amount', 'amount_micro_scu', 'input_unit', 'quality', 'location_id', 'updated_at'].sort())
-    assert.deepEqual({ ...call.payload, updated_at: undefined }, {
-      amount, amount_micro_scu: micro, input_unit: unit, quality: 507, location_id: locationId, updated_at: undefined,
+    assert.equal(call.rpc, 'update_or_merge_inventory_lot')
+    assert.equal(call.select, 'inventory_id::text,outcome,amount::text,amount_micro_scu::text')
+    assert.deepEqual(call.payload, {
+      p_inventory_id: '12', p_amount: amount, p_amount_micro_scu: micro, p_input_unit: unit,
+      p_quantity_kind: material === 'Aluminum' ? 'VOLUME' : 'COUNT', p_quality: 507, p_location_id: locationId,
     })
-    const timestamp = Date.parse(call.payload.updated_at)
-    assert.ok(timestamp >= before && timestamp <= after)
-    assert.equal(new Date(timestamp).toISOString(), call.payload.updated_at)
   }
 })
 
 test('zero updated rows are not successful', async () => {
   reset(); state.update.data = null
-  assert.deepEqual(await updateInventoryLot(input), result('LOT_NOT_FOUND'))
+  assert.deepEqual(await updateInventoryLot(input), result('UPDATE_FAILED'))
+})
+
+test('maps atomic merge outcomes and rejects malformed results', async () => {
+  reset(); state.update.data.outcome = 'MERGED'
+  assert.deepEqual(await updateInventoryLot(input), { ok: true, code: 'LOT_MERGED' })
+  reset(); state.update.data.outcome = 'UNKNOWN'
+  assert.deepEqual(await updateInventoryLot(input), result('UPDATE_FAILED'))
+  assert.equal(calls[2].rpc, 'update_or_merge_inventory_lot')
 })
 
 test('maps authorization and unexpected errors at every database operation', async () => {

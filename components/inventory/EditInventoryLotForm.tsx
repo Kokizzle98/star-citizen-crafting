@@ -23,7 +23,7 @@ export function EditInventoryLotForm({ row, initial, locations, pending, setPend
   pending: boolean
   setPending: (pending: boolean) => void
   onCancel: () => void
-  onSuccess: () => void
+  onSuccess: (code: 'LOT_UPDATED' | 'LOT_MERGED') => void
 }) {
   const [result, setResult] = useState<UpdateInventoryLotResult | null>(null)
   const field = result && !result.ok ? errorField(result.code) : null
@@ -35,6 +35,7 @@ export function EditInventoryLotForm({ row, initial, locations, pending, setPend
   })
   const fieldError = (name: string) => field === name
     ? <span id={id(`${name}-error`)}>{message}</span> : null
+  const currentLocationAvailable = locations.some((location) => location.id === row.location_id)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -43,7 +44,7 @@ export function EditInventoryLotForm({ row, initial, locations, pending, setPend
     setPending(true)
     try {
       const next = await submitInventoryLotUpdate(data)
-      if (next.ok) onSuccess()
+      if (next.ok) onSuccess(next.code)
       else setResult(next)
     } catch (error) {
       console.error('Inventory lot update failed', error)
@@ -72,8 +73,9 @@ export function EditInventoryLotForm({ row, initial, locations, pending, setPend
     <input id={id('quality')} name="quality" inputMode="numeric" defaultValue={row.quality} {...errorProps('quality')} />
     {fieldError('quality')}
     <label htmlFor={id('location')}>Location</label>
-    <select id={id('location')} name="locationId" defaultValue={locations.some((location) => location.id === row.location_id) ? row.location_id : ''} {...errorProps('locationId')}>
+    <select id={id('location')} name="locationId" defaultValue={row.location_id} {...errorProps('locationId')}>
       <option value="">Location auswählen</option>
+      {!currentLocationAvailable && <option value={row.location_id}>{row.location_name} (aktuelle Location, nicht verfügbar)</option>}
       {locations.map((location) => <option key={location.id} value={location.id}>{location.canonical_name}</option>)}
     </select>
     {fieldError('locationId')}

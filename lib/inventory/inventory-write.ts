@@ -218,7 +218,23 @@ export async function addInventoryLot(
     }
   }
 
-  const prepared = prepareInventoryLot(input, materialKind)
+  let locationId = input.locationId
+  if (!locationId.trim()) {
+    const { data: fallback, error: fallbackError } = await supabase
+      .from('inventory_locations')
+      .select('id')
+      .eq('normalized_name', 'unbekannt')
+      .eq('is_system', true)
+      .eq('is_archived', false)
+      .maybeSingle()
+    if (fallbackError || !fallback || typeof fallback.id !== 'string' || !fallback.id.trim()) {
+      console.error('Inventory fallback location could not be resolved', fallbackError)
+      return { ok: false, code: 'LOCATION_INVALID' }
+    }
+    locationId = fallback.id
+  }
+
+  const prepared = prepareInventoryLot({ ...input, locationId }, materialKind)
 
   if (!prepared.ok) {
     return prepared

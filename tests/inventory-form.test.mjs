@@ -104,7 +104,7 @@ test('form exposes only the appropriate units and central messages', () => {
 test('page retains inventory read boundary and loads existing active locations', () => {
   assert.match(page, /await getActiveGroupInventory\(\)/)
   assert.match(options, /\.from\('inventory_locations'\)/)
-  assert.match(options, /\.select\('id, canonical_name'\)/)
+  assert.match(options, /\.select\('id, canonical_name, normalized_name, is_system'\)/)
   assert.match(options, /\.eq\('is_archived', false\)/)
 })
 test('add form manages open, cancel and success focus lifecycle', () => {

@@ -16,9 +16,10 @@ function errorField(code: InventoryErrorCode): string | null {
   return null
 }
 
-export function AddInventoryLotForm({ units, locations }: {
+export function AddInventoryLotForm({ units, locations, fallbackLocationId }: {
   units: MaterialUnits
   locations: InventoryLocationOption[]
+  fallbackLocationId: string
 }) {
   const [open, setOpen] = useState(false)
   const [material, setMaterial] = useState('')
@@ -98,7 +99,7 @@ export function AddInventoryLotForm({ units, locations }: {
       </div>
       <div>
         <label htmlFor="lot-location">Location</label>
-        <select id="lot-location" name="locationId" {...errorProps('locationId')}>
+        <select id="lot-location" name="locationId" defaultValue={fallbackLocationId} {...errorProps('locationId')}>
           <option value="">Location auswählen</option>
           {locations.map((location) =>
             <option key={location.id} value={location.id}>{location.canonical_name}</option>)}

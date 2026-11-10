@@ -53,7 +53,7 @@ type Editing = {
   setPending: (pending: boolean) => void
   start: (id: string) => void
   cancel: () => void
-  success: () => void
+  success: (code: 'LOT_UPDATED' | 'LOT_MERGED') => void
   startDelete: (id: string) => void
   cancelDelete: () => void
   confirmDelete: (id: string) => void
@@ -115,7 +115,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
   const [editingLotId, setEditingLotId] = useState<string | null>(null)
   const [deletingLotId, setDeletingLotId] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
-  const [success, setSuccess] = useState<'LOT_UPDATED' | 'LOT_DELETED' | null>(null)
+  const [success, setSuccess] = useState<'LOT_UPDATED' | 'LOT_MERGED' | 'LOT_DELETED' | null>(null)
   const [error, setError] = useState<InventoryErrorCode | null>(null)
   const deletePending = useRef(false)
   const deleteCancelRef = useRef<HTMLButtonElement>(null)
@@ -164,7 +164,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     currentUserId, locations: locationOptions, editingLotId, deletingLotId, deleteCancelRef, editTriggerRefs, deleteTriggerRefs, pending, setPending,
     start: (id) => { setSuccess(null); setError(null); setDeletingLotId(null); setEditingLotId(id) },
     cancel: () => { restoreEditFocusId.current = editingLotId; setEditingLotId(null) },
-    success: () => { setEditingLotId(null); setSuccess('LOT_UPDATED'); router.refresh() },
+    success: (code) => { setEditingLotId(null); setSuccess(code); router.refresh() },
     startDelete: (id) => { setSuccess(null); setError(null); setEditingLotId(null); setDeletingLotId(id) },
     cancelDelete: () => { restoreDeleteFocusId.current = deletingLotId; setDeletingLotId(null); setError(null) },
     confirmDelete,

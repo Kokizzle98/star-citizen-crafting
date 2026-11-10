@@ -47,7 +47,7 @@ export async function submitInventoryLotUpdate(formData: FormData): Promise<Upda
     quality: text(formData, 'quality'),
     locationId: text(formData, 'locationId'),
   })
-  if (result.ok && result.code === 'LOT_UPDATED') revalidatePath('/vector/inventory')
+  if (result.ok) revalidatePath('/vector/inventory')
   return result
 }
 
