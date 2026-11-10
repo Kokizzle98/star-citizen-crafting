@@ -25,3 +25,16 @@ export type ScmdbLocationDataset = {
   sourceFile: string
   locations: ScmdbLocationRaw[]
 }
+
+export type ClassifiedScmdbLocationDataset = Omit<ScmdbLocationDataset, 'locations'> & {
+  locations: NormalizedScmdbLocation[]
+  valid: NormalizedScmdbLocation[]
+  quarantined: NormalizedScmdbLocation[]
+  rejectedTechnical: NormalizedScmdbLocation[]
+  counts: {
+    total: number
+    valid: number
+    quarantined: number
+    rejectedTechnical: number
+  }
+}
