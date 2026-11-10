@@ -140,6 +140,10 @@ Read-only prechecks A to D for PR 2 (run on 2026-11-11 against Production under 
 
 Consequence for PR 2: the crew blueprint view must re-validate active-crew membership exactly like `get_active_group_inventory` (member **and** crew not archived) and must not rely on `is_group_member` alone. The archived-crew gap in `is_group_member` is a separate pre-existing finding outside this work package. The crew and profile contracts above exist only in Supabase, not as repository migrations; PR 2 contract tests must reproduce them as a test fixture from these precheck results.
 
+Owner decision for PR 2 (2026-11-11): `get_active_crew_blueprint_status()` takes over the crew security contract of `get_active_group_inventory()` exactly — `AUTH_REQUIRED` when not signed in, `ACTIVE_GROUP_REQUIRED` without an active crew, `ACTIVE_GROUP_NOT_ALLOWED` when the active crew is archived or `auth.uid()` is not a member. There is no silent self-only fallback inside the crew function. Own ownership is read independently through the personal ownership read path, so the UI can still show `Du` and `Nicht bekannt` without a valid crew. New `SECURITY DEFINER` functions use `search_path = ''` and fully qualified names. `is_group_member()` is not changed in this work package.
+
+Read-only EXECUTE precheck (2026-11-11, Production, `DB-ENV-03`): all five functions above are owned by `postgres`, are `SECURITY DEFINER`, and have `proacl = {postgres=X/postgres, authenticated=X/postgres}`. `PUBLIC` and `anon` cannot execute them; `authenticated` can.
+
 Sequential pull requests inside this package:
 
 - PR 1: checkpoint rotation and the `lib/blueprints/` catalog and reward readers with tests; no database, no UI. **Merged as #36.**
@@ -154,6 +158,7 @@ Known open items, none of them started:
 - after this package: linking Crafting with Crew Inventory (see `SCMDB_LOCATION_HANDOVER.md`);
 - older audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders: archive or remove only after a separate, explicit decision;
 - Rule Index items R2, R4 and R5 remain as listed in `docs/RULE_INDEX.md`.
+- pre-existing security and technical-debt finding, separate follow-up, **not** part of this work package and not to be repaired silently: `is_group_member(p_group_id, p_user_id DEFAULT auth.uid())` does not exclude archived crews, so the existing policies built on it (`groups_read_member`, `group_members_read`, `user_settings_insert_own`, `user_settings_update_own`) still accept membership of an archived crew; for example a user can set an archived crew as `active_group_id`. Additionally `is_group_member` and `is_group_admin` accept an arbitrary `p_user_id` and are executable by every `authenticated` user, so any signed-in user who knows a crew id can test whether any other user is a member or admin of that crew. User ids are readable by every signed-in user through `profiles_read`; crew ids are only readable by members. The blueprint work package does not depend on either behaviour, because its crew function re-validates membership and the archive state itself.
 
 Completed packages: `Restart Safety + AI Efficiency v1` (PR #10) and `Repository Cleanup and Baseline v1` (PR #34).
 

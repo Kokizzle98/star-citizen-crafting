@@ -100,7 +100,7 @@ This layer handles:
 - resolver logic for ambiguous or incomplete information
 
 ### 4. Database and Migration Layer
-Security-sensitive workflows are included to support controlled staging and production safety:
+Security-sensitive workflows are included to support controlled Production database safety (see docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md; there is currently no separate staging database):
 - `database/`
 - `database/migrations/`
 
@@ -114,7 +114,7 @@ This layer is intended to ensure:
 The project includes guardrails such as:
 - local-only environment handling
 - no secret leakage
-- staging-only migration expectations
+- migrations validated by local and PGlite contract tests, review and CI, then applied to Production only after an explicit named GO and checked with read-only postchecks
 - production blockers until checks pass
 - explicit handling of missing or unresolved data
 
