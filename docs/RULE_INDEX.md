@@ -139,7 +139,7 @@ docs/architecture/legacy/
 docs/reviews/archive/
 ```
 
-`RULE_SET_REVIEW_2026-10-29.md` is a `REVIEW_RECORD`, not a policy. Its findings are remediation inputs and remain historically unchanged after remediation.
+`archive/RULE_SET_REVIEW_2026-10-29.md` is a `REVIEW_RECORD`, not a policy. Its findings are remediation inputs and remain historically unchanged after remediation.
 
 | Review record | Status | Authority Scope | Authority |
 |---|---|---|---|
@@ -171,7 +171,7 @@ Before changing VECTOR behavior:
 5. If an applicable FROZEN conflict cannot be resolved by explicit supersession and scope, stop with `FROZEN_CONFLICT` instead of guessing.
 6. Follow the applicable validation/release gates before Production.
 
-A concise repository-root `AGENTS.md` should later point contributors and coding agents to this index rather than duplicating the full rule set.
+A concise repository-root `AGENTS.md` points contributors and coding agents to this index rather than duplicating the full rule set.
 
 ## 13. Known remediation queue from review 2026-10-29
 
@@ -182,7 +182,7 @@ A concise repository-root `AGENTS.md` should later point contributors and coding
 | R3 LIVE/PTU preview boundary | `RESOLVED` | Resolved by the governed full-document promotion of `VECTOR_VERSIONING_V1_1.md` as FROZEN and the simultaneous supersession registration of v1.0. `DATA_CONTEXT_MODEL_V1.md` remains PROPOSED and must reconcile with FROZEN v1.1 before its own freeze |
 | R4 migration gates and paths | `OPEN` | `MIGRATION_TEST_CONTRACT_V1.md` + README/repository layout |
 | R5 freeze lifecycle / ADR location | `OPEN` | `VECTOR_GOVERNANCE_V1.md` |
-| R6 contributor/agent entry point | `OPEN` | repository-root `AGENTS.md` |
+| R6 contributor/agent entry point | `RESOLVED` | repository-root `AGENTS.md` (pointer only; `CLAUDE.md` refers to it) |
 
 ## 14. Status decision
 
