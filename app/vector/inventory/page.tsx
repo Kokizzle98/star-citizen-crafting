@@ -26,7 +26,7 @@ export default async function InventoryPage() {
       </header>
 
       {result.status === 'success' && metadata?.available && locations?.ok &&
-        <AddInventoryLotForm units={metadata.units} locations={locations.locations} />}
+        <AddInventoryLotForm units={metadata.units} locations={locations.locations} fallbackLocationId={locations.fallbackLocationId} />}
       {result.status === 'success' && (!metadata?.available || !locations?.ok) &&
         <p role="status">Materialien oder Locations konnten nicht geladen werden. Lot hinzufügen ist nicht verfügbar.</p>}
       {result.status === 'success' && (

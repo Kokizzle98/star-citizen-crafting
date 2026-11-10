@@ -39,14 +39,17 @@ test('update adapter forwards only allowlisted fields and revalidates only succe
   assert.deepEqual(await actionModule.submitInventoryLotUpdate(data), result)
   assert.deepEqual(calls, [expected])
   assert.deepEqual(paths, ['/vector/inventory'])
+  result = { ok: true, code: 'LOT_MERGED' }
+  assert.deepEqual(await actionModule.submitInventoryLotUpdate(data), result)
+  assert.deepEqual(paths, ['/vector/inventory', '/vector/inventory'])
   result = { ok: false, code: 'LOT_NOT_FOUND' }
   assert.deepEqual(await actionModule.submitInventoryLotUpdate(data), result)
-  assert.deepEqual(paths, ['/vector/inventory'])
+  assert.deepEqual(paths, ['/vector/inventory', '/vector/inventory'])
   data.set('inputUnit', 'bad')
   assert.deepEqual(await actionModule.submitInventoryLotUpdate(data), { ok: false, code: 'UNIT_NOT_ALLOWED_FOR_MATERIAL_KIND' })
   data.delete('inputUnit')
   assert.deepEqual(await actionModule.submitInventoryLotUpdate(data), { ok: false, code: 'UNIT_REQUIRED' })
-  assert.equal(calls.length, 2)
+  assert.equal(calls.length, 3)
 })
 
 test('initial values are exact for all units and reject inconsistent units', () => {
@@ -75,9 +78,14 @@ test('inline editor is ownership gated and has immutable material and accessible
   assert.match(form, /aria-invalid/)
   assert.match(form, /aria-describedby/)
   assert.match(form, /role="alert"/)
-  assert.match(view, /setSuccess\('LOT_UPDATED'\)/)
+  assert.match(view, /setSuccess\(code\)/)
   assert.match(view, /INVENTORY_SUCCESS_MESSAGES\[success\]/)
   assert.doesNotMatch(form + view + action, /\.from\s*\(|\.update\s*\(/)
+})
+test('preserves an unavailable current location without adding it to other lots options', () => {
+  assert.match(form, /currentLocationAvailable = locations\.some\(\(location\) => location\.id === row\.location_id\)/)
+  assert.match(form, /name="locationId" defaultValue=\{row\.location_id\}/)
+  assert.match(form, /!currentLocationAvailable && <option value=\{row\.location_id\}>\{row\.location_name\}/)
 })
 test('edit cancel restores focus to its originating trigger without restoring on success', () => {
   assert.match(view, /const editTriggerRefs = useRef\(new Map<string, HTMLButtonElement>\(\)\)/)
@@ -89,9 +97,9 @@ test('edit cancel restores focus to its originating trigger without restoring on
   assert.match(view, /restoreEditFocusId\.current = null/)
   assert.match(view, /cancel: \(\) => \{ restoreEditFocusId\.current = editingLotId; setEditingLotId\(null\) \}/)
 
-  const success = view.match(/success: \(\) => \{([^}]*)\}/)?.[1] ?? ''
+  const success = view.match(/success: \(code\) => \{([^}]*)\}/)?.[1] ?? ''
   assert.match(success, /setEditingLotId\(null\)/)
-  assert.match(success, /setSuccess\('LOT_UPDATED'\)/)
+  assert.match(success, /setSuccess\(code\)/)
   assert.match(success, /router\.refresh\(\)/)
   assert.doesNotMatch(success, /restoreEditFocusId|editTriggerRefs|\.focus\(/)
 })
