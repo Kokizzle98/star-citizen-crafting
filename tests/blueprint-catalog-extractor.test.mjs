@@ -224,6 +224,34 @@ test('rejects a duplicate source identity instead of collapsing it', () => {
   )
 })
 
+test('rejects a recipe slot without any ingredient option', () => {
+  const withSlots = slots =>
+    extractScmdbBlueprints(
+      minimalManifest,
+      minimalDataset([{ ...minimalRow, tiers: [{ craftTimeSeconds: 10, slots }] }]),
+      'LIVE',
+    )
+
+  const usableSlot = {
+    name: 'Substrate',
+    options: [{ type: 'resource', quantity: 2, minQuality: 0, resourceName: 'Titanium' }],
+  }
+
+  // Control: the same recipe with a usable option is accepted.
+  assert.equal(withSlots([usableSlot]).blueprints.length, 1)
+
+  // An empty option list is a required slot with no usable ingredient. It must
+  // fail closed rather than let an otherwise clean blueprint pass as VALID.
+  assert.throws(
+    () => withSlots([{ name: 'Substrate', options: [] }]),
+    /SCMDB_BLUEPRINT_RECIPE_INVALID/,
+  )
+  assert.throws(
+    () => withSlots([usableSlot, { name: 'Lattice', options: [] }]),
+    /SCMDB_BLUEPRINT_RECIPE_INVALID/,
+  )
+})
+
 test('rejects a recipe that is absent, multi-tier or malformed', () => {
   const withTiers = tiers =>
     extractScmdbBlueprints(minimalManifest, minimalDataset([{ ...minimalRow, tiers }]), 'LIVE')

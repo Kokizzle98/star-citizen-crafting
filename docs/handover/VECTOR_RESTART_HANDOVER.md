@@ -114,6 +114,24 @@ Fixed package boundaries confirmed by the owner:
 - ownership model `A` is approved: one current row per user and blueprint, `UNIQUE(user_id, blueprint_id)`; manual removal deletes the row and returns the state to `not known`. Historization is deliberately deferred and becomes mandatory with wipe execution or automatic detection;
 - mission and reward relations may be normalized as data in the import package; the `where do I get this?` feature stays `DEFERRED` and out of scope.
 
+Verified SCMDB source findings (mirrored datasets `4.10.2-live.12913470` and `4.10.3-ptu.13032516`; both are covered by `tests/blueprint-reward-sources.test.mjs`):
+
+- reward relations are not unique per `contract + pool + blueprint`: the pools `BP_MISSIONREWARD_NorthRockFPSKill_EliminateBoss` and `BP_MISSIONREWARD_VaughnGenerator_EliminateBoss` each reference one blueprint twice, which SCMDB itself documents in `knownIssues.duplicateReferences` as probable CIG copy-paste errors. Each pool is used by two contracts, so each channel has four duplicate rows (`duplicateSourceRows = 4`). They are real source rows and are kept, never silently deduplicated; a later UI may merge identical statements in a derived view only, and that UI is `DEFERRED`;
+- the PTU merged dataset references 14 blueprint identities that neither the PTU nor the LIVE blueprint catalog contains. Owner decision: they stay unresolved. No LIVE fallback, no synthetic blueprint rows, no mapping onto a seemingly matching blueprint; a later PTU import must treat them explicitly as an unresolved source or reference issue. PR 3 stays LIVE-only. The identities are:
+  `018a29dc-d128-4697-b181-a885c60ee29c`, `04fa9b45-45a6-4dae-a21d-7a865053fccc`, `06e3f3bc-a75b-4d12-8dd6-fadc0184b88e`, `41f5d2b5-3bbe-42d7-bce6-6c5a4662e51f`, `4394e0c5-8ffc-47aa-be0c-062f3213aa89`, `4454b4bc-fc57-4421-a689-cd4ac8599649`, `61666d7d-06ca-48d2-8dbd-9e245cc129a3`, `62646684-53f5-4ef3-95f8-2022da314aaf`, `98ef4a00-9d0b-4504-8246-178440327138`, `b33bdfb5-6d25-4a7a-86f6-fdf6da4362bb`, `b356eedd-43f0-4c0e-9797-2a864da94735`, `d5737fc2-fd2e-42d4-8246-76bc624c390e`, `e6234718-dfc7-45c5-968e-c8dd1b390caa`, `f43fcac4-3bb2-4cb4-bd01-2768b585209d`.
+
+Owner-approved reward source-occurrence model for PR 2:
+
+- a reward row's identity is one concrete source occurrence inside one SCMDB dataset:
+  `UNIQUE (dataset_id, source_contract_id, source_reward_index, source_pool_guid, source_pool_entry_index)`;
+- SCMDB has no explicit index field, so `source_reward_index` (position in `contracts[].blueprintRewards`) and `source_pool_entry_index` (position in `blueprintPools[pool].blueprints`) are derived deterministically from the 0-based array positions. Verified unique for every LIVE and PTU row; the duplicates sit at pool positions 7/8 (Vaughn) and 10/11 (NorthRock);
+- `blueprint_id` is stored but deliberately not part of the identity key, so a wrong blueprint mapping surfaces as a conflict instead of a second row;
+- a repeated import of the same dataset stays idempotent (one dataset row per channel and version, its reward rows replaced in one transaction, following the SCMDB location sync pattern); duplicate business references stay distinct source rows;
+- `duplicateSourceRows` stays explicitly measurable: stored on the dataset row, recomputed in SQL by the sync and rejected on mismatch, and asserted by a contract test;
+- no reward-row identity is claimed across different dataset revisions; a random UUID alone is not an acceptable identity.
+
+Open environment question for PR 2: the Supabase connector sees exactly one project (`qpbgtzjtwgkwlgpbataq`, "Kokizzle98's Project", organization "Star Citizen Group Crafting", only the default branch `main`). The owner has **not** confirmed that this project is the system called staging. Until the environment mapping is clarified and documented, no SQL is run through the connector, no branch is created and no production or staging mapping is assumed.
+
 Sequential pull requests inside this package:
 
 - PR 1: checkpoint rotation and the `lib/blueprints/` catalog and reward readers with tests; no database, no UI.

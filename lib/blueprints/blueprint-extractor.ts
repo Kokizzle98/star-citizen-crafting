@@ -71,8 +71,18 @@ function recipeOption(input: unknown): ScmdbBlueprintRecipeOption {
   throw new Error('SCMDB_BLUEPRINT_RECIPE_INVALID')
 }
 
+/**
+ * A slot is a required ingredient position. A slot without any option has no
+ * usable ingredient, so the recipe is malformed and fails closed instead of
+ * letting an otherwise clean blueprint pass as `VALID`.
+ */
 function recipeSlot(input: unknown): ScmdbBlueprintRecipeSlot {
-  if (!plainObject(input) || !nonempty(input.name) || !Array.isArray(input.options)) {
+  if (
+    !plainObject(input) ||
+    !nonempty(input.name) ||
+    !Array.isArray(input.options) ||
+    input.options.length === 0
+  ) {
     throw new Error('SCMDB_BLUEPRINT_RECIPE_INVALID')
   }
 
