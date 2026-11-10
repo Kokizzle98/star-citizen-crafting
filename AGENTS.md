@@ -25,6 +25,14 @@ VECTOR is a community tool for Star Citizen (crew inventory, crafting, fleet and
 
 Run typecheck and tests before proposing a change. Pull requests are expected to keep both green.
 
+## Context and token hygiene
+
+- Never read `data/` (about 84 MB, mostly SCMDB JSON and CSV audit output) into the conversation. Query it with a short script (`jq`, Python) and report only the result.
+- Read only the FROZEN specifications that apply to the change, not all of `docs/`. `docs/architecture/legacy/` and `docs/reviews/` are historical evidence, not working material.
+- One work package per conversation. The repository, not the chat, is the record: start a new conversation from `AGENTS.md` and the restart handover instead of continuing a long one.
+- For larger work, write a short plan first and get it confirmed before building.
+- Prefer the smallest sufficient model and effort; escalate only for architecture, data-model or security decisions.
+
 ## Working rules
 
 - Work on a dedicated feature branch and open a pull request against `develop`. Never push directly to `develop` or `main`.

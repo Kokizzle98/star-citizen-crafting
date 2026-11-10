@@ -11,28 +11,22 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Repository Cleanup and Baseline v1`
-- Branch: `chore/repo-cleanup`
+- Work package: `none (idle baseline)`; the previous package `Repository Cleanup and Baseline v1` is complete (PR #34)
+- Branch: `develop`
 - Base: `develop`
 - Checkpoint date: `2026-11-10`
-- Work-package base (historical): `3e5f4ab73cc43373d90915be4d1dfab4f52ed0a5`
-- Active checkpoint anchor: `3e5f4ab73cc43373d90915be4d1dfab4f52ed0a5`
+- Work-package base (historical): `01e60aa087a96996e46c3126b3c2f5e4b5bf9db1`
+- Active checkpoint anchor: `01e60aa087a96996e46c3126b3c2f5e4b5bf9db1`
 - Working-tree expectation: `CLEAN`
-- Active PR: opened after the cleanup commits are pushed; its number and the checkpoint control revision are recorded in the PR description
+- Active PR: none once the rotation PR that introduces this block is merged; while that PR is open, its branch `chore/agents-token-hygiene` is the only permitted deviation from the expected branch
 - PR base: `develop`
 
-The work-package base is the verified `develop` head after PR #33 (SCMDB location handover). The active checkpoint anchor equals that base because this work package starts from it. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The work-package base and anchor are the verified `develop` head after PR #34 (repository cleanup and baseline). This block is written so that it is valid both on the rotation branch and after its merge into `develop`: the only paths that change after the anchor are the two listed below. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
-- `.gitignore`
 - `AGENTS.md`
-- `CLAUDE.md`
-- `app/vector/page.tsx`
-- `docs/RULE_INDEX.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `docs/reviews/RULE_SET_REVIEW_2026-10-29.md` (removal of the unregistered duplicate; the archived copy stays)
-- `package-lock.json`
 
 Recovery control block:
 
@@ -57,8 +51,9 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#10` (Restart Safety + AI Efficiency v1): merged into `develop` on 2026-10-30.
 - PR `#11` (Versioning v1.1 freeze transition): merged into `main` on 2026-10-30.
 - PRs `#27` to `#33` (SCMDB location pipeline and its handover): merged into `develop`.
+- PR `#34` (Repository Cleanup and Baseline v1: lockfile, handover, dashboard text, `AGENTS.md`/`CLAUDE.md`): merged into `develop` on 2026-11-10.
 
-No earlier PR is active. Do not reopen or modify them from this work package.
+No earlier PR is active. Do not reopen or modify them.
 
 ## 2. AUTHORITATIVE STATE POINTERS
 
@@ -69,7 +64,7 @@ These are compact status pointers only. The repository documents themselves must
 - `DATA_CONTEXT_MODEL_V1` = `PROPOSED`
 - R2 = `IN_PROGRESS`
 - R3 = `RESOLVED`
-- R6 = `RESOLVED` (root `AGENTS.md` added by this work package; effective on merge)
+- R6 = `RESOLVED` (root `AGENTS.md` and `CLAUDE.md` exist on `develop` since PR #34)
 - supersession = `EFFECTIVE`
 - freeze transition = `EXECUTED` (PR #11, merged into `main` on 2026-10-30)
 
@@ -93,44 +88,30 @@ Historical review evidence for the Versioning v1.1 work (PRs #9 to #11, all merg
 - Evidence bookkeeping commit: `2da66c9`
 - Final known Versioning branch head: `0127581`
 
-No open review finding is tracked in this handover. The cleanup work package is reviewed through its own pull request.
+No open review finding is tracked in this handover and no review is pending.
 
 Review evidence must always be associated with the exact commit actually reviewed. Later review IDs are not added recursively merely because they reviewed evidence bookkeeping.
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Repository Cleanup and Baseline v1`
+None. The repository is on an idle baseline.
 
-The previous work package `Restart Safety + AI Efficiency v1` is complete (PR #10, merged).
+Completed packages: `Restart Safety + AI Efficiency v1` (PR #10) and `Repository Cleanup and Baseline v1` (PR #34). This rotation additionally adds the context and token hygiene section to `AGENTS.md`.
 
-Objective:
+Known open items, none of them started:
 
-- remove leftovers so the repository is a clean, trustworthy baseline for further work;
-- make the restart handover and dashboard text match the real state;
-- give contributors and coding agents a single entry point (`AGENTS.md`, `CLAUDE.md`).
+- next planned product area: `Blueprint Ownership / Tracking`, then linking Crafting with Crew Inventory (see `SCMDB_LOCATION_HANDOVER.md`);
+- older audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders: archive or remove only after a separate, explicit decision;
+- Rule Index items R2, R4 and R5 remain as listed in `docs/RULE_INDEX.md`.
 
-Scope:
-
-- `package-lock.json` pointed at the standard npm registry (versions and integrity hashes unchanged);
-- this handover's checkpoint sections;
-- dashboard module text in `app/vector/page.tsx`;
-- removal of the unregistered duplicate `docs/reviews/RULE_SET_REVIEW_2026-10-29.md`;
-- `.gitignore` entry for `tsconfig.tsbuildinfo`;
-- root `AGENTS.md` and `CLAUDE.md`, plus the matching R6 row and one path reference in `docs/RULE_INDEX.md`.
-
-Out of scope:
-
-- any FROZEN rule, migration or SCMDB location behavior;
-- resolving R2, R4 or R5;
-- archiving or removing the older audit scripts and `data/audit*` folders (separate, later decision);
-- implementation of new product functionality.
+A new work package starts on its own feature branch. Its first commit rotates this checkpoint to a control block that names the new package and its allowed paths; the owner confirms that block through the pull request.
 
 ## 6. DO NOT DO
 
 - Do not infer authoritative project state from chat history alone.
 - Do not silently continue when Git/PR state differs from the checkpoint.
 - Do not change FROZEN rules as part of recovery.
-- Do not reopen or modify merged PRs of earlier work packages (#9, #10, #11, #27 to #33).
+- Do not reopen or modify merged PRs of earlier work packages (#9, #10, #11, #27 to #34).
 - Do not change R2/R3 merely to make a workflow checkpoint look complete.
 - Do not create recursive review-evidence commits.
 - Do not run repository-wide AI audits when a bounded check can answer the question.
@@ -312,4 +293,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Open the pull request for `chore/repo-cleanup` against `develop` and record the exact pushed head as `Checkpoint control revision` in its description. After the owner has reviewed and approved, merge it, then rotate this checkpoint to the new `develop` head. After that, start `Blueprint Ownership / Tracking` on a dedicated feature branch as planned in `SCMDB_LOCATION_HANDOVER.md`. Do not reopen SCMDB Location work without a concrete defect, and do not reopen PR #9, #10 or #11.
+NEXT STEP: Merge the rotation pull request that introduces this block (owner approval required; no further rotation is needed afterwards). Then start `Blueprint Ownership / Tracking` in a new conversation from `AGENTS.md` and this handover: first write a short plan, then create a dedicated feature branch whose first commit rotates this checkpoint to that work package. Do not reopen SCMDB Location work without a concrete defect, and do not reopen merged PRs.
