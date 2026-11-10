@@ -11,24 +11,28 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `VECTOR Versioning v1.1 Freeze Transition`
-- Branch: `docs/versioning-v1-1-freeze-transition`
-- Base: `main`
-- Checkpoint date: `2026-10-30`
-- Work-package base (historical): `7f004e89b343da8550ebd8109c0bbb0928c32957`
-- Active checkpoint anchor: `d46b839e461e26a99888cc38d8035a8a61bda781`
+- Work package: `Repository Cleanup and Baseline v1`
+- Branch: `chore/repo-cleanup`
+- Base: `develop`
+- Checkpoint date: `2026-11-10`
+- Work-package base (historical): `3e5f4ab73cc43373d90915be4d1dfab4f52ed0a5`
+- Active checkpoint anchor: `3e5f4ab73cc43373d90915be4d1dfab4f52ed0a5`
 - Working-tree expectation: `CLEAN`
-- Active PR: `#11`
-- PR state: `OPEN / DRAFT`
-- PR base: `main`
+- Active PR: opened after the cleanup commits are pushed; its number and the checkpoint control revision are recorded in the PR description
+- PR base: `develop`
 
-The work-package base is the verified `develop` origin for this transition branch. The active checkpoint anchor is the reviewed PR #11 head before the grouped Low-finding remediation. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The work-package base is the verified `develop` head after PR #33 (SCMDB location handover). The active checkpoint anchor equals that base because this work package starts from it. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
+- `.gitignore`
+- `AGENTS.md`
+- `CLAUDE.md`
+- `app/vector/page.tsx`
 - `docs/RULE_INDEX.md`
-- `docs/frozen/VECTOR_VERSIONING_V1_1.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
+- `docs/reviews/RULE_SET_REVIEW_2026-10-29.md` (removal of the unregistered duplicate; the archived copy stays)
+- `package-lock.json`
 
 Recovery control block:
 
@@ -47,33 +51,27 @@ The control block is trusted only from the LVCR copy (see LVCR trust model in th
 
 The anchor is intentionally not an exact expected HEAD. The current committed HEAD may legitimately advance beyond the active checkpoint anchor only when all recovery invariants pass. Any unexpected changed path produces `RECOVERY_STATE = DRIFT_DETECTED`.
 
-### Previous stable Versioning checkpoint
+### Previous checkpoints (historical, all merged)
 
-- PR: `#9`
-- Versioning branch: `docs/versioning-v1-1-freeze-readiness-remediation`
-- Versioning head: `0127581`
-- PR base: `develop`
-- PR state: `OPEN / DRAFT`
-- Commits: `11`
-- Changed files: `6`
-- Diff: `+719 / -116`
-- Mergeable: `MERGEABLE`
-- Merge state: `CLEAN`
-- Normal checks: passed
+- PR `#9` (Versioning v1.1 freeze-readiness remediation): merged into `develop` on 2026-10-30.
+- PR `#10` (Restart Safety + AI Efficiency v1): merged into `develop` on 2026-10-30.
+- PR `#11` (Versioning v1.1 freeze transition): merged into `main` on 2026-10-30.
+- PRs `#27` to `#33` (SCMDB location pipeline and its handover): merged into `develop`.
 
-PR #9 is not the active branch for this work package.
+No earlier PR is active. Do not reopen or modify them from this work package.
 
 ## 2. AUTHORITATIVE STATE POINTERS
 
 These are compact status pointers only. The repository documents themselves must be read for substantive meaning.
 
-- `VECTOR_VERSIONING_V1` = `FROZEN`
-- `VECTOR_VERSIONING_V1_1` = `PROPOSED`
+- `VECTOR_VERSIONING_V1` = `SUPERSEDED` (file intentionally unchanged for traceability; see `docs/RULE_INDEX.md`)
+- `VECTOR_VERSIONING_V1_1` = `FROZEN`
 - `DATA_CONTEXT_MODEL_V1` = `PROPOSED`
 - R2 = `IN_PROGRESS`
-- R3 = `OPEN`
-- supersession = `NOT EFFECTIVE`
-- freeze transition = `NOT_EXECUTED`
+- R3 = `RESOLVED`
+- R6 = `RESOLVED` (root `AGENTS.md` added by this work package; effective on merge)
+- supersession = `EFFECTIVE`
+- freeze transition = `EXECUTED` (PR #11, merged into `main` on 2026-10-30)
 
 ## 3. OWNER DECISIONS
 
@@ -88,44 +86,43 @@ The durable rationale and evidence belong in the repository's decision and revie
 
 ## 4. REVIEW STATE
 
+Historical review evidence for the Versioning v1.1 work (PRs #9 to #11, all merged):
+
 - Substantive owner-decision implementation commit: `1e363a2`
 - Direct implementation review: Copilot review `5707029494` on `1e363a2`; result: `Approval recommended`; no active/open issues for that reviewed implementation
 - Evidence bookkeeping commit: `2da66c9`
-- Later dependency-completeness and governance remediation continued after that checkpoint
 - Final known Versioning branch head: `0127581`
-- No concrete open inline finding remains at the handover checkpoint
+
+No open review finding is tracked in this handover. The cleanup work package is reviewed through its own pull request.
 
 Review evidence must always be associated with the exact commit actually reviewed. Later review IDs are not added recursively merely because they reviewed evidence bookkeeping.
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Restart Safety + AI Efficiency v1`
+`Repository Cleanup and Baseline v1`
+
+The previous work package `Restart Safety + AI Efficiency v1` is complete (PR #10, merged).
 
 Objective:
 
-- make VECTOR recovery deterministic after a new chat/session;
-- minimize dependence on chat memory;
-- reduce unnecessary AI-credit consumption;
-- replace repeated review loops with explicit stable gates.
+- remove leftovers so the repository is a clean, trustworthy baseline for further work;
+- make the restart handover and dashboard text match the real state;
+- give contributors and coding agents a single entry point (`AGENTS.md`, `CLAUDE.md`).
 
 Scope:
 
-- active restart handover;
-- recovery protocol;
-- drift detection;
-- checkpoint policy;
-- AI model/context routing;
-- review-gate policy;
-- evidence anti-recursion;
-- usage measurement baseline.
+- `package-lock.json` pointed at the standard npm registry (versions and integrity hashes unchanged);
+- this handover's checkpoint sections;
+- dashboard module text in `app/vector/page.tsx`;
+- removal of the unregistered duplicate `docs/reviews/RULE_SET_REVIEW_2026-10-29.md`;
+- `.gitignore` entry for `tsconfig.tsbuildinfo`;
+- root `AGENTS.md` and `CLAUDE.md`, plus the matching R6 row and one path reference in `docs/RULE_INDEX.md`.
 
 Out of scope:
 
-- resolving R2;
-- resolving R3;
-- freezing Versioning v1.1;
-- supersession;
-- merging PR #9;
+- any FROZEN rule, migration or SCMDB location behavior;
+- resolving R2, R4 or R5;
+- archiving or removing the older audit scripts and `data/audit*` folders (separate, later decision);
 - implementation of new product functionality.
 
 ## 6. DO NOT DO
@@ -133,7 +130,7 @@ Out of scope:
 - Do not infer authoritative project state from chat history alone.
 - Do not silently continue when Git/PR state differs from the checkpoint.
 - Do not change FROZEN rules as part of recovery.
-- Do not merge or modify PR #9 from this work package.
+- Do not reopen or modify merged PRs of earlier work packages (#9, #10, #11, #27 to #33).
 - Do not change R2/R3 merely to make a workflow checkpoint look complete.
 - Do not create recursive review-evidence commits.
 - Do not run repository-wide AI audits when a bounded check can answer the question.
@@ -315,4 +312,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Commit and push the grouped PR #11 Low-finding remediation, record the exact new PR #11 head as the checkpoint control revision, validate Head/Checkpoint equality and green checks, then run exactly one Lite re-review. Do not reopen PR #9 or PR #10.
+NEXT STEP: Open the pull request for `chore/repo-cleanup` against `develop` and record the exact pushed head as `Checkpoint control revision` in its description. After the owner has reviewed and approved, merge it, then rotate this checkpoint to the new `develop` head. After that, start `Blueprint Ownership / Tracking` on a dedicated feature branch as planned in `SCMDB_LOCATION_HANDOVER.md`. Do not reopen SCMDB Location work without a concrete defect, and do not reopen PR #9, #10 or #11.
