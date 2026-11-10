@@ -11,22 +11,28 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `none (idle baseline)`; the previous package `Repository Cleanup and Baseline v1` is complete (PR #34)
-- Branch: `develop`
+- Work package: `Blueprint Ownership / Tracking`
+- Branch: `feat/blueprint-ownership`
 - Base: `develop`
 - Checkpoint date: `2026-11-10`
-- Work-package base (historical): `01e60aa087a96996e46c3126b3c2f5e4b5bf9db1`
-- Active checkpoint anchor: `01e60aa087a96996e46c3126b3c2f5e4b5bf9db1`
+- Work-package base (historical): `1ee9efa90abd7f6c75c6fb620f642a96290b877f`
+- Active checkpoint anchor: `1ee9efa90abd7f6c75c6fb620f642a96290b877f`
 - Working-tree expectation: `CLEAN`
-- Active PR: none once the rotation PR that introduces this block is merged; while that PR is open, its branch `chore/agents-token-hygiene` is the only permitted deviation from the expected branch
+- Active PR: the work-package pull request for `Blueprint Ownership / Tracking` against `develop`; its branch `feat/blueprint-ownership` is the expected branch for the whole work package
 - PR base: `develop`
 
-The work-package base and anchor are the verified `develop` head after PR #34 (repository cleanup and baseline). This block is written so that it is valid both on the rotation branch and after its merge into `develop`: the only paths that change after the anchor are the two listed below. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The work-package base and anchor are the verified `develop` head after PR #35 (`AGENTS.md` token hygiene and rotation to the idle baseline). The work package is delivered in four sequential pull requests from the same branch family; the allowed scope below is the union for the whole package and does not widen per pull request. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
-- `AGENTS.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
+- `lib/blueprints/**`
+- `tests/blueprint-*.test.mjs`
+- `database/migrations/blueprints/**`
+- `app/admin/blueprints/**`
+- `app/vector/blueprints/**`
+- `app/vector/page.tsx`
+- `components/layout/VectorSidebar.tsx`
 
 Recovery control block:
 
@@ -52,6 +58,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#11` (Versioning v1.1 freeze transition): merged into `main` on 2026-10-30.
 - PRs `#27` to `#33` (SCMDB location pipeline and its handover): merged into `develop`.
 - PR `#34` (Repository Cleanup and Baseline v1: lockfile, handover, dashboard text, `AGENTS.md`/`CLAUDE.md`): merged into `develop` on 2026-11-10.
+- PR `#35` (`AGENTS.md` token hygiene and checkpoint rotation to the idle baseline): merged into `develop` on 2026-11-10.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -94,17 +101,35 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-None. The repository is on an idle baseline.
+`Blueprint Ownership / Tracking`. Owner-approved scope and decisions are recorded in the work-package pull requests; this section is a pointer, not the decision record.
 
-Completed packages: `Restart Safety + AI Efficiency v1` (PR #10) and `Repository Cleanup and Baseline v1` (PR #34). This rotation additionally adds the context and token hygiene section to `AGENTS.md`.
+Fixed package boundaries confirmed by the owner:
+
+- blueprint definitions are global SCMDB-derived catalog data, readable by authenticated VECTOR users only; there is no anonymous catalog;
+- blueprint ownership is personal VECTOR user state (`auth.users` / `profiles.id`), never crew-owned; active-crew members may see each other's known ownership as a derived aggregation only;
+- ownership must not require a verified RSI or Star Citizen account; `profiles.primary_game_account_id` is not an ownership precondition;
+- a missing ownership row means `ownership not known`, never `not owned`;
+- ownership provenance is modelled as `MANUAL` (writable now), `GAME_LOG` and `COMPANION` (prepared, not writable in this package);
+- SCMDB `isDefault` is preserved as a raw catalog value only; it is not personal ownership and must not create an ownership rule. SCMDB marks exactly eight blueprints this way and describes them as starter blueprints in its own changelog; that is a source statement, not a rule derived from CIG data;
+- ownership model `A` is approved: one current row per user and blueprint, `UNIQUE(user_id, blueprint_id)`; manual removal deletes the row and returns the state to `not known`. Historization is deliberately deferred and becomes mandatory with wipe execution or automatic detection;
+- mission and reward relations may be normalized as data in the import package; the `where do I get this?` feature stays `DEFERRED` and out of scope.
+
+Sequential pull requests inside this package:
+
+- PR 1: checkpoint rotation and the `lib/blueprints/` catalog and reward readers with tests; no database, no UI.
+- PR 2: `database/migrations/blueprints/001` with the five tables, RLS and the four functions, plus contract tests; owner validates in staging before production promotion.
+- PR 3: the admin synchronization of the LIVE catalog and reward relations into the database; LIVE only, no PTU import, no end-user UI.
+- PR 4: `/vector/blueprints` with the LIVE catalog, search, filters, the personal manual ownership toggle, the non-colour-only status display, the review hint, the sidebar link and the dashboard text.
+
+Out of scope for the whole package: the `where do I get this?` and mission UI, automatic blueprint detection, Game Log, Companion, RSI linking, Pledge Hangar, an `isDefault` ownership rule, the crafting link, wipe logic and any PTU ownership UI.
 
 Known open items, none of them started:
 
-- next planned product area: `Blueprint Ownership / Tracking`, then linking Crafting with Crew Inventory (see `SCMDB_LOCATION_HANDOVER.md`);
+- after this package: linking Crafting with Crew Inventory (see `SCMDB_LOCATION_HANDOVER.md`);
 - older audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders: archive or remove only after a separate, explicit decision;
 - Rule Index items R2, R4 and R5 remain as listed in `docs/RULE_INDEX.md`.
 
-A new work package starts on its own feature branch. Its first commit rotates this checkpoint to a control block that names the new package and its allowed paths; the owner confirms that block through the pull request.
+Completed packages: `Restart Safety + AI Efficiency v1` (PR #10) and `Repository Cleanup and Baseline v1` (PR #34).
 
 ## 6. DO NOT DO
 
@@ -293,4 +318,15 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Merge the rotation pull request that introduces this block (owner approval required; no further rotation is needed afterwards). Then start `Blueprint Ownership / Tracking` in a new conversation from `AGENTS.md` and this handover: first write a short plan, then create a dedicated feature branch whose first commit rotates this checkpoint to that work package. Do not reopen SCMDB Location work without a concrete defect, and do not reopen merged PRs.
+NEXT STEP: Review and merge PR 1 of `Blueprint Ownership / Tracking` (owner approval required; the checkpoint control revision belongs in that pull request description).
+
+PR 2 is blocked until the following read-only staging prechecks are supplied, because the crew and profile contracts they describe are not in the repository and must not be assumed:
+
+1. the definitions of `is_group_member`, `is_group_admin`, `set_active_group`, `get_active_group_inventory` and `get_my_app_role`;
+2. the existing primary keys, foreign keys and constraints of `groups`, `group_members`, `user_settings` and `profiles`;
+3. the existing indexes of those four tables;
+4. the RLS status of those four tables plus the complete RLS policies of `profiles`.
+
+Answered already: every `auth.users` row currently has a matching `profiles` row, so `profiles.nickname` is the display identity and no substitute name is required for the current scope. The implementation must still stay defensive: a missing profile must never widen data access, never replace crew membership and never cause an alternative identity to be derived from e-mail, game account or any other field.
+
+Do not implement PR 2 or `get_active_crew_blueprint_status()` before those prechecks exist. Do not reopen SCMDB Location work without a concrete defect, and do not reopen merged PRs.
