@@ -87,8 +87,17 @@ export type ClassifiedScmdbBlueprintDataset = Omit<ScmdbBlueprintDataset, 'bluep
  *
  * This is import data only. The `where do I get this?` feature is DEFERRED and
  * no runtime surface may depend on these rows in the current work package.
+ *
+ * Source-occurrence identity (owner-approved for the database): one row is one
+ * concrete occurrence inside one dataset, identified by
+ * `contractId + sourceRewardIndex + poolGuid + sourcePoolEntryIndex`.
+ * `blueprintSourceGuid` is deliberately not part of that identity.
  */
 export type ScmdbBlueprintRewardSource = {
+  /** 0-based position of the reward in `contracts[].blueprintRewards`. */
+  sourceRewardIndex: number
+  /** 0-based position of the entry in `blueprintPools[pool].blueprints`. */
+  sourcePoolEntryIndex: number
   blueprintSourceGuid: string
   poolGuid: string
   poolName: string
