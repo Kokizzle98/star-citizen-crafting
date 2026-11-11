@@ -19,6 +19,8 @@ type Manifest = {
 }
 
 type PoolEntry = {
+  /** 0-based position in `blueprintPools[pool].blueprints`. */
+  index: number
   blueprintSourceGuid: string
   weight: number
   hasKnownIssue: boolean
@@ -65,12 +67,13 @@ function readPools(input: unknown): Map<string, Pool> {
 
     const entries: PoolEntry[] = []
 
-    for (const entry of value.blueprints) {
+    for (const [index, entry] of value.blueprints.entries()) {
       if (!plainObject(entry) || !nonempty(entry.blueprintRecord) || !finiteNumber(entry.weight)) {
         throw new Error('SCMDB_BLUEPRINT_POOL_INVALID')
       }
 
       entries.push({
+        index,
         blueprintSourceGuid: entry.blueprintRecord,
         weight: entry.weight,
         hasKnownIssue: entry.knownIssue !== undefined && entry.knownIssue !== null,
@@ -162,7 +165,7 @@ export function extractScmdbBlueprintRewards(
       throw new Error('SCMDB_BLUEPRINT_REWARD_CONTRACT_INVALID')
     }
 
-    for (const reward of blueprintRewards) {
+    for (const [rewardIndex, reward] of blueprintRewards.entries()) {
       if (
         !plainObject(reward) ||
         !nonempty(reward.blueprintPool) ||
@@ -183,6 +186,8 @@ export function extractScmdbBlueprintRewards(
         blueprintGuids.add(entry.blueprintSourceGuid)
 
         rewards.push({
+          sourceRewardIndex: rewardIndex,
+          sourcePoolEntryIndex: entry.index,
           blueprintSourceGuid: entry.blueprintSourceGuid,
           poolGuid: reward.blueprintPool,
           poolName: pool.name,
@@ -203,7 +208,9 @@ export function extractScmdbBlueprintRewards(
   rewards.sort((a, b) =>
     a.blueprintSourceGuid.localeCompare(b.blueprintSourceGuid) ||
     a.contractId.localeCompare(b.contractId) ||
-    a.poolGuid.localeCompare(b.poolGuid),
+    a.poolGuid.localeCompare(b.poolGuid) ||
+    a.sourceRewardIndex - b.sourceRewardIndex ||
+    a.sourcePoolEntryIndex - b.sourcePoolEntryIndex,
   )
 
   const combinations = new Set<string>()
