@@ -49,22 +49,25 @@ export default async function VectorPage() {
           </span>
         </article>
 
-        <article className="vector-module-card">
+        <Link
+          href="/vector/fabricator"
+          className="vector-module-card vector-module-card--link"
+        >
           <span className="vector-module-card__status">
-            PLANNED
+            VERFÜGBAR
           </span>
 
           <h2>Fabricator</h2>
 
           <p>
-            Craftability, Materialbedarf, Qualität und
-            berechenbare Item-Stats.
+            Produkt wählen, Rezept prüfen und mit dem
+            Crew-Materialbestand vergleichen.
           </p>
 
           <span className="vector-module-card__footer">
-            WP4
+            Workspace · Rezept · Crew · Öffnen <span aria-hidden="true">→</span>
           </span>
-        </article>
+        </Link>
 
         <Link
           href="/vector/blueprints"
@@ -90,12 +93,12 @@ export default async function VectorPage() {
       <section className="vector-dashboard__status">
         <div>
           <span>CURRENT STATE</span>
-          <strong>Inventory · SCMDB Locations · Blueprints</strong>
+          <strong>Inventory · SCMDB Locations · Blueprints · Fabricator</strong>
         </div>
 
         <div>
           <span>NEXT PRODUCT MILESTONE</span>
-          <strong>Fabricator</strong>
+          <strong>Fabricator Quality &amp; Stats</strong>
         </div>
       </section>
     </div>
