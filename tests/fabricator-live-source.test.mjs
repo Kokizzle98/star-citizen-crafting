@@ -114,7 +114,8 @@ test('server read boundary: server-only, LIVE mirror plus guarded user-session r
   assert.doesNotMatch(reader, /\.(insert|update|upsert|delete|rpc)\(/)
   assert.doesNotMatch(reader, /supabase\/admin|service_role|SUPABASE_SECRET_KEY/)
   for (const name of ['fabricator-types', 'fabricator-recipe', 'fabricator-live-source', 'fabricator-dataset-guard',
-    'fabricator-product-family', 'fabricator-modifier-adapter', 'fabricator-baseline', 'fabricator-size', 'fabricator-live-source-cache']) {
+    'fabricator-product-family', 'fabricator-modifier-adapter', 'fabricator-baseline', 'fabricator-size', 'fabricator-units',
+    'fabricator-live-source-cache']) {
     const text = await readText(`lib/fabricator/${name}.ts`)
     assert.doesNotMatch(text, /supabase|node:fs|server-only/, `${name} must stay pure`)
   }

@@ -4,7 +4,9 @@ import type { FabricatorItem, FabricatorPropertyDefinition, FabricatorResolution
 //
 // Only explicitly allowlisted, evidence-based source fields count as a
 // baseline. The allowlist was verified against the LIVE mirror
-// 4.10.2-live.12913470 in the Fabricator inventory (2026-11-11); historical
+// 4.10.2-live.12913470 in the Fabricator inventory (2026-11-11) and, for
+// semantics, against SCMDB itself (scmdb.net and its shipped code, the
+// preferred source semantic reference for SCMDB-derived data); historical
 // audit outputs (data/audit*, VECTOR_RESOLVER_MAPPING_V2.csv) are not used as
 // authority. Anything else stays REVIEW_REQUIRED, SOURCE_DATA_MISSING or
 // UNRESOLVED and is never calculated as an absolute value.
@@ -20,11 +22,11 @@ type BaselineRule = {
   /** The item's attachType must be one of these. */
   attachTypes: readonly string[]
   /**
-   * IDENTITY: the source value is used as is. UNVERIFIED: the value is exact,
-   * but its relation to the SCMDB display unit is not verified yet; display
-   * code must not convert it.
+   * Raw unit of the source value when SCMDB evidence establishes it (display
+   * conversion: fabricator-units.ts); null when the SCMDB unit format applies
+   * to the raw value as is.
    */
-  unitConversion: 'IDENTITY' | 'UNVERIFIED'
+  sourceUnit: 'm/s' | null
 }
 
 export const FABRICATOR_BASELINE_RULES: Readonly<Record<string, BaselineRule>> = Object.freeze({
@@ -32,21 +34,22 @@ export const FABRICATOR_BASELINE_RULES: Readonly<Record<string, BaselineRule>> =
     path: ['health'],
     attachTypes: ['PowerPlant', 'Cooler', 'Shield', 'Radar', 'QuantumDrive', 'WeaponGun', 'WeaponMining',
       'DockingCollar', 'TractorBeam', 'SalvageHead'],
-    unitConversion: 'IDENTITY',
+    sourceUnit: null,
   },
-  itemresource_powergeneration: { path: ['powerOutput'], attachTypes: ['PowerPlant'], unitConversion: 'IDENTITY' },
-  itemresource_coolantgeneration: { path: ['coolingRate'], attachTypes: ['Cooler'], unitConversion: 'IDENTITY' },
-  shield_maxhealth: { path: ['shieldHealth'], attachTypes: ['Shield'], unitConversion: 'IDENTITY' },
-  radar_minaimassistdistance: { path: ['minAimAssistRange'], attachTypes: ['Radar'], unitConversion: 'IDENTITY' },
-  radar_maxaimassistdistance: { path: ['maxAimAssistRange'], attachTypes: ['Radar'], unitConversion: 'IDENTITY' },
-  quantum_speed: { path: ['driveSpeed'], attachTypes: ['QuantumDrive'], unitConversion: 'UNVERIFIED' },
-  weapon_tractor_maxdist: { path: ['maxDistance'], attachTypes: ['TractorBeam', 'SalvageHead'], unitConversion: 'IDENTITY' },
-  weapon_tractor_fullstrengthdist: { path: ['fullStrengthDistance'], attachTypes: ['TractorBeam', 'SalvageHead'], unitConversion: 'IDENTITY' },
-  weapon_tractor_maxvolume: { path: ['maxVolume'], attachTypes: ['TractorBeam', 'SalvageHead'], unitConversion: 'IDENTITY' },
-  weapon_hullscraping_speed: { path: ['salvageSpeedMultiplier'], attachTypes: ['SalvageModifier'], unitConversion: 'IDENTITY' },
-  weapon_hullscraping_radius: { path: ['radiusMultiplier'], attachTypes: ['SalvageModifier'], unitConversion: 'IDENTITY' },
-  weapon_hullscraping_efficiency: { path: ['extractionEfficiency'], attachTypes: ['SalvageModifier'], unitConversion: 'IDENTITY' },
-  armor_radiationdissipation: { path: ['radiationResistance', 'dissipationRate'], attachTypes: ARMOR_ATTACH_TYPES, unitConversion: 'IDENTITY' },
+  itemresource_powergeneration: { path: ['powerOutput'], attachTypes: ['PowerPlant'], sourceUnit: null },
+  itemresource_coolantgeneration: { path: ['coolingRate'], attachTypes: ['Cooler'], sourceUnit: null },
+  shield_maxhealth: { path: ['shieldHealth'], attachTypes: ['Shield'], sourceUnit: null },
+  radar_minaimassistdistance: { path: ['minAimAssistRange'], attachTypes: ['Radar'], sourceUnit: null },
+  radar_maxaimassistdistance: { path: ['maxAimAssistRange'], attachTypes: ['Radar'], sourceUnit: null },
+  // SCMDB evidence: raw m/s, crafted = driveSpeed * modifier, displayed as Mm/s (see fabricator-units.ts).
+  quantum_speed: { path: ['driveSpeed'], attachTypes: ['QuantumDrive'], sourceUnit: 'm/s' },
+  weapon_tractor_maxdist: { path: ['maxDistance'], attachTypes: ['TractorBeam', 'SalvageHead'], sourceUnit: null },
+  weapon_tractor_fullstrengthdist: { path: ['fullStrengthDistance'], attachTypes: ['TractorBeam', 'SalvageHead'], sourceUnit: null },
+  weapon_tractor_maxvolume: { path: ['maxVolume'], attachTypes: ['TractorBeam', 'SalvageHead'], sourceUnit: null },
+  weapon_hullscraping_speed: { path: ['salvageSpeedMultiplier'], attachTypes: ['SalvageModifier'], sourceUnit: null },
+  weapon_hullscraping_radius: { path: ['radiusMultiplier'], attachTypes: ['SalvageModifier'], sourceUnit: null },
+  weapon_hullscraping_efficiency: { path: ['extractionEfficiency'], attachTypes: ['SalvageModifier'], sourceUnit: null },
+  armor_radiationdissipation: { path: ['radiationResistance', 'dissipationRate'], attachTypes: ARMOR_ATTACH_TYPES, sourceUnit: null },
 })
 
 export type FabricatorBaselineReviewReason =
@@ -84,7 +87,7 @@ export type FabricatorBaseline = {
   value: number | null
   sourcePath: string | null
   unitFormat: string | null
-  unitConversion: 'IDENTITY' | 'UNVERIFIED' | null
+  sourceUnit: 'm/s' | null
   reason:
     | FabricatorBaselineReviewReason
     | 'FIELD_MISSING'
@@ -111,7 +114,7 @@ export function resolveFabricatorBaseline(
 ): FabricatorBaseline {
   const unitFormat = properties.get(propertyKey)?.unitFormat ?? null
   const result = (status: FabricatorResolution, reason: FabricatorBaseline['reason']): FabricatorBaseline =>
-    ({ propertyKey, status, value: null, sourcePath: null, unitFormat, unitConversion: null, reason })
+    ({ propertyKey, status, value: null, sourcePath: null, unitFormat, sourceUnit: null, reason })
 
   if (!properties.has(propertyKey)) return result('UNRESOLVED', 'PROPERTY_UNKNOWN')
   if (item === null) return result('UNRESOLVED', 'ITEM_UNRESOLVED')
@@ -131,7 +134,7 @@ export function resolveFabricatorBaseline(
     value,
     sourcePath: rule.path.join('.'),
     unitFormat,
-    unitConversion: rule.unitConversion,
+    sourceUnit: rule.sourceUnit,
     reason: null,
   }
 }

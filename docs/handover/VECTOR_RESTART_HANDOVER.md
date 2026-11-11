@@ -18,22 +18,32 @@ This document is operational and non-normative.
 - Work-package base (historical): `84e7fc3d3c72f62dc9007ec41938b3260cf574f7`
 - Active checkpoint anchor: `84e7fc3d3c72f62dc9007ec41938b3260cf574f7`
 - Working-tree expectation: `CLEAN`
-- Active PR: the F1 pull request from `feat/fabricator-f1-read-foundation` against `develop`; F2 and F3 each start from `develop` on their own branch whose first commit rotates only the branch, PR and `NEXT STEP` fields of this block
+- Active PR: #43, the F1 pull request from `feat/fabricator-f1-read-foundation` against `develop`; F2 and F3 each start from `develop` on their own branch whose first commit rotates this checkpoint, including its own allowed scope
 - PR base: `develop`
 
-The work-package base and anchor are the verified `develop` head after PR #42 (checkpoint after Blueprint PR 4, idle baseline). The allowed scope below is the union for the whole Fabricator Phase 1 (F1 to F3) and does not widen per pull request; F1 itself only touches the checkpoint documents, `lib/fabricator/**` and `tests/fabricator-*`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The work-package base and anchor are the verified `develop` head after PR #42 (checkpoint after Blueprint PR 4, idle baseline). The allowed scope below authorizes **F1 only** (owner correction 2026-11-11): the two checkpoint documents and exactly the F1 files in `lib/fabricator/` and `tests/`. No future UI path is authorized here; F2 and F3 each authorize their own paths in their own checkpoint rotation. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `lib/fabricator/**`
-- `tests/fabricator-*`
-- `app/vector/fabricator/**` (F2)
-- `components/fabricator/**` (F2)
-- `app/vector/page.tsx` (F2, dashboard entry)
-- `components/layout/VectorSidebar.tsx` (F2, navigation entry)
-- `app/globals.css` (F2, Fabricator styles)
+- `lib/fabricator/fabricator-baseline.ts`
+- `lib/fabricator/fabricator-dataset-guard.ts`
+- `lib/fabricator/fabricator-live-source.ts`
+- `lib/fabricator/fabricator-live-source-cache.ts`
+- `lib/fabricator/fabricator-live-source-read.ts`
+- `lib/fabricator/fabricator-modifier-adapter.ts`
+- `lib/fabricator/fabricator-product-family.ts`
+- `lib/fabricator/fabricator-recipe.ts`
+- `lib/fabricator/fabricator-size.ts`
+- `lib/fabricator/fabricator-types.ts`
+- `lib/fabricator/fabricator-units.ts`
+- `tests/fabricator-baseline-size.test.mjs`
+- `tests/fabricator-fixture.mjs`
+- `tests/fabricator-live-source.test.mjs`
+- `tests/fabricator-product-family.test.mjs`
+- `tests/fabricator-recipe.test.mjs`
+- `tests/fabricator-scmdb-semantics.test.mjs`
 
 Recovery control block:
 
@@ -119,12 +129,15 @@ Owner decisions (2026-11-11):
 - `D3 = A`: modifiers and baseline values are read server-side from the repository-pinned LIVE SCMDB mirror; the mirror version must equal the `ACTIVE` LIVE database dataset version, otherwise fail closed. No LIVE/PTU fallback, no other mirror, no database extension in F1;
 - `D4 = A` with contract: when a multiplicative effect is exactly determined by the recipe but no reliable baseline exists, only the relative crafting effect is shown with an explicit note; never derive a synthetic base or crafted value from it;
 - `D5`: product and variant hero images stay core. The `public/assets/components` images are UI mockups, not a product image source, and must not be used as product images; a neutral placeholder is allowed in F2 while a reliable image source is investigated.
+- SCMDB source and semantic reference (owner decision 2026-11-11): SCMDB is the external origin of the mirrored SCMDB dataset, and SCMDB itself (scmdb.net, available SCMDB documentation and traceable SCMDB code) is the preferred source semantic reference for how SCMDB interprets, names, calculates and displays its own raw data. An unclear SCMDB field is neither interpreted from the raw JSON alone nor discarded right away. Evidence order: (1) repository-pinned SCMDB dataset, (2) scmdb.net representation of the same datum, (3) SCMDB documentation, (4) traceable SCMDB implementation, (5) VECTOR adapter / normalizer, (6) tests against the reproduced semantics. SCMDB is **not** an authority for VECTOR user ownership, crew membership, inventory ownership, auth / identity, governance, security or VECTOR-specific domain decisions (SCMDB `isDefault` stays a raw source value only). This is not a FROZEN contract; a separate governance work package `SCMDB_SOURCE_AUTHORITY_V1` (or an integration into a future provider authority contract) is noted for later.
 
 Sequential pull requests inside this package:
 
 - F1: read and domain foundation in `lib/fabricator/` with tests (family/variant/slot resolution, item-to-blueprint, strict recipe, recipe-to-inventory vocabulary, modifier adapter to `VECTOR_CRAFT_CALC_V1`, baseline allowlist, size, LIVE mirror version guard); no UI, no database change, no Production mutation;
 - F2: `/vector/fabricator` workspace, recipe materials and crew craftability through the existing `get_active_group_inventory()`; read-only, no inventory mutation;
 - F3: global MANUAL quality slider Q0–1000 and resolved product stats (base, crafted, absolute and relative delta).
+
+Planned governance follow-up, not part of this package: `SCMDB_SOURCE_AUTHORITY_V1`.
 
 Out of scope for the whole package: SMART, MAX and SAVE PREMIUM strategies, reservation, consumption, shopping lists, multi-blueprint planning, simulation fallback, PTU and any database migration.
 

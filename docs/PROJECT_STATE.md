@@ -31,7 +31,7 @@
 
 ## ACTIVE
 
-- **Fabricator Phase 1**, pull request **F1 – Read & Domain Foundation** on `feat/fabricator-f1-read-foundation`: `lib/fabricator/` with tests; no UI, no database change, no Production mutation. Owner decisions D1 = A, D2 = C, D3 = A, D4 = A (with contract) and D5 (hero images core, mockups are no product image source) are recorded in the restart handover section 5 and the F1 pull request.
+- **Fabricator Phase 1**, pull request **F1 – Read & Domain Foundation** on `feat/fabricator-f1-read-foundation`: `lib/fabricator/` with tests; no UI, no database change, no Production mutation. Owner decisions D1 = A, D2 = C, D3 = A, D4 = A (with contract) and D5 (hero images core, mockups are no product image source) and the SCMDB source and semantic reference decision (SCMDB is the preferred semantic reference for SCMDB-derived data, never an authority for VECTOR user state) are recorded in the restart handover section 5 and the F1 pull request. The F1 checkpoint authorizes F1 paths only.
 
 ## PAUSED
 
@@ -51,6 +51,7 @@
 ## OPEN DECISIONS
 
 - No owner decision is pending for F1.
+- Separate governance work package noted for later: `SCMDB_SOURCE_AUTHORITY_V1` (or integration into a future provider authority contract).
 - Known items that will need a decision later, none started: a later UX / design pass (blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, the narrow app shell / sidebar on small screens); the known crew `active_group` inconsistency (`getCrewContext()` falls back to the first crew while the crew RPCs report `ACTIVE_GROUP_REQUIRED`), deliberately unchanged; the `Crew Security Hardening` work package (LOW to MEDIUM findings, due before the first user outside the current test group); archiving or removing the legacy audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders (separate Cleanup Gate); Rule Index remediation items R1, R2, R4 and R5; the later WP-AOM-01 gates (Security Finding Register, Backup Gate, Cleanup Gate), which stay separate future work.
 
 ## OPEN INFRASTRUCTURE WORK

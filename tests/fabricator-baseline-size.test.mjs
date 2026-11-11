@@ -40,7 +40,7 @@ test('representative statuses and reasons', () => {
     source.items.get(live.byTag.get(tag).productEntityClass) ?? null, source.properties)
   const js400 = at('BP_CRAFT_POWR_AMRS_S02_JS400_SCItem', 'health_maxhealth')
   assert.deepEqual({ ...js400 }, { propertyKey: 'health_maxhealth', status: 'RESOLVED', value: 980, sourcePath: 'health',
-    unitFormat: null, unitConversion: 'IDENTITY', reason: null })
+    unitFormat: null, sourceUnit: null, reason: null })
   const defiance = 'BP_CRAFT_slaver_armor_heavy_core_01_01_01'
   assert.equal(at(defiance, 'armor_temperaturemin').status, 'REVIEW_REQUIRED')
   assert.equal(at(defiance, 'armor_temperaturemin').reason, 'SIGNED_VALUE_MULTIPLIER_SEMANTICS_UNVERIFIED')
@@ -59,7 +59,7 @@ test('representative statuses and reasons', () => {
   const qd = source.blueprints.find(b => source.items.get(b.productEntityClass)?.attachType === 'QuantumDrive')
   const speed = at(qd.sourceTag, 'quantum_speed')
   assert.equal(speed.status, 'RESOLVED')
-  assert.equal(speed.unitConversion, 'UNVERIFIED', 'raw driveSpeed must not be converted to Mm/s without evidence')
+  assert.equal(speed.sourceUnit, 'm/s', 'SCMDB evidence: driveSpeed is raw m/s')
   assert.equal(at(qd.sourceTag, 'quantum_fuelrequirement').reason, 'UNIT_UNVERIFIED')
 })
 
