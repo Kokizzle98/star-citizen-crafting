@@ -131,6 +131,28 @@ test('F: wrong or unstable reward assignments fail closed without writing', asyn
   target.blueprint_source_guid = remapped.blueprints.find(b => b.source_guid !== target.blueprint_source_guid).source_guid
   await rejectsWithoutWrite(db, remapped, 'SCMDB_BLUEPRINT_SYNC_UNSTABLE_REWARD_ASSIGNMENT')
 
+  // A pool used by several rewards must be expanded to the same length by
+  // every use: a truncated expansion fails even with adjusted counts.
+  const truncated = clone(live)
+  const uses = new Map()
+  for (const r of truncated.rewards) {
+    const key = `${r.source_contract_id}|${r.source_reward_index}`
+    uses.set(r.source_pool_guid, (uses.get(r.source_pool_guid) ?? new Set()).add(key))
+  }
+  const duplicatePoolNames = ['BP_MISSIONREWARD_VaughnGenerator_EliminateBoss',
+    'BP_MISSIONREWARD_NorthRockFPSKill_EliminateBoss']
+  const shared = truncated.rewards.find(r =>
+    uses.get(r.source_pool_guid).size > 1 && !duplicatePoolNames.includes(r.pool_name))
+  const last = Math.max(...truncated.rewards
+    .filter(r => r.source_contract_id === shared.source_contract_id &&
+      r.source_reward_index === shared.source_reward_index)
+    .map(r => r.source_pool_entry_index))
+  assert.ok(last > 0)
+  truncated.rewards = truncated.rewards.filter(r => !(r.source_contract_id === shared.source_contract_id &&
+    r.source_reward_index === shared.source_reward_index && r.source_pool_entry_index === last))
+  truncated.rewardTotal -= 1
+  await rejectsWithoutWrite(db, truncated, 'SCMDB_BLUEPRINT_SYNC_UNSTABLE_REWARD_ASSIGNMENT')
+
   const shifted = clone(live)
   shifted.rewards[0].source_pool_entry_index += 1000
   await rejectsWithoutWrite(db, shifted, 'SCMDB_BLUEPRINT_SYNC_UNSTABLE_REWARD_ASSIGNMENT')

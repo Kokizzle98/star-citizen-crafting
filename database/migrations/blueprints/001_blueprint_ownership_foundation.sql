@@ -382,8 +382,17 @@ BEGIN
 
   -- Stable assignments: one reward points to one pool with one set of reward
   -- and contract attributes; one pool entry is one blueprint with one weight;
-  -- every reward expands its pool completely (entry positions 0..n-1).
+  -- every reward expands its pool completely (entry positions 0..n-1) and
+  -- every use of the same pool expands it to the same length.
   IF EXISTS (
+    SELECT 1 FROM (
+      SELECT r->>'source_pool_guid' AS pool_guid, count(*) AS entries
+      FROM jsonb_array_elements(p_rewards) AS r
+      GROUP BY r->>'source_contract_id', (r->>'source_reward_index')::integer, r->>'source_pool_guid'
+    ) AS expansion
+    GROUP BY expansion.pool_guid
+    HAVING count(DISTINCT expansion.entries) <> 1
+  ) OR EXISTS (
     SELECT 1 FROM jsonb_array_elements(p_rewards) AS r
     GROUP BY r->>'source_contract_id', (r->>'source_reward_index')::integer
     HAVING count(DISTINCT r->>'source_pool_guid') <> 1
