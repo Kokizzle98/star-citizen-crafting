@@ -11,22 +11,29 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `none (idle baseline)`; the previous package `Blueprint Ownership / Tracking` is complete: PR 1 (#36), PR 2 (#39, migration 001 applied to Production), PR 3 (#40, first LIVE sync run on Production) and PR 4 (#41, usable Blueprint UI `/vector/blueprints`) are merged. LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production. Next product milestone: `Fabricator` (not started; scope still to be defined)
-- Branch: `develop`
+- Work package: `Fabricator Phase 1` (sequential pull requests F1 to F3); active pull request: **F1 – Read & Domain Foundation** (no UI). The previous package `Blueprint Ownership / Tracking` is complete (PRs #36, #39, #40, #41, checkpoint #42); LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
+- Branch: `feat/fabricator-f1-read-foundation`
 - Base: `develop`
 - Checkpoint date: `2026-11-11`
-- Work-package base (historical): `a8ee27c9b3118725a060f0b95f9e6948abad528b`
-- Active checkpoint anchor: `a8ee27c9b3118725a060f0b95f9e6948abad528b`
+- Work-package base (historical): `84e7fc3d3c72f62dc9007ec41938b3260cf574f7`
+- Active checkpoint anchor: `84e7fc3d3c72f62dc9007ec41938b3260cf574f7`
 - Working-tree expectation: `CLEAN`
-- Active PR: none once the rotation PR that introduces this block is merged; while that PR is open, its branch `docs/blueprint-package-complete` is the only permitted deviation from the expected branch
+- Active PR: the F1 pull request from `feat/fabricator-f1-read-foundation` against `develop`; F2 and F3 each start from `develop` on their own branch whose first commit rotates only the branch, PR and `NEXT STEP` fields of this block
 - PR base: `develop`
 
-The work-package base and anchor are the verified `develop` head after PR #41 (Blueprint PR 4 squash merge; tree identical to the reviewed head `c3732cf`). This block is written so that it is valid both on the rotation branch and after its merge into `develop`: the only paths that change after the anchor are the two listed below. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The work-package base and anchor are the verified `develop` head after PR #42 (checkpoint after Blueprint PR 4, idle baseline). The allowed scope below is the union for the whole Fabricator Phase 1 (F1 to F3) and does not widen per pull request; F1 itself only touches the checkpoint documents, `lib/fabricator/**` and `tests/fabricator-*`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
+- `lib/fabricator/**`
+- `tests/fabricator-*`
+- `app/vector/fabricator/**` (F2)
+- `components/fabricator/**` (F2)
+- `app/vector/page.tsx` (F2, dashboard entry)
+- `components/layout/VectorSidebar.tsx` (F2, navigation entry)
+- `app/globals.css` (F2, Fabricator styles)
 
 Recovery control block:
 
@@ -59,6 +66,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#39` (Blueprint Ownership / Tracking PR 2: database foundation, migration 001): squash-merged into `develop` on 2026-11-11 as `debcd4e`; reviewed head `6cbf71e`. Migration 001 applied to Production on 2026-11-11 under an explicit named owner GO; `DB-ENV-08` postchecks PASS (recorded on PR #39).
 - PR `#40` (Blueprint Ownership / Tracking PR 3: LIVE blueprint catalog sync builder and owner-side runner): squash-merged into `develop` on 2026-11-11 as `b24a2e0`; reviewed head `55f9914`. First LIVE sync run on Production on 2026-11-11 under an explicit named owner GO; read-only postchecks PASS (recorded on PR #40).
 - PR `#41` (Blueprint Ownership / Tracking PR 4: usable Blueprint UI `/vector/blueprints`): squash-merged into `develop` on 2026-11-11 as `a8ee27c`; reviewed head `c3732cf` (tree identical). UI only; no migration and no Production mutation.
+- PR `#42` (checkpoint after Blueprint PR 4, idle baseline): merged into `develop` on 2026-11-11 as `84e7fc3`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -101,6 +109,26 @@ No open review finding is tracked in this handover and no review is pending.
 Review evidence must always be associated with the exact commit actually reviewed. Later review IDs are not added recursively merely because they reviewed evidence bookkeeping.
 
 ## 5. ACTIVE WORK PACKAGE
+
+`Fabricator Phase 1` is **active** (Fabricator F1 in progress). Owner-approved plan and decisions are recorded in the F1 pull request; this section is a pointer, not the decision record.
+
+Owner decisions (2026-11-11):
+
+- `D1 = A`: product-family and variant relations come only from deterministic structural source relations (blueprint tag structure within one `attachType`; armor slot from the source `attachType`). Product names may act as a consistency veto only and never create a relation; a structural family contradicted by product identity is `REVIEW_REQUIRED` / ungrouped. No fuzzy or name-only grouping;
+- `D2 = C`: F3 starts with one global MANUAL quality value Q0–1000; per-slot quality overrides are `NEXT`, and F1/F3 must not structurally prevent them;
+- `D3 = A`: modifiers and baseline values are read server-side from the repository-pinned LIVE SCMDB mirror; the mirror version must equal the `ACTIVE` LIVE database dataset version, otherwise fail closed. No LIVE/PTU fallback, no other mirror, no database extension in F1;
+- `D4 = A` with contract: when a multiplicative effect is exactly determined by the recipe but no reliable baseline exists, only the relative crafting effect is shown with an explicit note; never derive a synthetic base or crafted value from it;
+- `D5`: product and variant hero images stay core. The `public/assets/components` images are UI mockups, not a product image source, and must not be used as product images; a neutral placeholder is allowed in F2 while a reliable image source is investigated.
+
+Sequential pull requests inside this package:
+
+- F1: read and domain foundation in `lib/fabricator/` with tests (family/variant/slot resolution, item-to-blueprint, strict recipe, recipe-to-inventory vocabulary, modifier adapter to `VECTOR_CRAFT_CALC_V1`, baseline allowlist, size, LIVE mirror version guard); no UI, no database change, no Production mutation;
+- F2: `/vector/fabricator` workspace, recipe materials and crew craftability through the existing `get_active_group_inventory()`; read-only, no inventory mutation;
+- F3: global MANUAL quality slider Q0–1000 and resolved product stats (base, crafted, absolute and relative delta).
+
+Out of scope for the whole package: SMART, MAX and SAVE PREMIUM strategies, reservation, consumption, shopping lists, multi-blueprint planning, simulation fallback, PTU and any database migration.
+
+## 5a. PREVIOUS WORK PACKAGE
 
 `Blueprint Ownership / Tracking` is **complete** (PRs 1 to 4 merged: #36, #39, #40, #41). PR 2's migration is applied to Production; the LIVE catalog `4.10.2-live.12913470` is synchronized and `ACTIVE` in Production; PR 4 delivers the usable UI. This section stays as the record of the package's owner decisions; no work package is active (see section 1). Owner-approved scope and decisions are recorded in the work-package pull requests; this section is a pointer, not the decision record.
 
@@ -355,4 +383,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Merge the rotation pull request that introduces this block (owner approval required; no further rotation is needed afterwards). Then the owner refreshes the private Project Lead evidence from the clean, synchronized local `develop` with the existing generator (`docs/governance/PROJECT_LEAD_EVIDENCE.md`, section 5 and section 11). The next product milestone is `Fabricator`: its scope is defined by the Project Lead and owner first; then start it in a new conversation from `AGENTS.md` and this handover with a short plan and a dedicated feature branch whose first commit rotates this checkpoint to that work package. Do not reopen merged Blueprint PRs without a concrete defect. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Owner review of the Fabricator F1 pull request (read and domain foundation, no UI, no database change, no Production mutation). Merge only with explicit owner approval. Do not start F2 before F1 is merged; F2 then starts from `develop` on its own branch whose first commit rotates the branch, PR and `NEXT STEP` fields of this block. Do not reopen merged Blueprint PRs without a concrete defect. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
