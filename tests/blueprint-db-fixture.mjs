@@ -17,7 +17,9 @@
 
 import { readFile } from 'node:fs/promises'
 import { PGlite } from '@electric-sql/pglite'
-import ts from 'typescript'
+import {
+  buildPinnedLivePayload, loadBlueprintSyncModules, readScmdbBlueprintChannel,
+} from '../scripts/sync-scmdb-blueprint-catalog.mjs'
 
 export const migration = await readFile(
   new URL('../database/migrations/blueprints/001_blueprint_ownership_foundation.sql', import.meta.url),
@@ -124,31 +126,19 @@ export async function addBlueprint(db, n) {
 
 // --- sync payloads from the real PR 1 readers ------------------------------
 
-const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
-const moduleUrl = source => {
-  const output = ts.transpileModule(source, {
-    compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
-  }).outputText
-  return `data:text/javascript;base64,${Buffer.from(output).toString('base64')}`
-}
-
-async function loadReaders() {
-  const [extractor, normalizer, composer, rewards] = await Promise.all([
-    read('lib/blueprints/blueprint-extractor.ts'),
-    read('lib/blueprints/blueprint-normalizer.ts'),
-    read('lib/blueprints/blueprint-dataset.ts'),
-    read('lib/blueprints/blueprint-reward-extractor.ts'),
-  ])
-  const source = composer
-    .replace("'./blueprint-extractor'", JSON.stringify(moduleUrl(extractor)))
-    .replace("'./blueprint-normalizer'", JSON.stringify(moduleUrl(normalizer)))
-  return {
-    prepareScmdbBlueprintDataset: (await import(moduleUrl(source))).prepareScmdbBlueprintDataset,
-    extractScmdbBlueprintRewards: (await import(moduleUrl(rewards))).extractScmdbBlueprintRewards,
-  }
-}
-
-export function toSyncPayload(catalog, rewards) {
+// The sync payload comes from the production builder through the owner-side
+// runner's loader, so tests and the real sync share one mapping and one
+// pinned LIVE dataset. The camelCase envelope below only renames the builder's
+// top-level RPC parameters for the contract tests; it maps no row field.
+//
+// PTU exists here only so the database contract tests can prove that the SQL
+// function itself rejects a real PTU payload. Its rows come from the same
+// policy-free mapping; the sync path can never build a PTU payload.
+export async function realPayload(channel) {
+  if (channel === 'LIVE') return fromRpcParams((await buildPinnedLivePayload()).payload)
+  const modules = await loadBlueprintSyncModules()
+  const { catalog, rewards } = await readScmdbBlueprintChannel(channel, { modules })
+  const rows = modules.mapScmdbBlueprintSyncRows(catalog, rewards)
   return {
     source: 'SCMDB',
     channel: catalog.channel,
@@ -160,51 +150,25 @@ export function toSyncPayload(catalog, rewards) {
     blueprintReviewRequired: catalog.counts.reviewRequired,
     rewardTotal: rewards.counts.rewards,
     duplicateSourceRows: rewards.counts.duplicateSourceRows,
-    blueprints: catalog.blueprints.map(b => ({
-      source_guid: b.sourceGuid,
-      source_tag: b.sourceTag,
-      product_entity_class: b.productEntityClass,
-      product_name: b.productName,
-      gear: b.gear,
-      type: b.type,
-      subtype: b.subtype,
-      manufacturer: b.manufacturer,
-      recipe: b.recipe,
-      scmdb_is_default: b.scmdbIsDefault,
-      cig_data_error: b.scmdbCigDataError,
-      scmdb_suggested_name: b.scmdbSuggestedName,
-      review_state: b.reviewState,
-      issues: b.issues,
-    })),
-    rewards: rewards.rewards.map(r => ({
-      source_contract_id: r.contractId,
-      source_reward_index: r.sourceRewardIndex,
-      source_pool_guid: r.poolGuid,
-      source_pool_entry_index: r.sourcePoolEntryIndex,
-      blueprint_source_guid: r.blueprintSourceGuid,
-      pool_name: r.poolName,
-      pool_source: r.poolSource,
-      contract_debug_name: r.contractDebugName,
-      contract_category: r.contractCategory,
-      contract_mission_type: r.contractMissionType,
-      trigger: r.trigger,
-      chance: r.chance,
-      weight: r.weight,
-      has_source_known_issue: r.hasSourceKnownIssue,
-    })),
+    blueprints: rows.blueprints,
+    rewards: rows.rewards,
   }
 }
 
-export async function realPayload(channel) {
-  const { prepareScmdbBlueprintDataset, extractScmdbBlueprintRewards } = await loadReaders()
-  const manifest = JSON.parse(await read('data/scmdb/latest.json'))
-  const files = manifest.channels[channel.toLowerCase()].files
-  const catalog = prepareScmdbBlueprintDataset(
-    manifest, JSON.parse(await read(`data/scmdb/${files.crafting_blueprints}`)), channel)
-  const rewards = extractScmdbBlueprintRewards(
-    manifest, JSON.parse(await read(`data/scmdb/${files.merged}`)), channel)
-  return toSyncPayload(catalog, rewards)
-}
+export const fromRpcParams = p => ({
+  source: p.p_source,
+  channel: p.p_channel,
+  version: p.p_version,
+  catalogSourceFile: p.p_catalog_source_file,
+  rewardSourceFile: p.p_reward_source_file,
+  blueprintTotal: p.p_blueprint_total,
+  blueprintValid: p.p_blueprint_valid,
+  blueprintReviewRequired: p.p_blueprint_review_required,
+  rewardTotal: p.p_reward_total,
+  duplicateSourceRows: p.p_duplicate_source_rows,
+  blueprints: p.p_blueprints,
+  rewards: p.p_rewards,
+})
 
 export const syncSql = `SELECT public.sync_scmdb_blueprint_catalog(
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb) AS id`
