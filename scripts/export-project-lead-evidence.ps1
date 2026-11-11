@@ -141,6 +141,9 @@ $script:RetryDelayMs = 400
 $script:GitTimeoutMs = 120000        # every ordinary git invocation is bounded
 $script:StreamGraceMs = 10000        # extra time allowed for output collection after exit or kill
 $script:Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
+# Strict decoder for repository text and evidence files: invalid byte sequences throw instead of
+# being replaced by U+FFFD. Output of git commands (hashes, refs, commit subjects) may stay lossy.
+$script:Utf8Strict = New-Object System.Text.UTF8Encoding($false, $true)
 $script:SecretPatterns = @(
     '-----BEGIN [A-Z ]*PRIVATE KEY-----',
     '\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}',
@@ -403,11 +406,114 @@ function Write-Utf8File {
     [System.IO.File]::WriteAllBytes($Path, $script:Utf8NoBom.GetBytes($Text))
 }
 
+function ConvertFrom-StrictUtf8 {
+    # The one strict UTF-8 decode for repository and evidence text. Throws a short,
+    # non-sensitive error on malformed input; there is no code-page fallback and no repair.
+    param([byte[]]$Bytes)
+    try {
+        return $script:Utf8Strict.GetString($Bytes)
+    } catch [System.Text.DecoderFallbackException] {
+        throw (New-Object System.IO.InvalidDataException 'content is not valid UTF-8')
+    }
+}
+
 function Read-Utf8File {
     param([string]$Path)
-    $text = $script:Utf8NoBom.GetString([System.IO.File]::ReadAllBytes($Path))
+    $text = ConvertFrom-StrictUtf8 ([System.IO.File]::ReadAllBytes($Path))
     if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) { $text = $text.Substring(1) }
     return $text
+}
+
+if (-not ('VectorEvidence.ReparseInfo' -as [type])) {
+    Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+namespace VectorEvidence {
+    public static class ReparseInfo {
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct WIN32_FIND_DATA {
+            public uint dwFileAttributes;
+            public System.Runtime.InteropServices.ComTypes.FILETIME ftCreationTime;
+            public System.Runtime.InteropServices.ComTypes.FILETIME ftLastAccessTime;
+            public System.Runtime.InteropServices.ComTypes.FILETIME ftLastWriteTime;
+            public uint nFileSizeHigh;
+            public uint nFileSizeLow;
+            public uint dwReserved0;
+            public uint dwReserved1;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)] public string cFileName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 14)] public string cAlternateFileName;
+        }
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr FindFirstFileW(string lpFileName, out WIN32_FIND_DATA lpFindFileData);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool FindClose(IntPtr hFindFile);
+
+        // none: not a reparse point; cloud: cloud-files placeholder (OneDrive), not a redirect;
+        // redirect: junction, mount point or symbolic link; other: any other reparse tag;
+        // unknown: the entry could not be inspected.
+        public static string Classify(string path) {
+            WIN32_FIND_DATA data;
+            IntPtr handle = FindFirstFileW(path, out data);
+            if (handle == new IntPtr(-1)) { return "unknown"; }
+            FindClose(handle);
+            if ((data.dwFileAttributes & 0x400) == 0) { return "none"; }
+            uint tag = data.dwReserved0;
+            if (tag == 0xA0000003u || tag == 0xA000000Cu) { return "redirect"; }
+            if ((tag & 0xFFFF0FFFu) == 0x9000001Au) { return "cloud"; }
+            return "other";
+        }
+    }
+}
+'@
+}
+
+function Get-RedirectReason {
+    # $null when the path is not a redirecting reparse point (or does not exist); otherwise a
+    # short reason. Cloud-files placeholders (OneDrive) are ordinary directories and are allowed.
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) { return $null }
+    $trimmed = $Path.TrimEnd('\')
+    if ($trimmed.Length -le 2) { return $null }   # drive root
+    switch ([VectorEvidence.ReparseInfo]::Classify($trimmed)) {
+        'none' { return $null }
+        'cloud' { return $null }
+        'redirect' { return 'junction, mount point or symbolic link' }
+        'other' { return 'reparse point of an unsupported kind' }
+        default { return 'could not be inspected' }
+    }
+}
+
+function Assert-NoRedirects {
+    # Fails closed when any listed existing path component redirects elsewhere. Nothing under a
+    # redirected path is enumerated, written, moved or deleted.
+    param([string[]]$Paths)
+    foreach ($candidate in $Paths) {
+        $reason = Get-RedirectReason $candidate
+        if ($null -ne $reason) {
+            Stop-Blocked ("path component is a {0}; redirected output or repository paths are not supported: {1}" -f $reason, $candidate)
+        }
+    }
+}
+
+function Get-AncestorChain {
+    param([string]$Path)
+    $chain = New-Object System.Collections.Generic.List[string]
+    $current = $Path.TrimEnd('\')
+    while (-not [string]::IsNullOrEmpty($current)) {
+        $chain.Add($current)
+        $parent = Split-Path -Parent $current
+        if ([string]::IsNullOrEmpty($parent) -or $parent -eq $current) { break }
+        $current = $parent
+    }
+    return $chain.ToArray()
+}
+
+function Assert-SafeOutputPaths {
+    # Output root, every existing ancestor, and the Evidence, CURRENT and ARCHIVE directories.
+    # Called before the lock identity is derived and again right before publication and cleanup.
+    $paths = @(Get-AncestorChain $script:OutRoot)
+    if ($script:EvidenceDir) { $paths += @($script:EvidenceDir, $script:CurrentDir, $script:ArchiveDir) }
+    Assert-NoRedirects $paths
 }
 
 function Test-TransientIoError {
@@ -434,14 +540,20 @@ function Invoke-WithRetry {
 }
 
 function Move-Directory {
+    # Every rename re-validates the output path chain and both ends of the move first.
     param([string]$Source, [string]$Destination, [string]$What)
+    Assert-SafeOutputPaths
+    Assert-NoRedirects @($Source, $Destination)
     Invoke-WithRetry -What $What -Action { [System.IO.Directory]::Move($Source, $Destination) }
 }
 
 function Remove-DirectoryQuietly {
+    # A redirecting entry is never deleted or traversed; it is reported and left in place.
     param([string]$Path)
     if (-not (Test-Path -LiteralPath $Path)) { return $true }
     try {
+        Assert-SafeOutputPaths
+        Assert-NoRedirects @($Path)
         Invoke-WithRetry -What 'remove' -Action { Remove-Item -LiteralPath $Path -Recurse -Force }
         return $true
     } catch {
@@ -592,7 +704,7 @@ function ConvertTo-CanonicalSourceText {
     # Raw blob bytes stay authoritative for Git Blob, SHA256 and Bytes; this canonical text is
     # used only for the embedded body. CRLF becomes LF; a lone CR is not normalized and is
     # refused at generation time (Get-CommitSource). Trailing LFs collapse to exactly one.
-    $text = $script:Utf8NoBom.GetString($Bytes)
+    $text = ConvertFrom-StrictUtf8 $Bytes
     if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) { $text = $text.Substring(1) }
     $text = $text.Replace("`r`n", "`n")
     $text = $text.TrimEnd([char]10) + "`n"
@@ -621,6 +733,13 @@ function Initialize-Context {
         Stop-Blocked ('RepositoryRoot does not exist: ' + $candidateRoot)
     }
     $script:RepoRoot = (Resolve-Path -LiteralPath $candidateRoot).ProviderPath.TrimEnd('\')
+
+    # Redirected paths are not supported: the lexical containment decision below is only
+    # meaningful if no existing component of either chain is a junction, mount point or
+    # symbolic link. This runs before git, the lock identity and any filesystem access to CURRENT.
+    Assert-NoRedirects (@(Get-AncestorChain $script:OutRoot) + @(Get-AncestorChain $script:RepoRoot))
+    $evidenceCandidate = Join-Path $script:OutRoot 'Evidence'
+    Assert-NoRedirects @($evidenceCandidate, (Join-Path $evidenceCandidate 'CURRENT'), (Join-Path $evidenceCandidate 'ARCHIVE'))
 
     $topLevel = Invoke-Git -Arguments @('rev-parse', '--show-toplevel')
     if ($topLevel.ExitCode -ne 0) { Stop-Blocked ('RepositoryRoot is not inside a Git work tree: ' + $script:RepoRoot) }
@@ -834,7 +953,11 @@ function Get-CommitSource {
     if (-not (Test-Path -LiteralPath $workingTreePath -PathType Leaf)) {
         Stop-Blocked ("mandatory source '{0}' is not readable in the working tree" -f $RelativePath)
     }
-    $text = ConvertTo-CanonicalSourceText $content.Bytes
+    try {
+        $text = ConvertTo-CanonicalSourceText $content.Bytes
+    } catch [System.IO.InvalidDataException] {
+        Stop-Blocked ("mandatory source '{0}' is not valid UTF-8; nothing was published" -f $RelativePath)
+    }
     if ($text.Contains("`r")) {
         Stop-Blocked ("mandatory source '{0}' contains a bare carriage return; only LF or CRLF line endings are supported" -f $RelativePath)
     }
@@ -970,6 +1093,7 @@ function New-EvidenceText {
 
 function New-Candidate {
     param($Context, $Sources)
+    Assert-SafeOutputPaths
     if (-not (Test-Path -LiteralPath $script:EvidenceDir)) { [void](New-Item -ItemType Directory -Path $script:EvidenceDir) }
     $script:StagingDir = Join-Path $script:EvidenceDir ('.staging-' + $script:RunId)
     [void](New-Item -ItemType Directory -Path $script:StagingDir)
@@ -1000,8 +1124,9 @@ function Read-FieldBlock {
     # Reads "Label: value" lines in exactly the given order until a blank line. Every label must
     # appear exactly once: a repeated label is a duplicate (identical or not), a known label at
     # the wrong position is out of order, anything else is unknown or unexpected text.
+    # Stops at the first structural error and reports exactly one problem for the block, so
+    # malformed input of any size costs bounded work (no per-line error accumulation).
     param([string[]]$Lines, [ref]$Index, [string[]]$Labels, [string]$Context)
-    $problems = @()
     $values = @{}
     $next = 0
     while ($Index.Value -lt $Lines.Count) {
@@ -1009,9 +1134,7 @@ function Read-FieldBlock {
         if ($line -eq '') { break }
         if ($line -match $script:MarkerPattern) { break }
         if ($line -notmatch '^([A-Za-z0-9][A-Za-z0-9 ()]*):[ \t]*(.*)$') {
-            $problems += ($Context + ": unexpected text where a metadata field was expected: '" + (Get-LinePreview $line) + "'")
-            $Index.Value++
-            continue
+            return [pscustomobject]@{ Values = $values; Problems = @($Context + ": unexpected text where a metadata field was expected: '" + (Get-LinePreview $line) + "'") }
         }
         $label = $Matches[1]
         $value = $Matches[2].Trim()
@@ -1019,18 +1142,20 @@ function Read-FieldBlock {
             $values[$label] = $value
             $next++
         } elseif ($values.ContainsKey($label)) {
-            $problems += ($Context + ": duplicated field '" + $label + "'")
+            return [pscustomobject]@{ Values = $values; Problems = @($Context + ": duplicated field '" + $label + "'") }
         } elseif ($Labels -contains $label) {
-            $problems += ($Context + ": field '" + $label + "' out of order")
+            return [pscustomobject]@{ Values = $values; Problems = @($Context + ": field '" + $label + "' out of order") }
         } else {
-            $problems += ($Context + ": unknown metadata field '" + $label + "'")
+            return [pscustomobject]@{ Values = $values; Problems = @($Context + ": unknown metadata field '" + (Get-LinePreview $label) + "'") }
         }
         $Index.Value++
     }
     foreach ($label in $Labels) {
-        if (-not $values.ContainsKey($label)) { $problems += ($Context + ": missing field '" + $label + "'") }
+        if (-not $values.ContainsKey($label)) {
+            return [pscustomobject]@{ Values = $values; Problems = @($Context + ": missing field '" + $label + "'") }
+        }
     }
-    return [pscustomobject]@{ Values = $values; Problems = $problems }
+    return [pscustomobject]@{ Values = $values; Problems = @() }
 }
 
 function Get-GovernanceDocument {
@@ -1175,7 +1300,14 @@ function Test-GovernanceSections {
         if ($section.Sha256 -ne (Get-Sha256Hex $content.Bytes)) { $problems += ($label + ': declared SHA256 differs from the repository blob') }
         if ([string]$section.Bytes -ne [string]$content.Bytes.Length) { $problems += ($label + ': declared Bytes differ from the repository blob') }
         if ($null -eq $section.Body) { $problems += ($label + ': content block missing'); continue }
-        if (-not [string]::Equals($section.Body, (ConvertTo-CanonicalSourceText $content.Bytes), [System.StringComparison]::Ordinal)) {
+        $canonical = $null
+        try {
+            $canonical = ConvertTo-CanonicalSourceText $content.Bytes
+        } catch [System.IO.InvalidDataException] {
+            $problems += ($label + ': repository source is not valid UTF-8')
+            continue
+        }
+        if (-not [string]::Equals($section.Body, $canonical, [System.StringComparison]::Ordinal)) {
             $problems += ($label + ': embedded content differs from the repository source at the Snapshot Commit')
         }
         $verifiedBlobs += $repoBlobId
@@ -1226,9 +1358,13 @@ function Test-EvidenceSet {
         $hashes[$name] = Get-FileSha256 (Join-Path $Directory $name)
     }
 
-    $evidenceText = Read-Utf8File $evidencePath
-    $governanceText = Read-Utf8File $governancePath
-    $projectStateText = Read-Utf8File $projectStatePath
+    try {
+        $evidenceText = Read-Utf8File $evidencePath
+        $governanceText = Read-Utf8File $governancePath
+        $projectStateText = Read-Utf8File $projectStatePath
+    } catch [System.IO.InvalidDataException] {
+        return [pscustomobject]@{ Problems = @('an evidence file is not valid UTF-8'); Commit = $null; DeclaredBranch = $null; Hashes = $hashes; Fingerprint = $null }
+    }
 
     # Required VECTOR_EVIDENCE.md fields appear exactly once; a missing or repeated field is an error.
     $fieldProblems = New-Object System.Collections.Generic.List[string]
@@ -1380,6 +1516,8 @@ function Test-SameHashes {
 
 function Publish-Candidate {
     param($CandidateValidation)
+    # Immediately before CURRENT is touched: no component may have become a redirect.
+    Assert-SafeOutputPaths
     $previousDir = $null
     if (Test-Path -LiteralPath $script:CurrentDir) {
         $previousDir = Join-Path $script:EvidenceDir ('.previous-' + $script:RunId)
@@ -1490,6 +1628,7 @@ function Restore-PreviousCurrent {
 
 function Publish-Archive {
     param($CandidateValidation, [string]$Commit)
+    Assert-SafeOutputPaths
     $safeBranch = $ExpectedBranch -replace '[^A-Za-z0-9._-]', '-'
     $name = '{0}_{1}_{2}' -f [DateTime]::UtcNow.ToString('yyyy-MM-dd'), $safeBranch, $Commit.Substring(0, 12)
     $target = Join-Path $script:ArchiveDir $name
@@ -1542,6 +1681,8 @@ try {
         Write-Host ('TEST HOOK: holding the output-root lock for ' + $TestOnlyHoldLockSeconds + ' s')
         Start-Sleep -Seconds $TestOnlyHoldLockSeconds
     }
+    # A redirect that appeared after the initial check, before any inspection under the lock.
+    Assert-SafeOutputPaths
 
     if ($ValidateOnly) {
         $validation = Test-EvidenceSet -Directory $script:CurrentDir

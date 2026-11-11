@@ -3,12 +3,15 @@ import { spawn, spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import {
   existsSync,
+  lstatSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
+  rmdirSync,
   rmSync,
   statSync,
+  symlinkSync,
   truncateSync,
   writeFileSync,
 } from 'node:fs'
@@ -1383,4 +1386,233 @@ test('required freshness and safety fields are validated exactly once and the ti
   }
   restoreDir(fixture.current, saved)
   assertPass(runValidate(fixture))
+})
+
+// --------------------------------------------------------------------------
+// Fourth review finding 1: strict UTF-8 for repository sources
+// --------------------------------------------------------------------------
+
+const REPLACEMENT_CHAR = String.fromCharCode(0xfffd)
+const BOM_CHAR = String.fromCharCode(0xfeff)
+
+test('malformed UTF-8 in an allowlisted source is BLOCKED before publication and never repaired', { skip }, () => {
+  const marker = Buffer.from('# Agents\n\nAGENTS_FIXTURE_MARKER ')
+  const cases = [
+    ['isolated 0xFF byte', Buffer.concat([marker, Buffer.from([0xff]), Buffer.from('\n')])],
+    ['truncated multibyte sequence', Buffer.concat([marker, Buffer.from([0xe2, 0x82]), Buffer.from('\n')])],
+    ['invalid continuation byte', Buffer.concat([marker, Buffer.from([0xc3, 0x28]), Buffer.from('\n')])],
+    ['overlong encoding', Buffer.concat([marker, Buffer.from([0xc0, 0xaf]), Buffer.from('\n')])],
+  ]
+  for (const [name, bytes] of cases) {
+    const fixture = createFixture({ sources: { ...fixtureSources, 'AGENTS.md': bytes }, config: [['core.autocrlf', 'false']] })
+    // An existing CURRENT must stay byte-identical when the new candidate is malformed.
+    writeTree(fixture.current, { 'VECTOR_EVIDENCE.md': 'previous\n' })
+    const before = snapshotDir(fixture.current)
+    const run = runGenerator(fixture)
+    assertBlocked(run, /mandatory source 'AGENTS\.md' is not valid UTF-8; nothing was published/)
+    assert.ok(!run.text.includes(REPLACEMENT_CHAR), `${name}: no replacement character in output`)
+    assert.deepEqual(snapshotDir(fixture.current), before, name)
+    assert.deepEqual(readdirSync(fixture.evidence).sort(), ['ARCHIVE', 'CURRENT'], name)
+  }
+})
+
+test('valid non-ASCII UTF-8, with BOM and with CRLF, is embedded exactly', { skip }, () => {
+  const text = '# Agents\r\n\r\nAGENTS_FIXTURE_MARKER äöü € \u{1F680}\r\n'
+  const bom = Buffer.from([0xef, 0xbb, 0xbf])
+  const fixture = createFixture({
+    sources: { ...fixtureSources, 'AGENTS.md': Buffer.concat([bom, Buffer.from(text, 'utf8')]) },
+    config: [['core.autocrlf', 'false']],
+  })
+  assertPass(runGenerator(fixture))
+  const context = readCurrent(fixture)['GOVERNANCE_CONTEXT.md']
+  assert.ok(context.includes('AGENTS_FIXTURE_MARKER äöü € \u{1F680}\n----- END CONTENT AGENTS.md -----'))
+  assert.ok(!context.includes(REPLACEMENT_CHAR) && !context.includes(BOM_CHAR))
+  assertPass(runValidate(fixture))
+})
+
+test('validation rejects replacement characters, malformed reconstructed sources and malformed evidence files', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const saved = saveDir(fixture.current)
+
+  // A replacement character in the embedded body is not accepted as a stand-in for any byte.
+  tamperGovernance(fixture.current, text => text.replace('AGENTS_FIXTURE_MARKER', `AGENTS_FIXTURE_MARKER ${REPLACEMENT_CHAR}`))
+  assertBlocked(runValidate(fixture), /section 'AGENTS\.md': embedded content differs/)
+
+  // The declared commit holds a malformed source: reconstruction fails closed instead of repairing it.
+  restoreDir(fixture.current, saved)
+  writeFileSync(path.join(fixture.work, 'AGENTS.md'), Buffer.from([0x23, 0x20, 0xff, 0x0a]))
+  const bad = commitAll(fixture.work, 'fixture: malformed source')
+  git(fixture.work, ['push', '-q', 'origin', 'develop'])
+  const retarget = text => text.replace(new RegExp(fixture.sha, 'g'), bad)
+  tamperEvidence(fixture.current, retarget)
+  tamperGovernance(fixture.current, retarget)
+  assertBlocked(runValidate(fixture), /section 'AGENTS\.md': repository source is not valid UTF-8/)
+
+  // A malformed evidence file is a validation failure, not a lossy read.
+  restoreDir(fixture.current, saved)
+  writeFileSync(path.join(fixture.current, 'VECTOR_EVIDENCE.md'), Buffer.from([0x23, 0x20, 0xff, 0xfe, 0x0a]))
+  assertBlocked(runValidate(fixture), /an evidence file is not valid UTF-8/)
+})
+
+// --------------------------------------------------------------------------
+// Fourth review finding 2: redirected output paths are refused
+// --------------------------------------------------------------------------
+
+const makeJunction = (linkPath, targetPath) => symlinkSync(targetPath, linkPath, 'junction')
+const isLink = p => lstatSync(p).isSymbolicLink()
+const removeLink = p => {
+  try {
+    if (isLink(p)) rmdirSync(p)
+  } catch {
+    // best effort
+  }
+}
+
+// Fixture whose excluded sibling areas and repository contain recognizable content.
+const createJunctionFixture = () => {
+  const fixture = createFixture()
+  writeTree(fixture.out, {
+    'Private_Evidence/Security/secret-finding.md': 'PRIVATE_SECURITY_MARKER\n',
+    'Private_Evidence/Backup/backup.txt': 'PRIVATE_BACKUP_MARKER\n',
+    'WP_EVIDENCE/work-package.txt': 'WP_EVIDENCE_MARKER\n',
+  })
+  mkdirSync(path.join(fixture.work, 'inrepo'))
+  writeFileSync(path.join(fixture.work, 'inrepo', 'keep.txt'), 'IN_REPO_MARKER\n')
+  commitAll(fixture.work, 'fixture: tracked directory for the redirect target')
+  git(fixture.work, ['push', '-q', 'origin', 'develop'])
+  return fixture
+}
+
+const assertRedirectBlocked = (run, link, target, targetBefore) => {
+  assert.notEqual(run.status, 0, run.text)
+  assert.match(run.text, /RESULT: BLOCKED/)
+  assert.match(run.text, /path component is a junction, mount point or symbolic link; redirected output or repository paths are not supported/)
+  assert.doesNotMatch(run.text, /Output-root lock\s+ACQUIRED/, 'the lock must not be taken from an unsafe path')
+  assert.ok(isLink(link), 'the junction itself must be left in place')
+  assert.deepEqual(snapshotDir(target), targetBefore, 'target contents must be unchanged')
+  for (const name of readdirSync(target)) {
+    assert.doesNotMatch(name, /^\.(staging|previous|failed)-/, 'no operational directory in the redirected target')
+  }
+}
+
+test('a junction at Evidence, CURRENT, ARCHIVE, the output root or an ancestor is refused without touching its target', { skip }, () => {
+  const fixture = createJunctionFixture()
+  const security = path.join(fixture.out, 'Private_Evidence', 'Security')
+  const backup = path.join(fixture.out, 'Private_Evidence', 'Backup')
+  const wp = path.join(fixture.out, 'WP_EVIDENCE')
+  const inrepo = path.join(fixture.work, 'inrepo')
+  const links = []
+  try {
+    // Evidence -> Private_Evidence\Security (excluded sibling)
+    rmSync(fixture.evidence, { recursive: true })
+    makeJunction(fixture.evidence, security)
+    links.push(fixture.evidence)
+    let before = snapshotDir(security)
+    assertRedirectBlocked(runGenerator(fixture), fixture.evidence, security, before)
+    removeLink(fixture.evidence)
+
+    // CURRENT -> Private_Evidence\Backup, with a normal Evidence directory
+    mkdirSync(fixture.evidence)
+    makeJunction(fixture.current, backup)
+    links.push(fixture.current)
+    before = snapshotDir(backup)
+    assertRedirectBlocked(runGenerator(fixture), fixture.current, backup, before)
+    removeLink(fixture.current)
+
+    // ARCHIVE -> WP_EVIDENCE
+    makeJunction(fixture.archive, wp)
+    links.push(fixture.archive)
+    before = snapshotDir(wp)
+    assertRedirectBlocked(runGenerator(fixture, ['-Archive']), fixture.archive, wp, before)
+    removeLink(fixture.archive)
+
+    // Evidence -> a directory inside the repository
+    rmSync(fixture.evidence, { recursive: true })
+    makeJunction(fixture.evidence, inrepo)
+    links.push(fixture.evidence)
+    before = snapshotDir(inrepo)
+    assertRedirectBlocked(runGenerator(fixture), fixture.evidence, inrepo, before)
+    assert.equal(git(fixture.work, ['status', '--porcelain']).trim(), '', 'the repository must stay clean')
+    removeLink(fixture.evidence)
+    mkdirSync(fixture.evidence)
+    mkdirSync(fixture.current)
+    mkdirSync(fixture.archive)
+
+    // The output root itself is a junction to a real output root
+    const rootLink = path.join(fixture.root, 'root link')
+    makeJunction(rootLink, fixture.out)
+    links.push(rootLink)
+    before = snapshotDir(fixture.out)
+    assertRedirectBlocked(runGenerator({ ...fixture, out: rootLink }), rootLink, fixture.out, before)
+
+    // An intermediate existing component of the output path is a junction
+    const hop = path.join(fixture.root, 'hop')
+    makeJunction(hop, fixture.root)
+    links.push(hop)
+    before = snapshotDir(fixture.out)
+    assertRedirectBlocked(runGenerator({ ...fixture, out: path.join(hop, 'evidence out') }), hop, fixture.out, before)
+  } finally {
+    for (const link of links.reverse()) removeLink(link)
+  }
+  // With the junctions gone an ordinary output root passes again.
+  assertPass(runGenerator(fixture))
+  assert.deepEqual(readdirSync(fixture.current).sort(), [...finalFiles].sort())
+})
+
+test('a redirect that appears after the initial check is caught under the lock before CURRENT is inspected', { skip }, async () => {
+  const fixture = createJunctionFixture()
+  assertPass(runGenerator(fixture))
+  const security = path.join(fixture.out, 'Private_Evidence', 'Security')
+  const before = snapshotDir(security)
+  const run = spawnGenerator(fixture, ['-TestOnlyHoldLockSeconds', '10'])
+  try {
+    assert.ok(await waitFor(() => run.text.includes('TEST HOOK: holding the output-root lock'), 30_000), run.text)
+    rmSync(fixture.current, { recursive: true })
+    makeJunction(fixture.current, security)
+    assert.equal(await run.exit, 1, run.text)
+    assert.match(run.text, /path component is a junction, mount point or symbolic link/)
+    assert.ok(isLink(fixture.current))
+    assert.deepEqual(snapshotDir(security), before)
+    assert.deepEqual(readdirSync(fixture.evidence).filter(name => name.startsWith('.')), [])
+  } finally {
+    removeLink(fixture.current)
+  }
+})
+
+// --------------------------------------------------------------------------
+// Fourth review finding 3: malformed field blocks fail fast
+// --------------------------------------------------------------------------
+
+test('a near-limit block of malformed fields is rejected with one bounded error in bounded time and releases the lock', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const saved = saveDir(fixture.current)
+  const many = count => Array.from({ length: count }, (_, i) => `Unknown ${i}: x`).join('\n')
+
+  const attempt = (name, mutate) => {
+    restoreDir(fixture.current, saved)
+    tamperGovernance(fixture.current, mutate)
+    assert.ok(statSync(path.join(fixture.current, 'GOVERNANCE_CONTEXT.md')).size < 4 * 1024 * 1024, 'stays below the preflight limit')
+    const started = Date.now()
+    const result = runValidate(fixture)
+    const elapsed = Date.now() - started
+    assert.notEqual(result.status, 0, name)
+    const causes = result.text.split('\n').filter(line => line.startsWith('CAUSE: ') && !line.includes('validation failed'))
+    assert.equal(causes.length, 1, `${name}: exactly one structural error, got ${causes.length}`)
+    assert.ok(elapsed < 30_000, `${name}: took ${elapsed} ms`)
+    return causes[0]
+  }
+
+  // About 3.9 MB of malformed lines before the first blank line, in the header and in a section.
+  assert.match(attempt('header', text => text.replace('Source Count: 5', `Source Count: 5\n${many(200_000)}`)), /header: unknown metadata field 'Unknown 0'/)
+  assert.match(attempt('section', text => text.replace('SHA256:', `${many(200_000)}\nSHA256:`)), /section 1 \('AGENTS\.md'\): unknown metadata field 'Unknown 0'/)
+  assert.match(attempt('text', text => text.replace('Source Count: 5', `Source Count: 5\n${'??? not a field\n'.repeat(200_000)}`)), /header: unexpected text where a metadata field was expected/)
+
+  // The lock was released after every parser failure and normal parsing is unchanged.
+  restoreDir(fixture.current, saved)
+  const later = runValidate(fixture)
+  assertPass(later)
+  assert.match(later.text, /Output-root lock\s+ACQUIRED/)
+  assertPass(runGenerator(fixture))
 })
