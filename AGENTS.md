@@ -5,9 +5,11 @@ Entry point for contributors and coding agents (Claude, Copilot, others). This f
 ## Read first
 
 1. `docs/RULE_INDEX.md` — registry of all rules, their status and the conflict rule.
-2. `docs/handover/VECTOR_RESTART_HANDOVER.md` — current checkpoint, recovery procedure and `NEXT STEP`.
-3. `SCMDB_LOCATION_HANDOVER.md` — state and FROZEN contracts of the finished SCMDB location work.
-4. `docs/frozen/` — binding specifications. Read every one that applies to your change.
+2. `docs/PROJECT_STATE.md` — compact current state: DONE, ACTIVE, PAUSED, BLOCKED, NEXT, open decisions.
+3. `docs/handover/VECTOR_RESTART_HANDOVER.md` — recovery control block, drift procedure and `NEXT STEP`.
+4. `docs/governance/AI_OPERATING_MODEL.md` — roles and source-of-truth boundary for owner, Project Lead, engineering and review agents.
+5. `SCMDB_LOCATION_HANDOVER.md` — state and FROZEN contracts of the finished SCMDB location work.
+6. `docs/frozen/` — binding specifications. Read every one that applies to your change.
 
 Authority order: FROZEN specifications, then the repository and its lifecycle information, then PROPOSED specifications (design input only), then reviews and handovers, then chat history. If two FROZEN rules conflict and no explicit supersession decides it, stop and report `FROZEN_CONFLICT` instead of guessing.
 
@@ -22,6 +24,7 @@ VECTOR is a community tool for Star Citizen (crew inventory, crafting, fleet and
 - `npm test` — all tests (`node --test tests/*.test.mjs`)
 - `npm run lint` — ESLint
 - `npm run dev` — local dev server (needs `.env.local`, see `.env.example`)
+- `.\scripts\export-project-lead-evidence.ps1 -OutputRoot <private root>` — owner-side, commit-bound Project Lead evidence export from a clean `develop`; see `docs/governance/PROJECT_LEAD_EVIDENCE.md`
 
 Run typecheck and tests before proposing a change. Pull requests are expected to keep both green.
 
