@@ -609,7 +609,8 @@ test('an extra unallowlisted, duplicated or reordered governance section is reje
   const context = readFileSync(path.join(fixture.current, 'GOVERNANCE_CONTEXT.md'), 'utf8')
   const start = context.indexOf('## Source 1 of 5: AGENTS.md')
   const end = context.indexOf('## Source 2 of 5:')
-  const first = context.slice(start, end)
+  // One complete section ending right after its END marker (the blank separator is excluded).
+  const first = context.slice(start, end).replace(/\n+$/, '\n')
 
   // Extra section for a path that is not on the allowlist, with internally consistent metadata.
   const extra = first
@@ -624,7 +625,7 @@ test('an extra unallowlisted, duplicated or reordered governance section is reje
   assertPass(runGenerator(fixture))
   tamperGovernance(fixture.current, text => `${text}\n${first}`)
   const duplicateRun = runGenerator(fixture, ['-ValidateOnly'])
-  assertBlocked(duplicateRun, /expected 5 source sections, found 6|section 'AGENTS\.md': duplicated/)
+  assertBlocked(duplicateRun, /heading number 1 does not match position 6|expected 5 source sections, found 6|section 'AGENTS\.md': duplicated/)
 
   assertPass(runGenerator(fixture))
   tamperGovernance(fixture.current, text => {
@@ -634,7 +635,7 @@ test('an extra unallowlisted, duplicated or reordered governance section is reje
     return text.slice(0, s2) + text.slice(s3, s4) + text.slice(s2, s3) + text.slice(s4)
   })
   const orderRun = runGenerator(fixture, ['-ValidateOnly'])
-  assertBlocked(orderRun, /out of allowlist order/)
+  assertBlocked(orderRun, /heading number 3 does not match position 2|out of allowlist order/)
 })
 
 test('archive verification uses the same commit-bound source validation', { skip }, () => {
@@ -772,4 +773,321 @@ test('a post-publication failure on the first export leaves no invalid CURRENT b
   assert.match(run.text, /^CURRENT: restored \(the previous CURRENT was empty\)$/m)
   assert.deepEqual(readdirSync(fixture.current), [])
   assert.deepEqual(readdirSync(fixture.evidence).sort(), ['ARCHIVE', 'CURRENT'])
+})
+
+// --------------------------------------------------------------------------
+// Second review, helpers: save and restore a CURRENT set between tamper cases
+// --------------------------------------------------------------------------
+
+const saveDir = dir => Object.fromEntries(readdirSync(dir).map(name => [name, readFileSync(path.join(dir, name))]))
+
+const restoreDir = (dir, saved) => {
+  for (const name of readdirSync(dir)) rmSync(path.join(dir, name), { recursive: true, force: true })
+  for (const [name, content] of Object.entries(saved)) writeFileSync(path.join(dir, name), content)
+}
+
+// VECTOR_EVIDENCE.md carries no outer checksum of itself, so it is edited directly.
+const tamperEvidence = (dir, mutate) => {
+  const evidencePath = path.join(dir, 'VECTOR_EVIDENCE.md')
+  const original = readFileSync(evidencePath, 'utf8')
+  const mutated = mutate(original)
+  assert.notEqual(mutated, original, 'tamper helper must change the file')
+  writeFileSync(evidencePath, mutated)
+}
+
+const runValidate = fixture => runGenerator(fixture, ['-ValidateOnly'])
+
+const insertAfterLine = (text, lineStart, insertion) => {
+  const index = text.indexOf(lineStart)
+  assert.ok(index >= 0, `line starting with ${lineStart} not found`)
+  const end = text.indexOf('\n', index)
+  return `${text.slice(0, end + 1)}${insertion}\n${text.slice(end + 1)}`
+}
+
+// --------------------------------------------------------------------------
+// Second review finding 1: query, fragment, userinfo and port never reach the identity
+// --------------------------------------------------------------------------
+
+test('repository identity strips query, fragment, userinfo and port and keeps legal path characters', { skip }, () => {
+  const fixture = createFixture()
+  const secrets = ['alice', 'tok-userinfo', 'q-secret', 'frag-secret', ':1/']
+  const cases = [
+    ['https://127.0.0.1:1/team/repo.git?token=q-secret', '127.0.0.1/team/repo'],
+    ['https://127.0.0.1:1/team/repo.git#frag-secret', '127.0.0.1/team/repo'],
+    ['https://127.0.0.1:1/team/repo.git?token=q-secret#frag-secret', '127.0.0.1/team/repo'],
+    ['https://alice:tok-userinfo@127.0.0.1:1/team/repo.git?token=q-secret', '127.0.0.1/team/repo'],
+    ['https://127.0.0.1:1/team/my.gitops_tools-v2/repo-name.git?x=1', '127.0.0.1/team/my.gitops_tools-v2/repo-name'],
+  ]
+  for (const [url, expected] of cases) {
+    git(fixture.work, ['remote', 'set-url', 'origin', url])
+    const run = runGenerator(fixture)
+    assertPass(run)
+    const evidence = readCurrent(fixture)['VECTOR_EVIDENCE.md']
+    assert.equal(field(evidence, 'Repository'), expected, url)
+    assert.equal(field(evidence, 'Remote Evidence'), 'LOCALLY_CACHED (fetch failed)', url)
+    for (const secret of secrets) {
+      assert.ok(!evidence.includes(secret), `${url}: evidence contains ${secret}`)
+      if (secret !== ':1/') assert.ok(!run.text.includes(secret), `${url}: console contains ${secret}`)
+    }
+  }
+})
+
+// --------------------------------------------------------------------------
+// Second review finding 5: helper transports are never matched as SCP-style URLs
+// --------------------------------------------------------------------------
+
+test('helper transports export only a generic identity while SCP-style URLs stay supported', { skip }, () => {
+  const fixture = createFixture()
+  git(fixture.work, ['config', 'core.sshCommand', 'cmd /c exit 255'])
+  const username = userInfo().username
+
+  git(fixture.work, ['remote', 'set-url', 'origin', 'git@127.0.0.1:owner/repository.git'])
+  const scp = runGenerator(fixture)
+  assertPass(scp)
+  assert.equal(field(readCurrent(fixture)['VECTOR_EVIDENCE.md'], 'Repository'), '127.0.0.1/owner/repository')
+
+  const helpers = [
+    [`ext::powershell.exe -File C:/Users/${username}/hold.ps1 %S`, ['powershell', username, 'hold.ps1', 'C:/']],
+    ['ext::cmd //\\\\server\\share\\helper.cmd %S', ['server', 'share', 'helper.cmd', 'cmd']],
+    ['ext::curl https://host.example/x?token=abc-secret %S', ['curl', 'host.example', 'abc-secret', 'token']],
+    ['fd::3', ['fd::', 'fd/']],
+  ]
+  for (const [url, privateValues] of helpers) {
+    git(fixture.work, ['remote', 'set-url', 'origin', url])
+    // Some helpers fail immediately, others (fd::3) wait on a descriptor until the bounded fetch timeout.
+    const run = runGenerator(fixture, ['-FetchTimeoutSeconds', '3'])
+    assertPass(run)
+    const evidence = readCurrent(fixture)['VECTOR_EVIDENCE.md']
+    assert.equal(field(evidence, 'Repository'), 'other-transport', url)
+    assert.match(field(evidence, 'Remote Evidence'), /^LOCALLY_CACHED \(fetch (failed|timed out)\)$/, url)
+    for (const value of privateValues) assert.ok(!evidence.includes(value), `${url}: evidence contains ${value}`)
+    assert.ok(!run.text.includes('hold.ps1') && !run.text.includes('abc-secret'), `${url}: console leaks helper detail`)
+  }
+})
+
+// --------------------------------------------------------------------------
+// Second review finding 2: duplicated section metadata is rejected
+// --------------------------------------------------------------------------
+
+test('duplicated section metadata fields are rejected whether identical or conflicting', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const saved = saveDir(fixture.current)
+  const context = saved['GOVERNANCE_CONTEXT.md'].toString('utf8')
+  const sectionStart = context.indexOf('Repository Path: docs/RULE_INDEX.md')
+  const sectionText = context.slice(sectionStart, context.indexOf('----- BEGIN CONTENT docs/RULE_INDEX.md -----'))
+  const lineOf = label => sectionText.split('\n').find(line => line.startsWith(`${label}: `))
+  const conflicting = {
+    'Repository Path': 'Repository Path: docs/OTHER.md',
+    'Snapshot Commit': `Snapshot Commit: ${'1'.repeat(40)}`,
+    'Git Blob': `Git Blob: ${'2'.repeat(40)}`,
+    SHA256: `SHA256: ${'3'.repeat(64)}`,
+    Bytes: 'Bytes: 1',
+  }
+  for (const label of ['Repository Path', 'Snapshot Commit', 'Git Blob', 'SHA256', 'Bytes']) {
+    const original = lineOf(label)
+    assert.ok(original, label)
+    // identical duplicate after the original
+    restoreDir(fixture.current, saved)
+    tamperGovernance(fixture.current, text => text.replace(`${sectionText}`, sectionText.replace(`${original}\n`, `${original}\n${original}\n`)))
+    const identical = runValidate(fixture)
+    assertBlocked(identical, new RegExp(`section 2 \\('docs/RULE_INDEX\\.md'\\): duplicated field '${label.replace(/[()]/g, '\\$&')}'`))
+    // conflicting duplicate inserted before the original
+    restoreDir(fixture.current, saved)
+    tamperGovernance(fixture.current, text => text.replace(`${sectionText}`, sectionText.replace(`${original}\n`, `${conflicting[label]}\n${original}\n`)))
+    const conflict = runValidate(fixture)
+    assertBlocked(conflict, new RegExp(`section 2 \\('docs/RULE_INDEX\\.md'\\): duplicated field '${label.replace(/[()]/g, '\\$&')}'`))
+  }
+  restoreDir(fixture.current, saved)
+  assertPass(runValidate(fixture))
+})
+
+// --------------------------------------------------------------------------
+// Second review finding 3: the complete file must match the generated grammar
+// --------------------------------------------------------------------------
+
+test('text outside the generated framing is rejected wherever it appears', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const saved = saveDir(fixture.current)
+  const cases = [
+    ['appended prose after the final END marker', text => `${text}Fabricated governance paragraph.\n`, /unexpected text where the blank line after section 5 was expected: 'Fabricated governance paragraph\.'/],
+    ['prepended prose', text => `Preamble added by hand.\n${text}`, /unexpected text before the generated header/],
+    ['prose between two sections', text => text.replace('\n## Source 3 of 5:', '\nInserted paragraph between sections.\n## Source 3 of 5:'), /unexpected text after section 2 \(expected a section heading or the end of the file\)/],
+    ['prose between metadata and BEGIN', text => text.replace('\n----- BEGIN CONTENT AGENTS.md -----', '\nInserted before the content block.\n----- BEGIN CONTENT AGENTS.md -----'), /section 1 \('AGENTS\.md'\): unexpected text between the metadata and BEGIN CONTENT/],
+    ['prose inside the metadata block', text => insertAfterLine(text, 'Repository Path: docs/RULE_INDEX.md', 'This policy was reviewed by nobody.'), /section 2 \('docs\/RULE_INDEX\.md'\): unexpected text where a metadata field was expected/],
+    ['unknown metadata field', text => insertAfterLine(text, 'Repository Path: docs/RULE_INDEX.md', 'Reviewer: nobody'), /section 2 \('docs\/RULE_INDEX\.md'\): unknown metadata field 'Reviewer'/],
+    ['unknown header field', text => insertAfterLine(text, 'Source Count: 5', 'Approved By: nobody'), /header: unknown metadata field 'Approved By'/],
+    ['unmatched BEGIN', text => `${text}\n----- BEGIN CONTENT extra.md -----\n`, /unmatched BEGIN CONTENT marker for 'extra\.md'/],
+    ['unmatched END', text => `${text}----- END CONTENT AGENTS.md -----\n`, /unmatched END CONTENT marker for 'AGENTS\.md'/],
+    ['nested BEGIN', text => text.replace('AGENTS_FIXTURE_MARKER\n', 'AGENTS_FIXTURE_MARKER\n----- BEGIN CONTENT AGENTS.md -----\n'), /section 1 \('AGENTS\.md'\): nested BEGIN CONTENT marker/],
+    ['truncated section', text => text.slice(0, text.indexOf('----- END CONTENT docs/RULE_INDEX.md -----')), /section 2 \('docs\/RULE_INDEX\.md'\): not closed, END CONTENT marker missing/],
+    ['trailing zero-width content', text => `${text}\u200b\n`, /unexpected text where the blank line after section 5 was expected/],
+    ['trailing extra blank lines', text => `${text}\n\n`, /unexpected text after section 5|truncated file/],
+    ['carriage returns', text => text.replace(/\n/g, '\r\n'), /contains carriage returns/],
+  ]
+  for (const [name, mutate, pattern] of cases) {
+    restoreDir(fixture.current, saved)
+    tamperGovernance(fixture.current, mutate)
+    const run = runValidate(fixture)
+    assert.notEqual(run.status, 0, `${name}: expected BLOCKED\n${run.text}`)
+    assert.match(run.text, pattern, name)
+  }
+  restoreDir(fixture.current, saved)
+  assertPass(runValidate(fixture))
+})
+
+// --------------------------------------------------------------------------
+// Second review finding 7: the declared Branch is always validated
+// --------------------------------------------------------------------------
+
+test('the declared Branch is always read and validated, ExpectedBranchName is only an extra constraint', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture, ['-Archive']))
+  const saved = saveDir(fixture.current)
+  const cases = [
+    ['Branch missing', text => text.replace(/^Branch: .*\n/m, ''), /missing field 'Branch'/],
+    ['Branch empty', text => text.replace(/^Branch: .*$/m, 'Branch:'), /Branch is empty/],
+    ['Branch duplicated', text => text.replace(/^(Branch: .*)$/m, '$1\n$1'), /duplicated field 'Branch'/],
+    ['Branch changed to a feature branch', text => text.replace(/^Branch: develop$/m, 'Branch: feature/x'), /Snapshot ID 'develop:[0-9a-f]{40}' does not equal '<declared Branch>:<Snapshot Commit>' = 'feature\/x:/],
+    ['Snapshot ID says feature branch while Branch says develop', text => text.replace(/^Snapshot ID: develop:/m, 'Snapshot ID: feature/x:'), /Snapshot ID 'feature\/x:[0-9a-f]{40}' does not equal/],
+    ['Branch with illegal characters', text => text.replace(/^Branch: develop$/m, 'Branch: ../etc'), /is not a valid branch name/],
+  ]
+  for (const [name, mutate, pattern] of cases) {
+    restoreDir(fixture.current, saved)
+    tamperEvidence(fixture.current, mutate)
+    const run = runValidate(fixture)
+    assert.notEqual(run.status, 0, `${name}: expected BLOCKED\n${run.text}`)
+    assert.match(run.text, pattern, name)
+  }
+  restoreDir(fixture.current, saved)
+  assertPass(runValidate(fixture))
+
+  // Archive verification runs with ExpectedBranchName and must apply the same rules.
+  const archiveDir = path.join(fixture.archive, readdirSync(fixture.archive)[0])
+  const savedArchive = saveDir(archiveDir)
+  tamperEvidence(archiveDir, text => text.replace(/^Branch: .*\n/m, ''))
+  const removed = runGenerator(fixture, ['-Archive'])
+  assertBlocked(removed, /archive directory already exists with different content/)
+  assert.doesNotMatch(removed.text, /SKIPPED, valid archive/)
+
+  restoreDir(archiveDir, savedArchive)
+  tamperEvidence(archiveDir, text => text.replace(/^Branch: develop$/m, 'Branch: feature/x').replace(/^Snapshot ID: develop:/m, 'Snapshot ID: feature/x:'))
+  tamperGovernance(archiveDir, text => text.replace(/^Snapshot ID: develop:/m, 'Snapshot ID: feature/x:'))
+  const foreign = runGenerator(fixture, ['-Archive'])
+  assertBlocked(foreign, /archive directory already exists with different content/)
+
+  restoreDir(archiveDir, savedArchive)
+  const valid = runGenerator(fixture, ['-Archive'])
+  assertPass(valid)
+  assert.match(valid.text, /SKIPPED, valid archive of this commit exists/)
+})
+
+// --------------------------------------------------------------------------
+// Second review finding 6: a predecessor is trusted only after complete validation
+// --------------------------------------------------------------------------
+
+test('an invalid previous CURRENT is never used for the changed-files comparison but does not block the new export', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const saved = saveDir(fixture.current)
+  const unavailable = 'NOT_AVAILABLE (previous CURRENT is not a valid snapshot)'
+  const cases = [
+    ['missing VECTOR_EVIDENCE.md', dir => rmSync(path.join(dir, 'VECTOR_EVIDENCE.md'))],
+    ['missing PROJECT_STATE.md', dir => rmSync(path.join(dir, 'PROJECT_STATE.md'))],
+    ['missing GOVERNANCE_CONTEXT.md', dir => rmSync(path.join(dir, 'GOVERNANCE_CONTEXT.md'))],
+    ['unexpected fourth file', dir => writeFileSync(path.join(dir, 'NOTES.md'), 'extra\n')],
+    ['altered governance body', dir => writeFileSync(path.join(dir, 'GOVERNANCE_CONTEXT.md'), readFileSync(path.join(dir, 'GOVERNANCE_CONTEXT.md'), 'utf8').replace('DB_ENV_FIXTURE_MARKER', 'DB_ENV_FIXTURE_MARKER altered'))],
+    ['altered body with recomputed checksum', dir => tamperGovernance(dir, text => text.replace('DB_ENV_FIXTURE_MARKER', 'DB_ENV_FIXTURE_MARKER altered'))],
+    ['duplicate section metadata', dir => tamperGovernance(dir, text => text.replace(/^(Git Blob: .*)$/m, '$1\n$1'))],
+    ['appended text', dir => tamperGovernance(dir, text => `${text}Appended paragraph.\n`)],
+    ['inconsistent Branch', dir => tamperEvidence(dir, text => text.replace(/^Branch: develop$/m, 'Branch: feature/x'))],
+    ['inconsistent Snapshot ID', dir => tamperEvidence(dir, text => text.replace(/^Snapshot ID: develop:[0-9a-f]{40}$/m, `Snapshot ID: develop:${'0'.repeat(40)}`))],
+    ['invalid commit', dir => tamperEvidence(dir, text => text.replace(new RegExp(fixture.sha, 'g'), 'a'.repeat(40)))],
+    ['malformed evidence', dir => writeFileSync(path.join(dir, 'VECTOR_EVIDENCE.md'), Buffer.from([0xff, 0xfe, 0x00, 0x13, 0x37]))],
+  ]
+  for (const [name, mutate] of cases) {
+    restoreDir(fixture.current, saved)
+    mutate(fixture.current)
+    const run = runGenerator(fixture)
+    assertPass(run)
+    assert.match(run.text, /Previous CURRENT\s+not a valid snapshot/, name)
+    const evidence = readCurrent(fixture)['VECTOR_EVIDENCE.md']
+    assert.equal(field(evidence, 'Status'), unavailable, name)
+    assert.doesNotMatch(evidence, /^Status: (AVAILABLE|NONE)/m, name)
+    assert.deepEqual(readdirSync(fixture.current).sort(), [...finalFiles].sort(), name)
+  }
+
+  // A valid predecessor is still used: identical commit, then a real change.
+  restoreDir(fixture.current, saved)
+  const same = runGenerator(fixture)
+  assertPass(same)
+  assert.match(same.text, /Previous CURRENT\s+valid snapshot of/)
+  assert.equal(field(readCurrent(fixture)['VECTOR_EVIDENCE.md'], 'Status'), 'NONE (identical Snapshot Commit)')
+  writeFileSync(path.join(fixture.work, 'docs', 'RULE_INDEX.md'), '# Rule Index\n\nsecond revision\n')
+  commitAll(fixture.work, 'fixture: second commit')
+  git(fixture.work, ['push', '-q', 'origin', 'develop'])
+  const changed = runGenerator(fixture)
+  assertPass(changed)
+  const evidence = readCurrent(fixture)['VECTOR_EVIDENCE.md']
+  assert.equal(field(evidence, 'Status'), 'AVAILABLE')
+  assert.equal(field(evidence, 'Previous Snapshot Commit'), fixture.sha)
+  assert.match(evidence, /^- docs\/RULE_INDEX\.md$/m)
+})
+
+// --------------------------------------------------------------------------
+// Second review finding 4: runs on the same output root are serialized
+// --------------------------------------------------------------------------
+
+const spawnGenerator = (fixture, extra) => {
+  const child = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', script, '-OutputRoot', fixture.out, '-RepositoryRoot', fixture.work, ...extra])
+  const state = { text: '', exit: null }
+  child.stdout.on('data', chunk => (state.text += chunk))
+  child.stderr.on('data', chunk => (state.text += chunk))
+  state.exit = new Promise(resolve => child.on('close', resolve))
+  return state
+}
+
+const waitFor = async (predicate, timeoutMs) => {
+  const deadline = Date.now() + timeoutMs
+  while (!predicate() && Date.now() < deadline) await wait(100)
+  return predicate()
+}
+
+test('concurrent exports on the same output root are serialized by an exclusive lock', { skip }, async () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const before = snapshotDir(fixture.current)
+
+  // Run A holds the lock inside its critical section; run B gives up after 2 s and never touches CURRENT.
+  const runA = spawnGenerator(fixture, ['-TestOnlyHoldLockSeconds', '12'])
+  assert.ok(await waitFor(() => runA.text.includes('TEST HOOK: holding the output-root lock'), 30_000), runA.text)
+  const started = Date.now()
+  const runB = runGenerator(fixture, ['-LockTimeoutSeconds', '2'])
+  assert.ok(Date.now() - started < 12_000, 'run B must give up within its bounded timeout')
+  assertBlocked(runB, /another export holds the lock for this output root \(waited 2 s\); CURRENT was not touched/)
+  assert.match(runB.text, /^CURRENT: untouched by this run/m)
+  assert.deepEqual(snapshotDir(fixture.current), before)
+  assert.deepEqual(readdirSync(fixture.evidence).sort(), ['ARCHIVE', 'CURRENT'])
+
+  // Run A completes normally; its output is the final validated CURRENT.
+  assert.equal(await runA.exit, 0, runA.text)
+  assert.match(runA.text, /RESULT: PASS/)
+  assert.doesNotMatch(runA.text, /restored/)
+  assert.deepEqual(readdirSync(fixture.current).sort(), [...finalFiles].sort())
+  assertPass(runGenerator(fixture, ['-ValidateOnly']))
+
+  // A waiting run within the default timeout is served after the holder finishes.
+  const runC = spawnGenerator(fixture, ['-TestOnlyHoldLockSeconds', '4'])
+  assert.ok(await waitFor(() => runC.text.includes('TEST HOOK: holding the output-root lock'), 30_000), runC.text)
+  const runD = runGenerator(fixture)
+  assertPass(runD)
+  assert.equal(await runC.exit, 0, runC.text)
+  assert.deepEqual(readdirSync(fixture.current).sort(), [...finalFiles].sort())
+
+  // After every holder exited, a later normal run acquires the lock without any stale lock in the way.
+  const later = runGenerator(fixture)
+  assertPass(later)
+  assert.match(later.text, /Output-root lock\s+ACQUIRED/)
+  assertPass(runGenerator(fixture, ['-ValidateOnly']))
 })

@@ -46,11 +46,20 @@ Number of recent commits listed in VECTOR_EVIDENCE.md (1 to 100, default 15).
 Upper bound for the baseline fetch including its helper processes and output collection
 (1 to 600, default 90). A timeout is reported as LOCALLY_CACHED, never as fresh.
 
+.PARAMETER LockTimeoutSeconds
+How long to wait for the exclusive output-root lock held by another export (1 to 600, default
+30). Runs against the same OutputRoot are serialized; a run that cannot acquire the lock
+reports BLOCKED without touching CURRENT.
+
 .PARAMETER TestOnlySimulatePublishFailure
 Test hook that injects a failure into the publication state machine: 'AfterPreviousMovedAside'
 fails before the candidate is renamed in, 'ThrowDuringPostValidation' throws inside the
 post-publication validation, 'CorruptPublishedSet' damages the published set before that
 validation. The hook never weakens validation.
+
+.PARAMETER TestOnlyHoldLockSeconds
+Test hook that pauses inside the critical section right after the output-root lock was
+acquired, to exercise the serialization of concurrent runs. It never weakens validation.
 
 .EXAMPLE
 .\scripts\export-project-lead-evidence.ps1 -OutputRoot "D:\Private\VECTOR\ProjectLead"
@@ -76,8 +85,14 @@ param(
     [ValidateRange(1, 600)]
     [int]$FetchTimeoutSeconds = 90,
 
+    [ValidateRange(1, 600)]
+    [int]$LockTimeoutSeconds = 30,
+
     [ValidateSet('None', 'AfterPreviousMovedAside', 'ThrowDuringPostValidation', 'CorruptPublishedSet')]
-    [string]$TestOnlySimulatePublishFailure = 'None'
+    [string]$TestOnlySimulatePublishFailure = 'None',
+
+    [ValidateRange(0, 120)]
+    [int]$TestOnlyHoldLockSeconds = 0
 )
 
 Set-StrictMode -Version Latest
@@ -118,6 +133,23 @@ $script:SecretPatterns = @(
 )
 $script:BeginMarker = '----- BEGIN CONTENT {0} -----'
 $script:EndMarker = '----- END CONTENT {0} -----'
+$script:MarkerPattern = '^----- (BEGIN|END) CONTENT (.+) -----$'
+
+# Grammar of GOVERNANCE_CONTEXT.md, shared by the generator and the validator. The file is
+# LF-separated and consists of: title, blank, header fields in this order, blank, the
+# statement lines, then per source: blank, heading, blank, section fields in this order,
+# blank, BEGIN marker, body, END marker. The file ends directly after the last END marker.
+$script:GovernanceTitle = '# VECTOR Governance Context'
+$script:GovernanceHeaderFields = @('Format Version', 'Evidence Kind', 'Snapshot ID', 'Snapshot Commit', 'Generated (UTC)', 'Source Count', 'Generator')
+$script:GovernanceStatements = @(
+    'This file embeds allowlisted repository governance documents verbatim from the Snapshot Commit.',
+    'It is commit-bound evidence generated from a local Git checkout. It is NOT live GitHub access.',
+    'OneDrive cloud synchronization happens outside the generator.',
+    'Every source section names its repository path and Snapshot Commit. All sections must name the same commit as VECTOR_EVIDENCE.md; otherwise the snapshot is invalid.'
+)
+$script:GovernanceSectionFields = @('Repository Path', 'Snapshot Commit', 'Git Blob', 'SHA256', 'Bytes')
+$script:BranchPattern = '^[A-Za-z0-9][A-Za-z0-9._/-]*$'
+$script:TimestampPattern = '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$'
 
 $script:RepoRoot = $null
 $script:OutRoot = $null
@@ -129,6 +161,7 @@ $script:RunId = $null
 # Accurate description of the local CURRENT state for the final console line.
 # $null means "not touched by this run".
 $script:CurrentStatus = $null
+$script:Lock = $null
 
 # ---------------------------------------------------------------------------
 # Console helpers (local paths may be printed; evidence content never is)
@@ -151,7 +184,8 @@ function Get-SafeErrorText {
     if ([string]::IsNullOrWhiteSpace($Text)) { return '(no detail)' }
     $line = ($Text -split "`r?`n" | Where-Object { $_.Trim().Length -gt 0 } | Select-Object -First 1)
     if ($null -eq $line) { return '(no detail)' }
-    $line = $line -replace '://[^/@\s]+@', '://***@'
+    $line = $line -replace '[A-Za-z][A-Za-z0-9+.-]*://[^\s''"]+', '<url>'
+    $line = $line -replace '[A-Za-z][A-Za-z0-9+.-]*::[^''"]*', '<helper-transport>'
     $line = $line -replace '\\\\[^\s''"]+', '<unc-path>'
     $line = $line -replace '[A-Za-z]:[\\/][^\s''"]*', '<local-path>'
     if ($line.Length -gt 200) { $line = $line.Substring(0, 200) + '...' }
@@ -400,25 +434,83 @@ function Get-FieldValues {
     return $values
 }
 
+function Get-RepositoryPathIdentity {
+    # Repository path component for export: query and fragment removed, surrounding slashes
+    # trimmed, a trailing ".git" removed from the last segment only.
+    param([string]$Path)
+    $clean = $Path
+    $cut = $clean.IndexOfAny([char[]]@('?', '#'))
+    if ($cut -ge 0) { $clean = $clean.Substring(0, $cut) }
+    $clean = $clean.Trim('/')
+    if ($clean.EndsWith('.git')) { $clean = $clean.Substring(0, $clean.Length - 4) }
+    return $clean.TrimEnd('/')
+}
+
 function Get-NormalizedRemoteIdentity {
-    # Exported identity of the remote: host and repository path only. Local and network paths
-    # contribute their leaf name only, userinfo and ports are dropped, other transports are
-    # not described at all.
+    # Exported identity of the remote, in this fixed order:
+    #   1. helper and double-colon transports (ext::, fd::, ...) -> 'other-transport'
+    #   2. local, UNC and file paths -> leaf name only
+    #   3. standard URLs -> host and path only (no scheme, userinfo, port, query, fragment)
+    #   4. SCP-style user@host:path -> host and path only
+    #   5. anything else -> 'other-transport'
+    # Credentials, tokens, queries, fragments, absolute paths, usernames and helper command
+    # text never reach the evidence.
     param([string]$Url)
     $value = $Url.Trim()
+    if ($value -match '^[A-Za-z][A-Za-z0-9+.-]*::') { return 'other-transport' }
     if ($value -match '^[A-Za-z]:[\\/]' -or $value -match '^\\\\' -or $value -match '^file:' -or $value -match '^[\\/]') {
         $leaf = Split-Path -Leaf (($value -replace '^file:/*', '').TrimEnd('\', '/'))
         return 'local-path:' + $leaf
     }
-    if ($value -match '^(https?|ssh|git)://([^/@]+@)?([^/:]+)(:\d+)?/(.*)$') {
-        $path = $Matches[5] -replace '\.git$', ''
-        return ($Matches[3] + '/' + $path).TrimEnd('/')
+    if ($value -match '^(https?|ssh|git|ftps?)://') {
+        $uri = $null
+        if (-not [System.Uri]::TryCreate($value, [System.UriKind]::Absolute, [ref]$uri)) { return 'other-transport' }
+        if ([string]::IsNullOrEmpty($uri.Host)) { return 'other-transport' }
+        $path = Get-RepositoryPathIdentity $uri.AbsolutePath
+        if ($path.Length -eq 0) { return $uri.Host }
+        return $uri.Host + '/' + $path
     }
-    if ($value -match '^([^/@:]+@)?([^/:@]+):(?!//)(.*)$') {
-        $path = $Matches[3] -replace '\.git$', ''
-        return ($Matches[2] + '/' + $path).TrimEnd('/')
+    if ($value -match '^(?:[A-Za-z0-9._-]+@)?([A-Za-z0-9.-]+):([^\s:]*)$') {
+        $path = Get-RepositoryPathIdentity $Matches[2]
+        if ($path.Length -eq 0) { return $Matches[1] }
+        return $Matches[1] + '/' + $path
     }
     return 'other-transport'
+}
+
+function Enter-OutputRootLock {
+    # One exclusive, OS-enforced lock per output root. The name is derived from a hash of the
+    # normalized path, so the private path itself never appears anywhere. The mutex is owned by
+    # this process only and is released by Exit-OutputRootLock in the main finally block; the
+    # operating system releases it if the process dies, so no stale lock can block a later run.
+    $hash = Get-Sha256Hex ($script:Utf8NoBom.GetBytes((Get-NormalizedPath $script:OutRoot)))
+    $name = 'Global\VECTOR.ProjectLeadEvidence.' + $hash.Substring(0, 32)
+    $mutex = $null
+    try {
+        $mutex = New-Object System.Threading.Mutex($false, $name)
+    } catch {
+        Stop-Blocked ('could not create the output-root lock: ' + (Get-SafeErrorText $_.Exception.Message))
+    }
+    $acquired = $false
+    try {
+        $acquired = $mutex.WaitOne($LockTimeoutSeconds * 1000)
+    } catch [System.Threading.AbandonedMutexException] {
+        # The previous owner exited without releasing; the OS handed the lock to us.
+        $acquired = $true
+    }
+    if (-not $acquired) {
+        $mutex.Dispose()
+        Stop-Blocked ('another export holds the lock for this output root (waited ' + $LockTimeoutSeconds + ' s); CURRENT was not touched')
+    }
+    $script:Lock = $mutex
+    Write-Step 'Output-root lock' 'ACQUIRED'
+}
+
+function Exit-OutputRootLock {
+    if ($null -eq $script:Lock) { return }
+    try { $script:Lock.ReleaseMutex() } catch { }
+    try { $script:Lock.Dispose() } catch { }
+    $script:Lock = $null
 }
 
 function ConvertTo-CanonicalSourceText {
@@ -583,22 +675,32 @@ function Get-SnapshotContext {
 }
 
 function Get-PreviousSnapshot {
+    # A predecessor is used for the changed-files comparison only after the complete previous
+    # three-file set passed the same strict, commit-bound validator as every other evidence
+    # set. Anything else (missing files, altered content, thrown errors, foreign branch) makes
+    # the comparison NOT_AVAILABLE; it never blocks the creation of the new snapshot.
     param([string]$Head)
-    $result = [pscustomobject]@{ Commit = $null; Status = 'NOT_AVAILABLE (no previous valid CURRENT evidence)'; Files = @(); Truncated = $false }
-    $previousEvidence = Join-Path $script:CurrentDir 'VECTOR_EVIDENCE.md'
-    if (-not (Test-Path -LiteralPath $previousEvidence -PathType Leaf)) { return $result }
+    $result = [pscustomobject]@{ Commit = $null; Status = 'NOT_AVAILABLE (no previous CURRENT evidence)'; Files = @(); Truncated = $false }
+    if (-not (Test-Path -LiteralPath $script:CurrentDir -PathType Container)) { return $result }
+    if (@(Get-ChildItem -LiteralPath $script:CurrentDir -Force).Count -eq 0) { return $result }
+    $validation = $null
     try {
-        $text = Read-Utf8File $previousEvidence
+        $validation = Test-EvidenceSet -Directory $script:CurrentDir
     } catch {
-        $result.Status = 'NOT_AVAILABLE (previous VECTOR_EVIDENCE.md unreadable)'
+        $validation = [pscustomobject]@{ Problems = @('validation threw: ' + (Get-SafeErrorText $_.Exception.Message)); Commit = $null; DeclaredBranch = $null }
+    }
+    if ($validation.Problems.Count -gt 0) {
+        Write-Step 'Previous CURRENT' ('not a valid snapshot (' + $validation.Problems.Count + ' problem(s)); comparison NOT_AVAILABLE')
+        foreach ($problem in ($validation.Problems | Select-Object -First 5)) { Write-Host ('NOTE: previous CURRENT: ' + $problem) }
+        $result.Status = 'NOT_AVAILABLE (previous CURRENT is not a valid snapshot)'
         return $result
     }
-    $status = Get-FieldValue -Text $text -Label 'Evidence Status'
-    $commit = Get-FieldValue -Text $text -Label 'Snapshot Commit'
-    if ($status -ne $script:StatusVerified -or -not (Test-FullSha $commit)) {
-        $result.Status = 'NOT_AVAILABLE (previous CURRENT evidence is not a verified snapshot)'
+    if ($validation.DeclaredBranch -ne $ExpectedBranch) {
+        $result.Status = 'NOT_AVAILABLE (previous snapshot belongs to a different branch)'
         return $result
     }
+    $commit = $validation.Commit
+    Write-Step 'Previous CURRENT' ('valid snapshot of ' + $commit)
     $result.Commit = $commit
     if ($commit -eq $Head) {
         $result.Status = 'NONE (identical Snapshot Commit)'
@@ -652,6 +754,9 @@ function Get-CommitSource {
     $text = ConvertTo-CanonicalSourceText $content.Bytes
     $secret = Test-SecretPatterns -Text $text -Label $RelativePath
     if ($secret) { Stop-Blocked $secret }
+    if ([regex]::IsMatch($text, '(?m)' + $script:MarkerPattern)) {
+        Stop-Blocked ("mandatory source '{0}' contains a line shaped like a content marker and cannot be embedded unambiguously" -f $RelativePath)
+    }
     return [pscustomobject]@{
         Path   = $RelativePath
         Blob   = $blobId
@@ -682,28 +787,34 @@ function Get-Sources {
 
 function New-GovernanceContextText {
     param($Context, $Governance)
+    # Emits exactly the grammar that Get-GovernanceDocument accepts (see the grammar constants).
+    $header = @{
+        'Format Version'  = $script:FormatVersion
+        'Evidence Kind'   = 'GOVERNANCE_CONTEXT'
+        'Snapshot ID'     = $Context.SnapshotId
+        'Snapshot Commit' = $Context.Commit
+        'Generated (UTC)' = $Context.GeneratedUtc
+        'Source Count'    = [string]$Governance.Count
+        'Generator'       = $script:GeneratorPath
+    }
     $sb = New-Object System.Text.StringBuilder
-    [void]$sb.Append("# VECTOR Governance Context`n`n")
-    [void]$sb.Append("Format Version: $($script:FormatVersion)`n")
-    [void]$sb.Append("Evidence Kind: GOVERNANCE_CONTEXT`n")
-    [void]$sb.Append("Snapshot ID: $($Context.SnapshotId)`n")
-    [void]$sb.Append("Snapshot Commit: $($Context.Commit)`n")
-    [void]$sb.Append("Generated (UTC): $($Context.GeneratedUtc)`n")
-    [void]$sb.Append("Source Count: $($Governance.Count)`n")
-    [void]$sb.Append("Generator: $($script:GeneratorPath)`n`n")
-    [void]$sb.Append("This file embeds allowlisted repository governance documents verbatim from the Snapshot Commit.`n")
-    [void]$sb.Append("It is commit-bound evidence generated from a local Git checkout. It is NOT live GitHub access.`n")
-    [void]$sb.Append("OneDrive cloud synchronization happens outside the generator.`n")
-    [void]$sb.Append("Every source section names its repository path and Snapshot Commit. All sections must name the same commit as VECTOR_EVIDENCE.md; otherwise the snapshot is invalid.`n")
+    [void]$sb.Append($script:GovernanceTitle + "`n`n")
+    foreach ($label in $script:GovernanceHeaderFields) { [void]$sb.Append($label + ': ' + $header[$label] + "`n") }
+    [void]$sb.Append("`n")
+    foreach ($statement in $script:GovernanceStatements) { [void]$sb.Append($statement + "`n") }
     $index = 0
     foreach ($source in $Governance) {
         $index++
+        $fields = @{
+            'Repository Path' = $source.Path
+            'Snapshot Commit' = $Context.Commit
+            'Git Blob'        = $source.Blob
+            'SHA256'          = $source.Sha256
+            'Bytes'           = [string]$source.Bytes.Length
+        }
         [void]$sb.Append("`n## Source $index of $($Governance.Count): $($source.Path)`n`n")
-        [void]$sb.Append("Repository Path: $($source.Path)`n")
-        [void]$sb.Append("Snapshot Commit: $($Context.Commit)`n")
-        [void]$sb.Append("Git Blob: $($source.Blob)`n")
-        [void]$sb.Append("SHA256: $($source.Sha256)`n")
-        [void]$sb.Append("Bytes: $($source.Bytes.Length)`n`n")
+        foreach ($label in $script:GovernanceSectionFields) { [void]$sb.Append($label + ': ' + $fields[$label] + "`n") }
+        [void]$sb.Append("`n")
         [void]$sb.Append(($script:BeginMarker -f $source.Path) + "`n")
         [void]$sb.Append($source.Text)   # canonical text, already ends with exactly one LF
         [void]$sb.Append(($script:EndMarker -f $source.Path) + "`n")
@@ -792,59 +903,157 @@ function New-Candidate {
 # Validation of an evidence set (candidate or published)
 # ---------------------------------------------------------------------------
 
-function Get-GovernanceSections {
-    # Parses GOVERNANCE_CONTEXT.md into its header statements and source sections. Lines are
-    # split on LF only so that the body is recovered exactly as written; a CR left on a header
-    # or marker line is tolerated for parsing but a CR inside a body makes the body differ.
+function Get-LinePreview {
+    param([string]$Line)
+    $preview = $Line
+    if ($preview.Length -gt 60) { $preview = $preview.Substring(0, 60) + '...' }
+    return $preview
+}
+
+function Read-FieldBlock {
+    # Reads "Label: value" lines in exactly the given order until a blank line. Every label must
+    # appear exactly once: a repeated label is a duplicate (identical or not), a known label at
+    # the wrong position is out of order, anything else is unknown or unexpected text.
+    param([string[]]$Lines, [ref]$Index, [string[]]$Labels, [string]$Context)
+    $problems = @()
+    $values = @{}
+    $next = 0
+    while ($Index.Value -lt $Lines.Count) {
+        $line = $Lines[$Index.Value]
+        if ($line -eq '') { break }
+        if ($line -match $script:MarkerPattern) { break }
+        if ($line -notmatch '^([A-Za-z0-9][A-Za-z0-9 ()]*):[ \t]*(.*)$') {
+            $problems += ($Context + ": unexpected text where a metadata field was expected: '" + (Get-LinePreview $line) + "'")
+            $Index.Value++
+            continue
+        }
+        $label = $Matches[1]
+        $value = $Matches[2].Trim()
+        if ($next -lt $Labels.Count -and $label -eq $Labels[$next]) {
+            $values[$label] = $value
+            $next++
+        } elseif ($values.ContainsKey($label)) {
+            $problems += ($Context + ": duplicated field '" + $label + "'")
+        } elseif ($Labels -contains $label) {
+            $problems += ($Context + ": field '" + $label + "' out of order")
+        } else {
+            $problems += ($Context + ": unknown metadata field '" + $label + "'")
+        }
+        $Index.Value++
+    }
+    foreach ($label in $Labels) {
+        if (-not $values.ContainsKey($label)) { $problems += ($Context + ": missing field '" + $label + "'") }
+    }
+    return [pscustomobject]@{ Values = $values; Problems = $problems }
+}
+
+function Get-GovernanceDocument {
+    # Strict sequential parser for the complete GOVERNANCE_CONTEXT.md grammar (see the grammar
+    # constants). Every line of the file is consumed and classified; anything outside the
+    # generated framing, the fixed metadata and the embedded bodies is an error. Parsing stops
+    # at the first structural error, with the collected problems describing it.
     param([string]$Text)
     $problems = @()
-    $headerCommits = @()
     $sections = @()
-    $current = $null
-    $inBody = $false
-    $body = $null
-    foreach ($rawLine in ($Text -split "`n")) {
-        if ($inBody) {
-            if ($rawLine.TrimEnd("`r") -match '^----- END CONTENT (.+) -----$') {
-                if ($Matches[1] -ne $current.Path) { $problems += "GOVERNANCE_CONTEXT.md: END CONTENT for '$($Matches[1])' does not match the open section '$($current.Path)'" }
-                $current.Body = ($body -join "`n") + "`n"
-                $sections += $current
-                $current = $null
-                $inBody = $false
-                $body = $null
-                continue
+    $header = @{}
+    if ($Text.Contains("`r")) { $problems += 'GOVERNANCE_CONTEXT.md: contains carriage returns; the generated form is LF only' }
+    $lines = $Text -split "`n"
+    $last = $lines.Count - 1
+    $i = 0
+
+    $expectLine = {
+        param([string]$Expected, [string]$Description)
+        if ($i -gt $last) { $problems += ('GOVERNANCE_CONTEXT.md: truncated file, expected ' + $Description); return $false }
+        if ($lines[$i] -ne $Expected) {
+            $actual = $lines[$i]
+            if ($actual -match $script:MarkerPattern) { $problems += ('GOVERNANCE_CONTEXT.md: unmatched ' + $Matches[1] + " CONTENT marker for '" + $Matches[2] + "' where " + $Description + ' was expected') }
+            else { $problems += ('GOVERNANCE_CONTEXT.md: unexpected text where ' + $Description + " was expected: '" + (Get-LinePreview $actual) + "'") }
+            return $false
+        }
+        $i++
+        return $true
+    }
+
+    if ($lines.Count -lt 3 -or $lines[0] -ne $script:GovernanceTitle) {
+        $problems += 'GOVERNANCE_CONTEXT.md: unexpected text before the generated header (title line missing)'
+        return [pscustomobject]@{ Problems = $problems; Header = $header; Sections = $sections }
+    }
+    $i = 1
+    if (-not (. $expectLine '' 'the blank line after the title')) { return [pscustomobject]@{ Problems = $problems; Header = $header; Sections = $sections } }
+    $block = Read-FieldBlock -Lines $lines -Index ([ref]$i) -Labels $script:GovernanceHeaderFields -Context 'GOVERNANCE_CONTEXT.md header'
+    $problems += $block.Problems
+    $header = $block.Values
+    if ($problems.Count -gt 0) { return [pscustomobject]@{ Problems = $problems; Header = $header; Sections = $sections } }
+    if (-not (. $expectLine '' 'the blank line after the header fields')) { return [pscustomobject]@{ Problems = $problems; Header = $header; Sections = $sections } }
+    foreach ($statement in $script:GovernanceStatements) {
+        if (-not (. $expectLine $statement 'a generated statement line')) { return [pscustomobject]@{ Problems = $problems; Header = $header; Sections = $sections } }
+    }
+
+    $position = 0
+    while ($true) {
+        # End of file: exactly one empty element remains from the trailing LF.
+        if ($i -eq $last -and $lines[$i] -eq '') { break }
+        if ($i -gt $last) { $problems += 'GOVERNANCE_CONTEXT.md: truncated file after the last section'; break }
+        $position++
+        $where = if ($position -eq 1) { 'after the statement lines' } else { "after section $($position - 1)" }
+        if (-not (. $expectLine '' ('the blank line ' + $where))) { break }
+        if ($i -gt $last) { $problems += 'GOVERNANCE_CONTEXT.md: truncated file, expected a section heading'; break }
+        $heading = $lines[$i]
+        if ($heading -notmatch '^## Source (\d+) of (\d+): (.+)$') {
+            if ($heading -match $script:MarkerPattern) { $problems += ('GOVERNANCE_CONTEXT.md: unmatched ' + $Matches[1] + " CONTENT marker for '" + $Matches[2] + "' " + $where) }
+            else { $problems += ('GOVERNANCE_CONTEXT.md: unexpected text ' + $where + " (expected a section heading or the end of the file): '" + (Get-LinePreview $heading) + "'") }
+            break
+        }
+        $headingIndex = [int]$Matches[1]
+        $headingTotal = [int]$Matches[2]
+        $headingPath = $Matches[3]
+        $i++
+        $context = "GOVERNANCE_CONTEXT.md section $position ('$headingPath')"
+        if ($headingIndex -ne $position) { $problems += ($context + ": heading number $headingIndex does not match position $position") }
+        if (-not (. $expectLine '' 'the blank line after the section heading')) { break }
+        $block = Read-FieldBlock -Lines $lines -Index ([ref]$i) -Labels $script:GovernanceSectionFields -Context $context
+        $problems += $block.Problems
+        if ($block.Problems.Count -gt 0) { break }
+        $fields = $block.Values
+        if ($fields['Repository Path'] -ne $headingPath) { $problems += ($context + ": Repository Path '" + $fields['Repository Path'] + "' differs from the heading") }
+        if (-not (. $expectLine '' 'the blank line between the metadata and BEGIN CONTENT')) { break }
+        if ($i -gt $last) { $problems += ($context + ': truncated before BEGIN CONTENT'); break }
+        if ($lines[$i] -ne ($script:BeginMarker -f $headingPath)) {
+            if ($lines[$i] -match $script:MarkerPattern) { $problems += ($context + ': ' + $Matches[1] + " CONTENT marker for '" + $Matches[2] + "' does not match the section") }
+            else { $problems += ($context + ": unexpected text between the metadata and BEGIN CONTENT: '" + (Get-LinePreview $lines[$i]) + "'") }
+            break
+        }
+        $i++
+        $endMarker = $script:EndMarker -f $headingPath
+        $body = New-Object System.Collections.Generic.List[string]
+        $closed = $false
+        while ($i -le $last) {
+            $line = $lines[$i]
+            if ($line -eq $endMarker) { $closed = $true; $i++; break }
+            if ($line -match $script:MarkerPattern) {
+                if ($Matches[1] -eq 'BEGIN') { $problems += ($context + ": nested BEGIN CONTENT marker for '" + $Matches[2] + "' inside the body") }
+                else { $problems += ($context + ": END CONTENT marker for '" + $Matches[2] + "' does not match the open section") }
+                break
             }
-            if ($rawLine.TrimEnd("`r") -match '^----- BEGIN CONTENT (.+) -----$') { $problems += "GOVERNANCE_CONTEXT.md: nested BEGIN CONTENT for '$($Matches[1])'" }
-            $body += @($rawLine)
-            continue
+            $body.Add($line)
+            $i++
         }
-        $line = $rawLine.TrimEnd("`r")
-        if ($line -match '^----- BEGIN CONTENT (.+) -----$') {
-            if ($null -eq $current -or $Matches[1] -ne $current.Path) { $problems += "GOVERNANCE_CONTEXT.md: BEGIN CONTENT for '$($Matches[1])' without a matching section header" }
-            if ($null -eq $current) { $current = [pscustomobject]@{ Path = $Matches[1]; Commit = $null; Blob = $null; Sha256 = $null; Bytes = $null; Body = $null } }
-            $inBody = $true
-            $body = @()
-            continue
+        if (-not $closed) {
+            if ($problems.Count -eq 0 -or $i -gt $last) { $problems += ($context + ': not closed, END CONTENT marker missing (truncated file)') }
+            break
         }
-        if ($line -match '^----- END CONTENT (.+) -----$') { $problems += "GOVERNANCE_CONTEXT.md: END CONTENT for '$($Matches[1])' without BEGIN"; continue }
-        if ($line -match '^Repository Path:[ \t]*(.*)$') {
-            if ($null -ne $current) { $problems += "GOVERNANCE_CONTEXT.md: section '$($current.Path)' has no content block" }
-            $current = [pscustomobject]@{ Path = $Matches[1].Trim(); Commit = $null; Blob = $null; Sha256 = $null; Bytes = $null; Body = $null }
-            continue
-        }
-        if ($line -match '^Snapshot Commit:[ \t]*(.*)$') {
-            if ($null -ne $current) { $current.Commit = $Matches[1].Trim() } else { $headerCommits += $Matches[1].Trim() }
-            continue
-        }
-        if ($null -ne $current) {
-            if ($line -match '^Git Blob:[ \t]*(.*)$') { $current.Blob = $Matches[1].Trim(); continue }
-            if ($line -match '^SHA256:[ \t]*(.*)$') { $current.Sha256 = $Matches[1].Trim().ToLowerInvariant(); continue }
-            if ($line -match '^Bytes:[ \t]*(.*)$') { $current.Bytes = $Matches[1].Trim(); continue }
+        $sections += [pscustomobject]@{
+            Position = $position
+            Total    = $headingTotal
+            Path     = $headingPath
+            Commit   = $fields['Snapshot Commit']
+            Blob     = $fields['Git Blob']
+            Sha256   = $fields['SHA256'].ToLowerInvariant()
+            Bytes    = $fields['Bytes']
+            Body     = (($body -join "`n") + "`n")
         }
     }
-    if ($inBody) { $problems += "GOVERNANCE_CONTEXT.md: section '$($current.Path)' is not closed (truncated file)" }
-    elseif ($null -ne $current) { $problems += "GOVERNANCE_CONTEXT.md: section '$($current.Path)' has no content block" }
-    return [pscustomobject]@{ Problems = $problems; HeaderCommits = $headerCommits; Sections = $sections }
+    return [pscustomobject]@{ Problems = $problems; Header = $header; Sections = $sections }
 }
 
 function Test-GovernanceSections {
@@ -863,6 +1072,7 @@ function Test-GovernanceSections {
     for ($i = 0; $i -lt $sections.Count; $i++) {
         $section = $sections[$i]
         $label = "GOVERNANCE_CONTEXT.md section '" + $section.Path + "'"
+        if ($section.Total -ne $expected.Count) { $problems += ($label + ": heading total $($section.Total) differs from the allowlist size $($expected.Count)") }
         if ($expected -notcontains $section.Path) { $problems += ($label + ': not on the allowlist'); continue }
         if ($seen.ContainsKey($section.Path)) { $problems += ($label + ': duplicated'); continue }
         $seen[$section.Path] = $true
@@ -899,7 +1109,7 @@ function Test-EvidenceSet {
     $problems = @()
     $hashes = @{}
     if (-not (Test-Path -LiteralPath $Directory -PathType Container)) {
-        return [pscustomobject]@{ Problems = @('evidence directory does not exist: ' + $Directory); Commit = $null; Hashes = $hashes; Fingerprint = $null }
+        return [pscustomobject]@{ Problems = @('evidence directory does not exist: ' + $Directory); Commit = $null; DeclaredBranch = $null; Hashes = $hashes; Fingerprint = $null }
     }
     $entries = @(Get-ChildItem -LiteralPath $Directory -Force)
     $names = @($entries | ForEach-Object { $_.Name })
@@ -910,7 +1120,7 @@ function Test-EvidenceSet {
         if ($entry.PSIsContainer) { $problems += ('unexpected directory in evidence set: ' + $entry.Name) }
         elseif ($script:FinalFiles -notcontains $entry.Name) { $problems += ('unexpected file in evidence set: ' + $entry.Name) }
     }
-    if ($problems.Count -gt 0) { return [pscustomobject]@{ Problems = $problems; Commit = $null; Hashes = $hashes; Fingerprint = $null } }
+    if ($problems.Count -gt 0) { return [pscustomobject]@{ Problems = $problems; Commit = $null; DeclaredBranch = $null; Hashes = $hashes; Fingerprint = $null } }
 
     $evidencePath = Join-Path $Directory 'VECTOR_EVIDENCE.md'
     $projectStatePath = Join-Path $Directory 'PROJECT_STATE.md'
@@ -927,11 +1137,21 @@ function Test-EvidenceSet {
     $governanceText = Read-Utf8File $governancePath
     $projectStateText = Read-Utf8File $projectStatePath
 
-    $status = Get-FieldValue -Text $evidenceText -Label 'Evidence Status'
+    # Required VECTOR_EVIDENCE.md fields appear exactly once; a missing or repeated field is an error.
+    $fieldProblems = New-Object System.Collections.Generic.List[string]
+    $unique = {
+        param([string]$Label)
+        $values = @(Get-FieldValues -Text $evidenceText -Label $Label)
+        if ($values.Count -eq 0) { $fieldProblems.Add("VECTOR_EVIDENCE.md: missing field '" + $Label + "'"); return $null }
+        if ($values.Count -gt 1) { $fieldProblems.Add("VECTOR_EVIDENCE.md: duplicated field '" + $Label + "'"); return $null }
+        return $values[0]
+    }
+    $status = & $unique 'Evidence Status'
     if ($status -ne $script:StatusVerified) { $problems += ("VECTOR_EVIDENCE.md: Evidence Status is '{0}', expected {1}" -f $status, $script:StatusVerified) }
 
+    # Snapshot Commit appears exactly twice by construction: header and PROJECT_STATE section.
     $evidenceCommits = @(Get-FieldValues -Text $evidenceText -Label 'Snapshot Commit')
-    if ($evidenceCommits.Count -eq 0) { $problems += 'VECTOR_EVIDENCE.md: no Snapshot Commit' }
+    if ($evidenceCommits.Count -ne 2) { $problems += ("VECTOR_EVIDENCE.md: expected exactly 2 Snapshot Commit statements (header and PROJECT_STATE section), found {0}" -f $evidenceCommits.Count) }
     $commit = $ExpectedCommit
     if ([string]::IsNullOrEmpty($commit) -and $evidenceCommits.Count -gt 0) { $commit = $evidenceCommits[0] }
     if (-not (Test-FullSha $commit)) { $problems += ("Snapshot Commit is not a full 40-character SHA: '{0}'" -f $commit) }
@@ -939,25 +1159,36 @@ function Test-EvidenceSet {
         if ($value -ne $commit) { $problems += ("VECTOR_EVIDENCE.md: Snapshot Commit mismatch: '{0}' differs from Snapshot Commit {1}" -f $value, $commit) }
     }
 
-    $branch = $ExpectedBranchName
-    if ([string]::IsNullOrEmpty($branch)) { $branch = Get-FieldValue -Text $evidenceText -Label 'Branch' }
-    $snapshotId = Get-FieldValue -Text $evidenceText -Label 'Snapshot ID'
-    if ($snapshotId -ne ($branch + ':' + $commit)) { $problems += ("VECTOR_EVIDENCE.md: Snapshot ID '{0}' does not equal '{1}:{2}'" -f $snapshotId, $branch, $commit) }
-    $localHead = Get-FieldValue -Text $evidenceText -Label 'Local HEAD'
+    # The declared Branch is always read from the file. ExpectedBranchName, when supplied, is
+    # an additional constraint and never replaces the declared value.
+    $declaredBranch = & $unique 'Branch'
+    if ($null -ne $declaredBranch) {
+        if ($declaredBranch.Length -eq 0) { $problems += 'VECTOR_EVIDENCE.md: Branch is empty' }
+        elseif ($declaredBranch -notmatch $script:BranchPattern -or $declaredBranch.Contains('..')) { $problems += ("VECTOR_EVIDENCE.md: Branch '{0}' is not a valid branch name" -f $declaredBranch) }
+        if (-not [string]::IsNullOrEmpty($ExpectedBranchName) -and $declaredBranch -ne $ExpectedBranchName) {
+            $problems += ("VECTOR_EVIDENCE.md: declared Branch '{0}' differs from the expected branch '{1}'" -f $declaredBranch, $ExpectedBranchName)
+        }
+    }
+    $snapshotId = & $unique 'Snapshot ID'
+    if ($snapshotId -ne ($declaredBranch + ':' + $commit)) { $problems += ("VECTOR_EVIDENCE.md: Snapshot ID '{0}' does not equal '<declared Branch>:<Snapshot Commit>' = '{1}:{2}'" -f $snapshotId, $declaredBranch, $commit) }
+    $localHead = & $unique 'Local HEAD'
     if ($localHead -ne $commit) { $problems += 'VECTOR_EVIDENCE.md: Local HEAD differs from Snapshot Commit' }
-    $baselineHead = Get-FieldValue -Text $evidenceText -Label 'Baseline Ref HEAD'
+    $baselineHead = & $unique 'Baseline Ref HEAD'
     if ($baselineHead -ne $commit) { $problems += 'VECTOR_EVIDENCE.md: Baseline Ref HEAD differs from Snapshot Commit' }
 
-    $declaredProjectStateSha = Get-FieldValue -Text $evidenceText -Label 'Exported PROJECT_STATE SHA256'
+    $declaredProjectStateSha = & $unique 'Exported PROJECT_STATE SHA256'
     if ($declaredProjectStateSha -ne $hashes['PROJECT_STATE.md']) { $problems += 'PROJECT_STATE.md: SHA256 differs from the value declared in VECTOR_EVIDENCE.md' }
-    $declaredGovernanceSha = Get-FieldValue -Text $evidenceText -Label 'Exported GOVERNANCE_CONTEXT SHA256'
+    $declaredProjectStateBytes = & $unique 'Exported PROJECT_STATE Bytes'
+    if ([string]$declaredProjectStateBytes -ne [string](Get-Item -LiteralPath $projectStatePath).Length) { $problems += 'PROJECT_STATE.md: size differs from the value declared in VECTOR_EVIDENCE.md' }
+    $declaredGovernanceSha = & $unique 'Exported GOVERNANCE_CONTEXT SHA256'
     if ($declaredGovernanceSha -ne $hashes['GOVERNANCE_CONTEXT.md']) { $problems += 'GOVERNANCE_CONTEXT.md: SHA256 differs from the value declared in VECTOR_EVIDENCE.md' }
-    $declaredGovernanceBytes = Get-FieldValue -Text $evidenceText -Label 'Exported GOVERNANCE_CONTEXT Bytes'
+    $declaredGovernanceBytes = & $unique 'Exported GOVERNANCE_CONTEXT Bytes'
     if ([string]$declaredGovernanceBytes -ne [string](Get-Item -LiteralPath $governancePath).Length) { $problems += 'GOVERNANCE_CONTEXT.md: size differs from the value declared in VECTOR_EVIDENCE.md' }
-    $sourcePath = Get-FieldValue -Text $evidenceText -Label 'Source Path'
+    $sourcePath = & $unique 'Source Path'
     if ($sourcePath -ne $script:ProjectStateSource) { $problems += ("VECTOR_EVIDENCE.md: PROJECT_STATE Source Path is '{0}', expected {1}" -f $sourcePath, $script:ProjectStateSource) }
 
-    $declaredBlob = Get-FieldValue -Text $evidenceText -Label 'Exported PROJECT_STATE Git Blob'
+    $declaredBlob = & $unique 'Exported PROJECT_STATE Git Blob'
+    $problems += @($fieldProblems)
     $exportedBlob = Invoke-Git -Arguments @('hash-object', '--no-filters', '--', $projectStatePath)
     if ($exportedBlob.ExitCode -ne 0) {
         $problems += 'PROJECT_STATE.md: git hash-object failed'
@@ -979,18 +1210,21 @@ function Test-EvidenceSet {
         }
     }
 
-    $parsed = Get-GovernanceSections -Text $governanceText
+    $parsed = Get-GovernanceDocument -Text $governanceText
     $problems += $parsed.Problems
-    if ($parsed.HeaderCommits.Count -ne 1) { $problems += ("GOVERNANCE_CONTEXT.md: expected exactly one header Snapshot Commit, found {0}" -f $parsed.HeaderCommits.Count) }
-    foreach ($value in $parsed.HeaderCommits) {
-        if ($value -ne $commit) { $problems += ("GOVERNANCE_CONTEXT.md: Snapshot Commit mismatch: header '{0}' differs from Snapshot Commit {1}" -f $value, $commit) }
+    $sources = [pscustomobject]@{ Problems = @(); VerifiedBlobs = @() }
+    if ($parsed.Problems.Count -eq 0) {
+        $header = $parsed.Header
+        if ($header['Format Version'] -ne $script:FormatVersion) { $problems += ("GOVERNANCE_CONTEXT.md: Format Version is '{0}', expected {1}" -f $header['Format Version'], $script:FormatVersion) }
+        if ($header['Evidence Kind'] -ne 'GOVERNANCE_CONTEXT') { $problems += ("GOVERNANCE_CONTEXT.md: Evidence Kind is '{0}', expected GOVERNANCE_CONTEXT" -f $header['Evidence Kind']) }
+        if ($header['Snapshot Commit'] -ne $commit) { $problems += ("GOVERNANCE_CONTEXT.md: Snapshot Commit mismatch: header '{0}' differs from Snapshot Commit {1}" -f $header['Snapshot Commit'], $commit) }
+        if ($header['Snapshot ID'] -ne $snapshotId) { $problems += 'GOVERNANCE_CONTEXT.md: Snapshot ID differs from VECTOR_EVIDENCE.md' }
+        if ([string]$header['Source Count'] -ne [string]$script:GovernanceSources.Count) { $problems += ("GOVERNANCE_CONTEXT.md: Source Count is '{0}', expected {1}" -f $header['Source Count'], $script:GovernanceSources.Count) }
+        if ($header['Generator'] -ne $script:GeneratorPath) { $problems += ("GOVERNANCE_CONTEXT.md: Generator is '{0}', expected {1}" -f $header['Generator'], $script:GeneratorPath) }
+        if ($header['Generated (UTC)'] -notmatch $script:TimestampPattern) { $problems += 'GOVERNANCE_CONTEXT.md: Generated (UTC) is not a UTC timestamp' }
+        $sources = Test-GovernanceSections -Parsed $parsed -Commit $commit
+        $problems += $sources.Problems
     }
-    $declaredCount = Get-FieldValue -Text $governanceText -Label 'Source Count'
-    if ([string]$declaredCount -ne [string]$script:GovernanceSources.Count) { $problems += ("GOVERNANCE_CONTEXT.md: Source Count is '{0}', expected {1}" -f $declaredCount, $script:GovernanceSources.Count) }
-    $governanceSnapshotId = Get-FieldValue -Text $governanceText -Label 'Snapshot ID'
-    if ($governanceSnapshotId -ne $snapshotId) { $problems += 'GOVERNANCE_CONTEXT.md: Snapshot ID differs from VECTOR_EVIDENCE.md' }
-    $sources = Test-GovernanceSections -Parsed $parsed -Commit $commit
-    $problems += $sources.Problems
 
     foreach ($pair in @(@('VECTOR_EVIDENCE.md', $evidenceText), @('PROJECT_STATE.md', $projectStateText), @('GOVERNANCE_CONTEXT.md', $governanceText))) {
         $secret = Test-SecretPatterns -Text $pair[1] -Label $pair[0]
@@ -1003,7 +1237,7 @@ function Test-EvidenceSet {
     $fingerprint = $null
     if ($problems.Count -eq 0) { $fingerprint = $commit + '|' + $declaredBlob + '|' + ($sources.VerifiedBlobs -join ',') }
 
-    return [pscustomobject]@{ Problems = @($problems); Commit = $commit; Hashes = $hashes; Fingerprint = $fingerprint }
+    return [pscustomobject]@{ Problems = @($problems); Commit = $commit; DeclaredBranch = $declaredBranch; Hashes = $hashes; Fingerprint = $fingerprint }
 }
 
 function Assert-ValidationPassed {
@@ -1184,6 +1418,15 @@ $script:ExitCode = 1
 try {
     Initialize-Context
 
+    # Everything that inspects or changes the shared CURRENT and ARCHIVE state runs under the
+    # exclusive output-root lock: predecessor inspection, candidate validation, publication,
+    # post-publication validation, restoration, archiving and cleanup. Released in finally.
+    Enter-OutputRootLock
+    if ($TestOnlyHoldLockSeconds -gt 0) {
+        Write-Host ('TEST HOOK: holding the output-root lock for ' + $TestOnlyHoldLockSeconds + ' s')
+        Start-Sleep -Seconds $TestOnlyHoldLockSeconds
+    }
+
     if ($ValidateOnly) {
         $validation = Test-EvidenceSet -Directory $script:CurrentDir
         Assert-ValidationPassed -Validation $validation -Label 'CURRENT validation'
@@ -1229,6 +1472,8 @@ try {
         }
     }
     $script:ExitCode = 1
+} finally {
+    Exit-OutputRootLock
 }
 
 exit $script:ExitCode
