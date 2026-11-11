@@ -3,8 +3,8 @@
 Status of `001_blueprint_ownership_foundation.sql`: **applied to VECTOR Supabase Production** on
 2026-11-11 under an explicit, named owner GO (`DB-ENV-04`, `DB-ENV-07` in
 `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`); the read-only `DB-ENV-08` postchecks recorded on the
-migration pull request (#39) were PASS. The data import is separate and has not been run: the five
-tables are empty until a sync runs under its own owner GO.
+migration pull request (#39) were PASS. The data import is separate: the first LIVE sync of dataset
+`4.10.2-live.12913470` ran once on 2026-11-11 under its own owner GO (`DB-ENV-04`; evidence on PR #40).
 
 This file records the Blueprint Ownership / Tracking PR 2 contracts next to the migration. The owner
 decisions behind them are in `docs/handover/VECTOR_RESTART_HANDOVER.md`, section 5. The technical

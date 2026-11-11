@@ -1,4 +1,5 @@
-﻿import { requireUser } from '@/lib/auth/authorization'
+﻿import Link from 'next/link'
+import { requireUser } from '@/lib/auth/authorization'
 
 export const metadata = {
   title: 'Dashboard',
@@ -18,7 +19,7 @@ export default async function VectorPage() {
           <h1>Dashboard</h1>
 
           <p className="vector-page-header__description">
-            Crew-, Inventory- und Crafting-Übersicht.
+            Crew-, Inventory-, Blueprint- und Crafting-Übersicht.
           </p>
         </div>
 
@@ -65,33 +66,36 @@ export default async function VectorPage() {
           </span>
         </article>
 
-        <article className="vector-module-card">
+        <Link
+          href="/vector/blueprints"
+          className="vector-module-card vector-module-card--link"
+        >
           <span className="vector-module-card__status">
-            NEXT
+            VERFÜGBAR
           </span>
 
           <h2>Blueprints</h2>
 
           <p>
-            Verifizierte Blueprint-Basis für produktiv
-            berechenbare Fabricator-Items.
+            LIVE Blueprint-Katalog durchsuchen und
+            eigenen Besitz manuell markieren.
           </p>
 
           <span className="vector-module-card__footer">
-            Ownership / Tracking
+            Ownership / Tracking · Öffnen <span aria-hidden="true">→</span>
           </span>
-        </article>
+        </Link>
       </section>
 
       <section className="vector-dashboard__status">
         <div>
           <span>CURRENT STATE</span>
-          <strong>Inventory · SCMDB Locations</strong>
+          <strong>Inventory · SCMDB Locations · Blueprints</strong>
         </div>
 
         <div>
           <span>NEXT PRODUCT MILESTONE</span>
-          <strong>Blueprint Ownership</strong>
+          <strong>Fabricator</strong>
         </div>
       </section>
     </div>
