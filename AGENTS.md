@@ -40,7 +40,7 @@ Run typecheck and tests before proposing a change. Pull requests are expected to
 - Never commit secrets. `.env.local` stays local; `CITIZEN_ID_ENABLED=false` is the default.
 - Do not guess missing or uncertain data (locations, identities, resolver values). Keep it visible as an explicit review state.
 - LIVE and PTU datasets are strictly isolated. No cross-channel fallback.
-- Database changes go through reviewed migrations in `database/migrations/` and must be validated in staging first. Production promotion stays blocked until checks pass.
+- Database changes go through reviewed migrations in `database/migrations/`. The only Supabase environment is Production (it currently holds test data, which does not make it staging); there is no staging database. Read-only access is allowed, every Production mutation needs a separate explicit owner GO, and migrations follow the gates in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`.
 - Authorization is enforced in the backend (RLS/RPC). UI state is never the security boundary.
 - Keep changes small and explain them in plain language: the project owner is a system administrator, not a developer, and works in German.
 
