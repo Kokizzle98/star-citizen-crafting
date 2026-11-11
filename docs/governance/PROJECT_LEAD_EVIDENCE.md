@@ -42,7 +42,7 @@ The private Project Lead operating contract stays outside the repository. The sn
 - `git` on `PATH`.
 - A local clone of the repository with the `origin` remote.
 - An existing private output root, for example the Project Lead folder in OneDrive. The generator never creates the root itself and refuses a root inside the repository.
-- No credentials, tokens or API keys. The only network action is a bounded `git fetch` of the baseline branch; if it fails (offline), the run continues with the locally cached remote ref and records that.
+- No credentials, tokens or API keys. The only network action is a bounded `git fetch` of the baseline branch with an explicit refspec into the exact remote-tracking ref that is compared afterwards (`+refs/heads/develop:refs/remotes/origin/develop`), independent of the clone's configured fetch mapping. `FRESHLY_FETCHED` is recorded only when that ref equals `FETCH_HEAD` after the fetch. If the fetch fails or times out, the run continues with the locally cached ref and records a generic `LOCALLY_CACHED (fetch failed)` or `LOCALLY_CACHED (fetch timed out)`; the redacted diagnostic appears on the console only. Every Git invocation is bounded: on timeout the generator stops the process tree it started and bounds the collection of redirected output.
 
 ## 5. Productive command
 
@@ -63,7 +63,8 @@ Optional: `-Archive` additionally stores a copy under `Evidence\ARCHIVE` (sectio
 | `-Archive` | off | also write an archive copy |
 | `-ValidateOnly` | off | validate the existing CURRENT set, no generation |
 | `-RecentCommitCount` | 15 | bounded commit list in `VECTOR_EVIDENCE.md` |
-| `-TestOnlySimulatePublishFailure` | `None` | test hook for the restore path; never weakens validation |
+| `-FetchTimeoutSeconds` | 90 | upper bound for the baseline fetch including helper processes and output collection |
+| `-TestOnlySimulatePublishFailure` | `None` | test hook for the publication state machine; never weakens validation |
 
 There is deliberately no `-Force`, `-SkipValidation` or `-AllowDirtyWorkingTree`. The explicit branch and ref parameters only change which baseline an isolated test expects; every fail-closed check still runs.
 
@@ -83,6 +84,7 @@ Generated files are UTF-8 without BOM. Local absolute paths are printed on the c
 
 - **Snapshot ID** is `<branch>:<full commit SHA>`, productively `develop:<FULL_COMMIT_SHA>`. The Snapshot Commit is the local HEAD, which must equal the resolved baseline ref.
 - A snapshot is valid only when `VECTOR_EVIDENCE.md` names one full Snapshot Commit, every source section of `GOVERNANCE_CONTEXT.md` names the same commit, and the exported `PROJECT_STATE.md` matches the repository file at that commit (verified through the Git blob id). Commit statements inside embedded source content are ignored by this check.
+- Every embedded section of `GOVERNANCE_CONTEXT.md` is verified against the repository, not only its header: the validator reads the blob at the declared commit and path with Git, requires the declared `Git Blob`, `SHA256` and `Bytes` to match that blob, and requires the embedded body to equal the canonical text of the blob (UTF-8 without a leading BOM, exactly one trailing LF). Sections must appear in allowlist order with no duplicates, omissions or extras. The same validation runs on the candidate, on the published CURRENT, in `-ValidateOnly` and on an existing archive before a verify-and-skip; the snapshot fingerprint used for archive comparison is computed only from verified sources.
 - `docs/PROJECT_STATE.md` carries `State verified through commit`: the latest complete commit through which its statements were verified. It never contains the hash of the commit that contains that version of itself, and it is not required to contain the current Snapshot ID. The Snapshot Commit lives in `VECTOR_EVIDENCE.md` only.
 - Supported Evidence Status values: `VERIFIED_AT_GENERATION` (published) and `BLOCKED` (reported on the console and by the exit code; never written into CURRENT).
 
@@ -98,7 +100,7 @@ On BLOCKED the generator does not publish, never replaces an existing valid CURR
 2. The candidate is validated: exactly the three final file names, Evidence Status, commit consistency across all files, Snapshot ID, SHA256 values, Git blob identity of `PROJECT_STATE.md` against the repository, allowlist of embedded sources, balanced content delimiters, size limits and secret patterns.
 3. Only after validation the existing CURRENT is moved aside (`Evidence\.previous-<run id>`) and the staging directory is renamed to CURRENT. Both steps are same-volume renames with a bounded retry (3 attempts) for transient sharing violations. No process is ever terminated.
 4. If the rename fails, the previous CURRENT is moved back. If even that fails, the run reports BLOCKED and leaves the previous set in the named recovery directory.
-5. CURRENT is validated again after publication; the previous set is then removed.
+5. CURRENT is validated again after publication. A failed or throwing post-publication validation goes through the same restoration path: the unvalidated replacement is moved out of CURRENT, the previous set is restored and verified, the failed replacement is discarded after a successful restore, and the final console line `CURRENT:` states the exact local condition (`previous set restored and verified`, `restored (the previous CURRENT was empty)`, or the recovery directory when restoration failed). Only after a successful validation is the previous set removed.
 
 A successful run guarantees only the local consistency actually checked. It does not claim a transaction across the OneDrive cloud and does not claim that cloud synchronization has completed. The Project Lead treats a CURRENT set as valid only when all three files exist and the commit-specific statements are consistent. Normal reruns on the same commit are idempotent; `VECTOR_EVIDENCE.md` then records `Status: NONE (identical Snapshot Commit)` for the changed-files section.
 

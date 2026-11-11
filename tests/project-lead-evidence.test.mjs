@@ -11,7 +11,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { tmpdir, userInfo } from 'node:os'
 import path from 'node:path'
 import test from 'node:test'
 import { fileURLToPath } from 'node:url'
@@ -362,7 +362,7 @@ test('archive exists only with the explicit switch and an existing archive is ne
 test('a simulated publication failure restores the previous valid CURRENT set', { skip }, () => {
   const before = snapshotDir(happy.current)
   const run = runGenerator(happy, ['-TestOnlySimulatePublishFailure', 'AfterPreviousMovedAside'])
-  assertBlocked(run, /previous CURRENT restored/)
+  assertBlocked(run, /previous set restored and verified \(Snapshot Commit [0-9a-f]{40}\)/)
   assert.deepEqual(snapshotDir(happy.current), before)
   assert.deepEqual(readdirSync(happy.evidence).sort(), ['ARCHIVE', 'CURRENT'])
 })
@@ -504,4 +504,272 @@ test('an output root inside the repository is refused', { skip }, () => {
   const run = runGenerator({ ...fixture, out: inside })
   assertBlocked(run, /OutputRoot must not be inside the repository/)
   rmSync(inside, { recursive: true, force: true })
+})
+
+// --------------------------------------------------------------------------
+// Review finding 1: the compared remote-tracking ref must be refreshed
+// --------------------------------------------------------------------------
+
+const pushFromOtherClone = (fixture, name, mutate) => {
+  const other = path.join(fixture.root, name)
+  git(fixture.root, ['clone', '-q', fixture.origin, other])
+  git(other, ['checkout', '-q', 'develop'])
+  return mutate(other)
+}
+
+test('restricted fetch refspec: the exact compared tracking ref is refreshed and a remote ahead blocks', { skip }, () => {
+  const fixture = createFixture()
+  const remoteSha = pushFromOtherClone(fixture, 'other clone', other => {
+    writeFileSync(path.join(other, 'AGENTS.md'), '# Agents\n\nremote change\n')
+    const sha = commitAll(other, 'fixture: remote commit')
+    git(other, ['push', '-q', 'origin', 'develop'])
+    return sha
+  })
+  // A fetch mapping that does not cover develop, as in a single-branch clone of another branch.
+  git(fixture.work, ['config', 'remote.origin.fetch', '+refs/heads/other:refs/remotes/origin/other'])
+
+  // The previous implementation fetched by branch name; that updates FETCH_HEAD only.
+  git(fixture.work, ['fetch', '--quiet', 'origin', 'develop'])
+  assert.equal(git(fixture.work, ['rev-parse', 'refs/remotes/origin/develop']).trim(), fixture.sha, 'precondition: branch-name fetch leaves the tracking ref stale')
+  assert.equal(git(fixture.work, ['rev-parse', 'FETCH_HEAD']).trim(), remoteSha)
+
+  const run = runGenerator(fixture)
+  assertBlocked(run, /does not equal origin\/develop/)
+  assert.match(run.text, /FRESHLY_FETCHED/)
+  assert.equal(git(fixture.work, ['rev-parse', 'refs/remotes/origin/develop']).trim(), remoteSha, 'the compared ref must carry the fetched commit')
+  assert.deepEqual(readdirSync(fixture.current), [])
+})
+
+test('a force-updated remote branch is mirrored into the tracking ref and blocks', { skip }, () => {
+  const fixture = createFixture()
+  const rewritten = pushFromOtherClone(fixture, 'other clone', other => {
+    writeFileSync(path.join(other, 'AGENTS.md'), '# Agents\n\nrewritten history\n')
+    git(other, ['add', '-A'])
+    git(other, ['commit', '-q', '--amend', '-m', 'fixture: rewritten initial state'])
+    git(other, ['push', '-q', '--force', 'origin', 'develop'])
+    return git(other, ['rev-parse', 'HEAD']).trim()
+  })
+  assert.notEqual(rewritten, fixture.sha)
+  const run = runGenerator(fixture)
+  assertBlocked(run, /does not equal origin\/develop/)
+  assert.match(run.text, /FRESHLY_FETCHED/)
+  assert.equal(git(fixture.work, ['rev-parse', 'refs/remotes/origin/develop']).trim(), rewritten)
+})
+
+// --------------------------------------------------------------------------
+// Review finding 2: embedded policies are verified against their commit-bound sources
+// --------------------------------------------------------------------------
+
+// Rewrites GOVERNANCE_CONTEXT.md in `dir` and recomputes the outer SHA256 and
+// size declared in VECTOR_EVIDENCE.md, exactly what an attacker with write
+// access to the evidence folder would do.
+const tamperGovernance = (dir, mutate) => {
+  const contextPath = path.join(dir, 'GOVERNANCE_CONTEXT.md')
+  const evidencePath = path.join(dir, 'VECTOR_EVIDENCE.md')
+  const original = readFileSync(contextPath, 'utf8')
+  const mutated = mutate(original)
+  assert.notEqual(mutated, original, 'tamper helper must change the file')
+  writeFileSync(contextPath, mutated)
+  const bytes = readFileSync(contextPath)
+  const evidence = readFileSync(evidencePath, 'utf8')
+    .replace(/^Exported GOVERNANCE_CONTEXT SHA256: .*$/m, `Exported GOVERNANCE_CONTEXT SHA256: ${sha256(bytes)}`)
+    .replace(/^Exported GOVERNANCE_CONTEXT Bytes: .*$/m, `Exported GOVERNANCE_CONTEXT Bytes: ${bytes.length}`)
+  writeFileSync(evidencePath, evidence)
+}
+
+test('an altered embedded policy body with a recomputed outer checksum is rejected', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  assertPass(runGenerator(fixture, ['-ValidateOnly']))
+  tamperGovernance(fixture.current, text => text.replace('DB_ENV_FIXTURE_MARKER', 'DB_ENV_FIXTURE_MARKER altered policy text'))
+  const run = runGenerator(fixture, ['-ValidateOnly'])
+  assertBlocked(run, /section 'docs\/frozen\/DB_ENVIRONMENT_GOVERNANCE_V1\.md': embedded content differs from the repository source at the Snapshot Commit/)
+  // Declared metadata was left untouched, so only the commit-bound comparison can catch this.
+  assert.doesNotMatch(run.text, /SHA256 differs from the value declared/)
+})
+
+test('incorrect declared blob or hash metadata of an embedded section is rejected', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const context = readFileSync(path.join(fixture.current, 'GOVERNANCE_CONTEXT.md'), 'utf8')
+  const blob = context.match(/^Repository Path: AGENTS\.md\nSnapshot Commit: [0-9a-f]{40}\nGit Blob: ([0-9a-f]{40})$/m)[1]
+  tamperGovernance(fixture.current, text => text.replace(`Git Blob: ${blob}`, `Git Blob: ${'0'.repeat(40)}`))
+  const blobRun = runGenerator(fixture, ['-ValidateOnly'])
+  assertBlocked(blobRun, /section 'AGENTS\.md': declared Git Blob differs from the repository blob/)
+
+  assertPass(runGenerator(fixture))
+  tamperGovernance(fixture.current, text => text.replace(/^(Repository Path: docs\/RULE_INDEX\.md\n(?:.*\n){2})SHA256: [0-9a-f]{64}$/m, `$1SHA256: ${'f'.repeat(64)}`))
+  const hashRun = runGenerator(fixture, ['-ValidateOnly'])
+  assertBlocked(hashRun, /section 'docs\/RULE_INDEX\.md': declared SHA256 differs from the repository blob/)
+})
+
+test('an extra unallowlisted, duplicated or reordered governance section is rejected', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const context = readFileSync(path.join(fixture.current, 'GOVERNANCE_CONTEXT.md'), 'utf8')
+  const start = context.indexOf('## Source 1 of 5: AGENTS.md')
+  const end = context.indexOf('## Source 2 of 5:')
+  const first = context.slice(start, end)
+
+  // Extra section for a path that is not on the allowlist, with internally consistent metadata.
+  const extra = first
+    .replace('## Source 1 of 5: AGENTS.md', '## Source 6 of 6: lib/app.ts')
+    .replace('Repository Path: AGENTS.md', 'Repository Path: lib/app.ts')
+    .replace('BEGIN CONTENT AGENTS.md', 'BEGIN CONTENT lib/app.ts')
+    .replace('END CONTENT AGENTS.md', 'END CONTENT lib/app.ts')
+  tamperGovernance(fixture.current, text => `${text}\n${extra}`.replace('Source Count: 5', 'Source Count: 6'))
+  const extraRun = runGenerator(fixture, ['-ValidateOnly'])
+  assertBlocked(extraRun, /section 'lib\/app\.ts': not on the allowlist/)
+
+  assertPass(runGenerator(fixture))
+  tamperGovernance(fixture.current, text => `${text}\n${first}`)
+  const duplicateRun = runGenerator(fixture, ['-ValidateOnly'])
+  assertBlocked(duplicateRun, /expected 5 source sections, found 6|section 'AGENTS\.md': duplicated/)
+
+  assertPass(runGenerator(fixture))
+  tamperGovernance(fixture.current, text => {
+    const s2 = text.indexOf('## Source 2 of 5:')
+    const s3 = text.indexOf('## Source 3 of 5:')
+    const s4 = text.indexOf('## Source 4 of 5:')
+    return text.slice(0, s2) + text.slice(s3, s4) + text.slice(s2, s3) + text.slice(s4)
+  })
+  const orderRun = runGenerator(fixture, ['-ValidateOnly'])
+  assertBlocked(orderRun, /out of allowlist order/)
+})
+
+test('archive verification uses the same commit-bound source validation', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture, ['-Archive']))
+  const archiveDir = path.join(fixture.archive, readdirSync(fixture.archive)[0])
+  tamperGovernance(archiveDir, text => text.replace('HANDOVER_FIXTURE_MARKER', 'HANDOVER_FIXTURE_MARKER altered'))
+  const run = runGenerator(fixture, ['-Archive'])
+  assertBlocked(run, /archive directory already exists with different content/)
+  assert.doesNotMatch(run.text, /SKIPPED, valid archive/)
+  assertPass(runGenerator(fixture, ['-ValidateOnly']))
+})
+
+// --------------------------------------------------------------------------
+// Review finding 3: the fetch timeout bounds the subprocess tree and stream waits
+// --------------------------------------------------------------------------
+
+const holderCount = marker =>
+  Number(
+    spawnSync(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-Command', `@(Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${marker}*' -and $_.ProcessId -ne $PID }).Count`],
+      { encoding: 'utf8' },
+    ).stdout.trim(),
+  )
+
+test('a remote helper that keeps the redirected streams open cannot stall the export past the fetch timeout', { skip }, async () => {
+  const fixture = createFixture()
+  const marker = `hold-handles-${path.basename(fixture.root)}`
+  const holdScript = path.join(fixture.root, `${marker}.ps1`)
+  writeFileSync(holdScript, 'Start-Sleep -Seconds 120\n')
+  // git-remote-ext splits the command on spaces; "% " is a literal space.
+  const command = `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ${holdScript.replace(/\\/g, '/').replace(/ /g, '% ')} %S`
+  git(fixture.work, ['config', 'protocol.ext.allow', 'always'])
+  git(fixture.work, ['remote', 'set-url', 'origin', `ext::${command}`])
+  try {
+    const started = Date.now()
+    const run = runGenerator(fixture, ['-FetchTimeoutSeconds', '3'])
+    const elapsed = Date.now() - started
+    assert.ok(elapsed < 60_000, `export took ${elapsed} ms`)
+    assertPass(run)
+    assert.match(run.text, /Remote Evidence: LOCALLY_CACHED \(fetch timed out\)/)
+    assert.match(run.text, /process tree stopped/)
+    const evidence = readCurrent(fixture)['VECTOR_EVIDENCE.md']
+    assert.equal(field(evidence, 'Remote Evidence'), 'LOCALLY_CACHED (fetch timed out)')
+    await wait(500)
+    assert.equal(holderCount(marker), 0, 'helper process tree must have been stopped')
+  } finally {
+    spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${marker}*' -and $_.ProcessId -ne $PID } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`])
+  }
+})
+
+// --------------------------------------------------------------------------
+// Review finding 4: private paths never reach the exported remote diagnostics
+// --------------------------------------------------------------------------
+
+const assertGenericCachedStatus = (fixture, run, privateValues) => {
+  assertPass(run)
+  const evidence = readCurrent(fixture)['VECTOR_EVIDENCE.md']
+  assert.equal(field(evidence, 'Remote Evidence'), 'LOCALLY_CACHED (fetch failed)')
+  for (const value of privateValues) {
+    assert.ok(!evidence.includes(value), `VECTOR_EVIDENCE.md must not contain ${value}`)
+  }
+  return evidence
+}
+
+test('a failed fetch from a local path containing the username exports only a generic status', { skip }, () => {
+  const fixture = createFixture()
+  const username = userInfo().username
+  const privatePath = path.join('C:\\Users', username, `vector-no-such-remote-${path.basename(fixture.root)}.git`)
+  git(fixture.work, ['remote', 'set-url', 'origin', privatePath])
+  const run = runGenerator(fixture)
+  const evidence = assertGenericCachedStatus(fixture, run, [privatePath, `Users\\${username}`, `Users/${username}`])
+  assert.equal(field(evidence, 'Repository'), `local-path:${path.basename(privatePath)}`)
+  assert.match(run.text, /LOCALLY_CACHED \(fetch failed\) \[/)
+  assert.ok(!run.text.includes(privatePath), 'console diagnostic must redact the local path')
+})
+
+test('a failed fetch from a UNC path exports only a generic status', { skip }, () => {
+  const fixture = createFixture()
+  const unc = '\\\\localhost\\vector-nonexistent-share\\team\\repo.git'
+  git(fixture.work, ['remote', 'set-url', 'origin', unc])
+  const run = runGenerator(fixture)
+  const evidence = assertGenericCachedStatus(fixture, run, [unc, 'localhost', 'vector-nonexistent-share'])
+  assert.equal(field(evidence, 'Repository'), 'local-path:repo.git')
+  assert.ok(!run.text.includes('vector-nonexistent-share'), 'console diagnostic must redact the UNC path')
+})
+
+test('a failed fetch from a URL with userinfo exports neither the user nor the secret', { skip }, () => {
+  const fixture = createFixture()
+  git(fixture.work, ['remote', 'set-url', 'origin', 'https://alice:s3cr3t-token-value@127.0.0.1:1/private/repo.git'])
+  const run = runGenerator(fixture)
+  const evidence = assertGenericCachedStatus(fixture, run, ['alice', 's3cr3t-token-value', ':1/'])
+  assert.equal(field(evidence, 'Repository'), '127.0.0.1/private/repo')
+  assert.ok(!run.text.includes('s3cr3t-token-value'), 'console output must not contain the secret')
+})
+
+// --------------------------------------------------------------------------
+// Review finding 5: post-publication validation failures restore the previous set
+// --------------------------------------------------------------------------
+
+const assertRestoredAfterPostValidationFailure = (fixture, run, before, causePattern) => {
+  assert.notEqual(run.status, 0, run.text)
+  assert.match(run.text, /RESULT: BLOCKED/)
+  assert.match(run.text, causePattern)
+  assert.match(run.text, /^CURRENT: previous set restored and verified \(Snapshot Commit [0-9a-f]{40}\)$/m)
+  assert.doesNotMatch(run.text, /preserved \(/)
+  assert.doesNotMatch(run.text, /untouched/)
+  assert.deepEqual(snapshotDir(fixture.current), before)
+  assert.deepEqual(readdirSync(fixture.current).sort(), [...finalFiles].sort())
+  assert.deepEqual(readdirSync(fixture.evidence).sort(), ['ARCHIVE', 'CURRENT'])
+  assertPass(runGenerator(fixture, ['-ValidateOnly']))
+}
+
+test('an exception thrown during post-publication validation restores and verifies the previous CURRENT', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const before = snapshotDir(fixture.current)
+  const run = runGenerator(fixture, ['-TestOnlySimulatePublishFailure', 'ThrowDuringPostValidation'])
+  assertRestoredAfterPostValidationFailure(fixture, run, before, /post-publication validation threw: simulated exception/)
+})
+
+test('a published set that fails post-publication validation is replaced by the restored previous CURRENT', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const before = snapshotDir(fixture.current)
+  const run = runGenerator(fixture, ['-TestOnlySimulatePublishFailure', 'CorruptPublishedSet'])
+  assertRestoredAfterPostValidationFailure(fixture, run, before, /CAUSE: required file missing: PROJECT_STATE\.md/)
+})
+
+test('a post-publication failure on the first export leaves no invalid CURRENT behind and says so', { skip }, () => {
+  const fixture = createFixture()
+  const run = runGenerator(fixture, ['-TestOnlySimulatePublishFailure', 'ThrowDuringPostValidation'])
+  assert.notEqual(run.status, 0, run.text)
+  assert.match(run.text, /^CURRENT: restored \(the previous CURRENT was empty\)$/m)
+  assert.deepEqual(readdirSync(fixture.current), [])
+  assert.deepEqual(readdirSync(fixture.evidence).sort(), ['ARCHIVE', 'CURRENT'])
 })

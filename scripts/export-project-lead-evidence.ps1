@@ -42,12 +42,18 @@ Do not generate. Validate the existing CURRENT set against the repository and re
 .PARAMETER RecentCommitCount
 Number of recent commits listed in VECTOR_EVIDENCE.md (1 to 100, default 15).
 
+.PARAMETER FetchTimeoutSeconds
+Upper bound for the baseline fetch including its helper processes and output collection
+(1 to 600, default 90). A timeout is reported as LOCALLY_CACHED, never as fresh.
+
 .PARAMETER TestOnlySimulatePublishFailure
-Test hook. 'AfterPreviousMovedAside' fails the publication after the previous CURRENT was moved
-aside, to exercise the restore path. It never weakens validation.
+Test hook that injects a failure into the publication state machine: 'AfterPreviousMovedAside'
+fails before the candidate is renamed in, 'ThrowDuringPostValidation' throws inside the
+post-publication validation, 'CorruptPublishedSet' damages the published set before that
+validation. The hook never weakens validation.
 
 .EXAMPLE
-.\scripts\export-project-lead-evidence.ps1 -OutputRoot "D:\Private\VECTOR\01_Project_Lead"
+.\scripts\export-project-lead-evidence.ps1 -OutputRoot "D:\Private\VECTOR\ProjectLead"
 #>
 [CmdletBinding()]
 param(
@@ -67,7 +73,10 @@ param(
     [ValidateRange(1, 100)]
     [int]$RecentCommitCount = 15,
 
-    [ValidateSet('None', 'AfterPreviousMovedAside')]
+    [ValidateRange(1, 600)]
+    [int]$FetchTimeoutSeconds = 90,
+
+    [ValidateSet('None', 'AfterPreviousMovedAside', 'ThrowDuringPostValidation', 'CorruptPublishedSet')]
     [string]$TestOnlySimulatePublishFailure = 'None'
 )
 
@@ -95,7 +104,8 @@ $script:MaxTotalBytes = 4MB
 $script:MaxChangedFiles = 200
 $script:RetryCount = 3
 $script:RetryDelayMs = 400
-$script:FetchTimeoutMs = 90000
+$script:GitTimeoutMs = 120000        # every ordinary git invocation is bounded
+$script:StreamGraceMs = 10000        # extra time allowed for output collection after exit or kill
 $script:Utf8NoBom = New-Object System.Text.UTF8Encoding($false)
 $script:SecretPatterns = @(
     '-----BEGIN [A-Z ]*PRIVATE KEY-----',
@@ -116,6 +126,9 @@ $script:CurrentDir = $null
 $script:ArchiveDir = $null
 $script:StagingDir = $null
 $script:RunId = $null
+# Accurate description of the local CURRENT state for the final console line.
+# $null means "not touched by this run".
+$script:CurrentStatus = $null
 
 # ---------------------------------------------------------------------------
 # Console helpers (local paths may be printed; evidence content never is)
@@ -132,11 +145,15 @@ function Stop-Blocked {
 }
 
 function Get-SafeErrorText {
+    # Console-only diagnostic: first non-empty line, URL userinfo, drive paths and UNC paths redacted.
+    # Never written into evidence files.
     param([string]$Text)
     if ([string]::IsNullOrWhiteSpace($Text)) { return '(no detail)' }
     $line = ($Text -split "`r?`n" | Where-Object { $_.Trim().Length -gt 0 } | Select-Object -First 1)
     if ($null -eq $line) { return '(no detail)' }
     $line = $line -replace '://[^/@\s]+@', '://***@'
+    $line = $line -replace '\\\\[^\s''"]+', '<unc-path>'
+    $line = $line -replace '[A-Za-z]:[\\/][^\s''"]*', '<local-path>'
     if ($line.Length -gt 200) { $line = $line.Substring(0, 200) + '...' }
     return $line
 }
@@ -159,10 +176,45 @@ function ConvertTo-ArgumentString {
     return ($parts -join ' ')
 }
 
+function Stop-ProcessTree {
+    # Stops the process started by this invocation and every descendant created after it.
+    # Descendants are discovered through their parent id and must have been created after the
+    # root process, which excludes unrelated processes that merely reuse a process id.
+    param([int]$RootProcessId, [DateTime]$NotBefore)
+    $all = @()
+    try {
+        $all = @(Get-CimInstance -ClassName Win32_Process -Property ProcessId, ParentProcessId, CreationDate -ErrorAction Stop)
+    } catch {
+        $all = @()
+    }
+    $descendants = New-Object System.Collections.Generic.List[int]
+    $queue = New-Object System.Collections.Generic.Queue[int]
+    $queue.Enqueue($RootProcessId)
+    while ($queue.Count -gt 0) {
+        $parent = $queue.Dequeue()
+        foreach ($candidate in $all) {
+            if ($candidate.ParentProcessId -ne $parent -or $candidate.ProcessId -eq $parent) { continue }
+            if ($descendants.Contains([int]$candidate.ProcessId)) { continue }
+            if ($null -ne $candidate.CreationDate -and $candidate.CreationDate -lt $NotBefore.AddSeconds(-2)) { continue }
+            $descendants.Add([int]$candidate.ProcessId)
+            $queue.Enqueue([int]$candidate.ProcessId)
+        }
+    }
+    # Deepest first, then the root.
+    $descendants.Reverse()
+    foreach ($id in $descendants) {
+        try { Stop-Process -Id $id -Force -ErrorAction Stop } catch { }
+    }
+    try { Stop-Process -Id $RootProcessId -Force -ErrorAction Stop } catch { }
+}
+
 function Invoke-Git {
+    # Bounded git invocation: the timeout covers the process, its subprocess tree and the
+    # collection of redirected output. A helper that keeps the pipes open after the timeout
+    # cannot stall the export; the call then reports a controlled failure.
     param(
         [string[]]$Arguments,
-        [int]$TimeoutMs = 0,
+        [int]$TimeoutMs = $script:GitTimeoutMs,
         [string]$WorkingDirectory = $script:RepoRoot
     )
     $startInfo = New-Object System.Diagnostics.ProcessStartInfo
@@ -181,30 +233,50 @@ function Invoke-Git {
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $startInfo
     [void]$process.Start()
+    $startedAt = [DateTime]::Now
+    try { $startedAt = $process.StartTime } catch { }
     $process.StandardInput.Close()
     $errorTask = $process.StandardError.ReadToEndAsync()
     $outputStream = New-Object System.IO.MemoryStream
     $outputTask = $process.StandardOutput.BaseStream.CopyToAsync($outputStream)
 
     $timedOut = $false
-    if ($TimeoutMs -gt 0) {
-        if (-not $process.WaitForExit($TimeoutMs)) {
-            $timedOut = $true
-            try { $process.Kill() } catch { }
-            $process.WaitForExit()
-        }
-    } else {
-        $process.WaitForExit()
+    if (-not $process.WaitForExit($TimeoutMs)) {
+        $timedOut = $true
+        Stop-ProcessTree -RootProcessId $process.Id -NotBefore $startedAt
+        [void]$process.WaitForExit($script:StreamGraceMs)
     }
-    [void]$outputTask.Wait()
-    $errorText = $errorTask.Result
+
+    $streamsComplete = $false
+    try {
+        $tasks = [System.Threading.Tasks.Task[]]@($outputTask, $errorTask)
+        $streamsComplete = [System.Threading.Tasks.Task]::WaitAll($tasks, $script:StreamGraceMs)
+    } catch {
+        $streamsComplete = $false
+    }
+    if (-not $streamsComplete) {
+        # Abandon the pipes; a surviving holder must not block the export.
+        try { $process.StandardOutput.Dispose() } catch { }
+        try { $process.StandardError.Dispose() } catch { }
+    }
+
+    $errorText = ''
+    if ($errorTask.IsCompleted -and -not $errorTask.IsFaulted -and -not $errorTask.IsCanceled) { $errorText = $errorTask.Result }
     $bytes = $outputStream.ToArray()
-    $exitCode = $process.ExitCode
+    $exitCode = -1
+    if ($process.HasExited) { $exitCode = $process.ExitCode }
     $process.Dispose()
-    if ($timedOut) { $exitCode = -1; $errorText = 'timeout after ' + $TimeoutMs + ' ms' }
+    if ($timedOut) {
+        $exitCode = -1
+        $errorText = 'timeout after ' + $TimeoutMs + ' ms (process tree stopped)'
+    } elseif (-not $streamsComplete) {
+        $exitCode = -2
+        $errorText = 'output collection did not finish within ' + $script:StreamGraceMs + ' ms'
+    }
 
     return [pscustomobject]@{
         ExitCode = $exitCode
+        TimedOut = $timedOut
         Bytes    = $bytes
         Text     = $script:Utf8NoBom.GetString($bytes)
         Error    = $errorText
@@ -329,16 +401,35 @@ function Get-FieldValues {
 }
 
 function Get-NormalizedRemoteIdentity {
+    # Exported identity of the remote: host and repository path only. Local and network paths
+    # contribute their leaf name only, userinfo and ports are dropped, other transports are
+    # not described at all.
     param([string]$Url)
     $value = $Url.Trim()
-    if ($value -match '^[A-Za-z]:[\\/]' -or $value -match '^\\\\' -or $value -match '^file:') {
-        return 'local-path:' + (Split-Path -Leaf ($value -replace '^file:/*', ''))
+    if ($value -match '^[A-Za-z]:[\\/]' -or $value -match '^\\\\' -or $value -match '^file:' -or $value -match '^[\\/]') {
+        $leaf = Split-Path -Leaf (($value -replace '^file:/*', '').TrimEnd('\', '/'))
+        return 'local-path:' + $leaf
     }
-    $value = $value -replace '^[A-Za-z][A-Za-z0-9+.-]*://', ''
-    $value = $value -replace '^[^@/]+@', ''
-    $value = $value -replace ':', '/'
-    $value = $value -replace '\.git$', ''
-    return $value.TrimEnd('/')
+    if ($value -match '^(https?|ssh|git)://([^/@]+@)?([^/:]+)(:\d+)?/(.*)$') {
+        $path = $Matches[5] -replace '\.git$', ''
+        return ($Matches[3] + '/' + $path).TrimEnd('/')
+    }
+    if ($value -match '^([^/@:]+@)?([^/:@]+):(?!//)(.*)$') {
+        $path = $Matches[3] -replace '\.git$', ''
+        return ($Matches[2] + '/' + $path).TrimEnd('/')
+    }
+    return 'other-transport'
+}
+
+function ConvertTo-CanonicalSourceText {
+    # The one canonical representation of an embedded source: UTF-8 text without a leading BOM
+    # and with exactly one trailing LF. The generator writes it and the validator recomputes it
+    # from the Git blob at the declared commit.
+    param([byte[]]$Bytes)
+    $text = $script:Utf8NoBom.GetString($Bytes)
+    if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) { $text = $text.Substring(1) }
+    if (-not $text.EndsWith("`n")) { $text += "`n" }
+    return $text
 }
 
 # ---------------------------------------------------------------------------
@@ -396,8 +487,12 @@ function Get-SnapshotContext {
     }
     Write-Step 'Branch' ('PASS (' + $branch + ')')
 
+    # Remote freshness. The exported status is generic by design (finding: private paths must
+    # never reach VECTOR_EVIDENCE.md); the redacted diagnostic is printed on the console only.
     $remoteEvidence = 'NOT_APPLICABLE (local baseline ref)'
+    $remoteDetail = ''
     $repositoryIdentity = 'local checkout (no remote baseline)'
+    $baselineLookup = $BaselineRef
     if ($BaselineRef -match '^([^/]+)/(.+)$') {
         $remoteName = $Matches[1]
         $remoteBranch = $Matches[2]
@@ -405,19 +500,44 @@ function Get-SnapshotContext {
         if ($remotes -contains $remoteName) {
             $remoteUrl = Get-GitText -Arguments @('remote', 'get-url', $remoteName) -What 'remote get-url'
             $repositoryIdentity = Get-NormalizedRemoteIdentity $remoteUrl
-            $fetch = Invoke-Git -Arguments @('fetch', '--quiet', $remoteName, $remoteBranch) -TimeoutMs $script:FetchTimeoutMs
+            $trackingRef = 'refs/remotes/' + $remoteName + '/' + $remoteBranch
+            $baselineLookup = $trackingRef
+            # Fetch with an explicit refspec into the exact remote-tracking ref that is compared
+            # below, independent of the repository's configured fetch mapping. The forced update
+            # mirrors the remote branch; safety comes from the HEAD comparison, never from the ref.
+            $refspec = '+refs/heads/' + $remoteBranch + ':' + $trackingRef
+            $fetch = Invoke-Git -Arguments @('fetch', '--quiet', '--no-tags', $remoteName, $refspec) -TimeoutMs ($FetchTimeoutSeconds * 1000)
             if ($fetch.ExitCode -eq 0) {
-                $remoteEvidence = 'FRESHLY_FETCHED'
+                # Verify that the compared ref really carries what was just fetched.
+                $fetched = Invoke-Git -Arguments @('rev-parse', '--verify', '--quiet', 'FETCH_HEAD^{commit}')
+                $tracking = Invoke-Git -Arguments @('rev-parse', '--verify', '--quiet', ($trackingRef + '^{commit}'))
+                $fetchedSha = $fetched.Text.TrimEnd("`r", "`n")
+                $trackingSha = $tracking.Text.TrimEnd("`r", "`n")
+                if ($fetched.ExitCode -eq 0 -and $tracking.ExitCode -eq 0 -and (Test-FullSha $fetchedSha) -and $fetchedSha -eq $trackingSha) {
+                    $remoteEvidence = 'FRESHLY_FETCHED'
+                } else {
+                    $remoteEvidence = 'LOCALLY_CACHED (tracking ref not refreshed)'
+                    $remoteDetail = 'FETCH_HEAD and ' + $trackingRef + ' differ after fetch'
+                }
+            } elseif ($fetch.TimedOut) {
+                $remoteEvidence = 'LOCALLY_CACHED (fetch timed out)'
+                $remoteDetail = Get-SafeErrorText $fetch.Error
             } else {
-                $remoteEvidence = 'LOCALLY_CACHED (fetch failed: ' + (Get-SafeErrorText $fetch.Error) + ')'
+                $remoteEvidence = 'LOCALLY_CACHED (fetch failed)'
+                $remoteDetail = Get-SafeErrorText $fetch.Error
             }
         } else {
-            $remoteEvidence = ("NOT_APPLICABLE (no remote named '{0}')" -f $remoteName)
+            $remoteEvidence = 'NOT_APPLICABLE (configured remote not found)'
+            $remoteDetail = "no remote named '" + $remoteName + "'"
         }
     }
-    Write-Step 'Remote evidence' $remoteEvidence
+    if ($remoteDetail) {
+        Write-Step 'Remote evidence' ($remoteEvidence + ' [' + $remoteDetail + ']')
+    } else {
+        Write-Step 'Remote evidence' $remoteEvidence
+    }
 
-    $baselineResult = Invoke-Git -Arguments @('rev-parse', '--verify', '--quiet', ($BaselineRef + '^{commit}'))
+    $baselineResult = Invoke-Git -Arguments @('rev-parse', '--verify', '--quiet', ($baselineLookup + '^{commit}'))
     if ($baselineResult.ExitCode -ne 0) { Stop-Blocked ("BaselineRef '{0}' does not resolve to a commit" -f $BaselineRef) }
     $baselineHead = $baselineResult.Text.TrimEnd("`r", "`n")
     $head = Get-GitText -Arguments @('rev-parse', '--verify', 'HEAD^{commit}') -What 'rev-parse HEAD'
@@ -529,8 +649,7 @@ function Get-CommitSource {
     if (-not (Test-Path -LiteralPath $workingTreePath -PathType Leaf)) {
         Stop-Blocked ("mandatory source '{0}' is not readable in the working tree" -f $RelativePath)
     }
-    $text = $script:Utf8NoBom.GetString($content.Bytes)
-    if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) { $text = $text.Substring(1) }
+    $text = ConvertTo-CanonicalSourceText $content.Bytes
     $secret = Test-SecretPatterns -Text $text -Label $RelativePath
     if ($secret) { Stop-Blocked $secret }
     return [pscustomobject]@{
@@ -586,8 +705,7 @@ function New-GovernanceContextText {
         [void]$sb.Append("SHA256: $($source.Sha256)`n")
         [void]$sb.Append("Bytes: $($source.Bytes.Length)`n`n")
         [void]$sb.Append(($script:BeginMarker -f $source.Path) + "`n")
-        [void]$sb.Append($source.Text)
-        if (-not $source.Text.EndsWith("`n")) { [void]$sb.Append("`n") }
+        [void]$sb.Append($source.Text)   # canonical text, already ends with exactly one LF
         [void]$sb.Append(($script:EndMarker -f $source.Path) + "`n")
     }
     return $sb.ToString()
@@ -674,32 +792,102 @@ function New-Candidate {
 # Validation of an evidence set (candidate or published)
 # ---------------------------------------------------------------------------
 
-function Get-GovernanceHeaders {
+function Get-GovernanceSections {
+    # Parses GOVERNANCE_CONTEXT.md into its header statements and source sections. Lines are
+    # split on LF only so that the body is recovered exactly as written; a CR left on a header
+    # or marker line is tolerated for parsing but a CR inside a body makes the body differ.
     param([string]$Text)
     $problems = @()
-    $commits = @()
-    $paths = @()
-    $blobs = @()
-    $openPath = $null
-    $lines = $Text -split "`r?`n"
-    foreach ($line in $lines) {
+    $headerCommits = @()
+    $sections = @()
+    $current = $null
+    $inBody = $false
+    $body = $null
+    foreach ($rawLine in ($Text -split "`n")) {
+        if ($inBody) {
+            if ($rawLine.TrimEnd("`r") -match '^----- END CONTENT (.+) -----$') {
+                if ($Matches[1] -ne $current.Path) { $problems += "GOVERNANCE_CONTEXT.md: END CONTENT for '$($Matches[1])' does not match the open section '$($current.Path)'" }
+                $current.Body = ($body -join "`n") + "`n"
+                $sections += $current
+                $current = $null
+                $inBody = $false
+                $body = $null
+                continue
+            }
+            if ($rawLine.TrimEnd("`r") -match '^----- BEGIN CONTENT (.+) -----$') { $problems += "GOVERNANCE_CONTEXT.md: nested BEGIN CONTENT for '$($Matches[1])'" }
+            $body += @($rawLine)
+            continue
+        }
+        $line = $rawLine.TrimEnd("`r")
         if ($line -match '^----- BEGIN CONTENT (.+) -----$') {
-            if ($null -ne $openPath) { $problems += "GOVERNANCE_CONTEXT.md: nested BEGIN CONTENT for '$($Matches[1])'" }
-            $openPath = $Matches[1]
+            if ($null -eq $current -or $Matches[1] -ne $current.Path) { $problems += "GOVERNANCE_CONTEXT.md: BEGIN CONTENT for '$($Matches[1])' without a matching section header" }
+            if ($null -eq $current) { $current = [pscustomobject]@{ Path = $Matches[1]; Commit = $null; Blob = $null; Sha256 = $null; Bytes = $null; Body = $null } }
+            $inBody = $true
+            $body = @()
             continue
         }
-        if ($line -match '^----- END CONTENT (.+) -----$') {
-            if ($openPath -ne $Matches[1]) { $problems += "GOVERNANCE_CONTEXT.md: END CONTENT for '$($Matches[1])' does not match the open section" }
-            $openPath = $null
+        if ($line -match '^----- END CONTENT (.+) -----$') { $problems += "GOVERNANCE_CONTEXT.md: END CONTENT for '$($Matches[1])' without BEGIN"; continue }
+        if ($line -match '^Repository Path:[ \t]*(.*)$') {
+            if ($null -ne $current) { $problems += "GOVERNANCE_CONTEXT.md: section '$($current.Path)' has no content block" }
+            $current = [pscustomobject]@{ Path = $Matches[1].Trim(); Commit = $null; Blob = $null; Sha256 = $null; Bytes = $null; Body = $null }
             continue
         }
-        if ($null -ne $openPath) { continue }
-        if ($line -match '^Snapshot Commit:[ \t]*(.*)$') { $commits += $Matches[1].Trim() }
-        if ($line -match '^Repository Path:[ \t]*(.*)$') { $paths += $Matches[1].Trim() }
-        if ($line -match '^Git Blob:[ \t]*(.*)$') { $blobs += $Matches[1].Trim() }
+        if ($line -match '^Snapshot Commit:[ \t]*(.*)$') {
+            if ($null -ne $current) { $current.Commit = $Matches[1].Trim() } else { $headerCommits += $Matches[1].Trim() }
+            continue
+        }
+        if ($null -ne $current) {
+            if ($line -match '^Git Blob:[ \t]*(.*)$') { $current.Blob = $Matches[1].Trim(); continue }
+            if ($line -match '^SHA256:[ \t]*(.*)$') { $current.Sha256 = $Matches[1].Trim().ToLowerInvariant(); continue }
+            if ($line -match '^Bytes:[ \t]*(.*)$') { $current.Bytes = $Matches[1].Trim(); continue }
+        }
     }
-    if ($null -ne $openPath) { $problems += "GOVERNANCE_CONTEXT.md: section '$openPath' is not closed" }
-    return [pscustomobject]@{ Problems = $problems; Commits = $commits; Paths = $paths; Blobs = $blobs }
+    if ($inBody) { $problems += "GOVERNANCE_CONTEXT.md: section '$($current.Path)' is not closed (truncated file)" }
+    elseif ($null -ne $current) { $problems += "GOVERNANCE_CONTEXT.md: section '$($current.Path)' has no content block" }
+    return [pscustomobject]@{ Problems = $problems; HeaderCommits = $headerCommits; Sections = $sections }
+}
+
+function Test-GovernanceSections {
+    # Commit-bound verification of every embedded source: the body must equal the canonical
+    # text of the Git blob at the declared commit, and the declared blob id, SHA256 and size must
+    # match that blob. The allowlist order and count are enforced exactly.
+    param($Parsed, [string]$Commit)
+    $problems = @()
+    $verifiedBlobs = @()
+    $sections = @($Parsed.Sections)
+    $expected = $script:GovernanceSources
+    if ($sections.Count -ne $expected.Count) {
+        $problems += ("GOVERNANCE_CONTEXT.md: expected {0} source sections, found {1}" -f $expected.Count, $sections.Count)
+    }
+    $seen = @{}
+    for ($i = 0; $i -lt $sections.Count; $i++) {
+        $section = $sections[$i]
+        $label = "GOVERNANCE_CONTEXT.md section '" + $section.Path + "'"
+        if ($expected -notcontains $section.Path) { $problems += ($label + ': not on the allowlist'); continue }
+        if ($seen.ContainsKey($section.Path)) { $problems += ($label + ': duplicated'); continue }
+        $seen[$section.Path] = $true
+        if ($i -lt $expected.Count -and $expected[$i] -ne $section.Path) { $problems += ($label + ": out of allowlist order (expected '" + $expected[$i] + "' at position " + ($i + 1) + ')') }
+        if ($section.Commit -ne $Commit) { $problems += ("GOVERNANCE_CONTEXT.md: Snapshot Commit mismatch: '{0}' in section '{1}' differs from Snapshot Commit {2}" -f $section.Commit, $section.Path, $Commit); continue }
+        if (-not (Test-FullSha $Commit)) { continue }
+        $spec = $Commit + ':' + $section.Path
+        $repoBlob = Invoke-Git -Arguments @('rev-parse', '--verify', '--quiet', $spec)
+        if ($repoBlob.ExitCode -ne 0) { $problems += ($label + ': source does not exist at the Snapshot Commit'); continue }
+        $repoBlobId = $repoBlob.Text.TrimEnd("`r", "`n")
+        if ($section.Blob -ne $repoBlobId) { $problems += ($label + ': declared Git Blob differs from the repository blob at the Snapshot Commit') }
+        $content = Invoke-Git -Arguments @('cat-file', 'blob', $spec)
+        if ($content.ExitCode -ne 0) { $problems += ($label + ': source could not be read at the Snapshot Commit'); continue }
+        if ($section.Sha256 -ne (Get-Sha256Hex $content.Bytes)) { $problems += ($label + ': declared SHA256 differs from the repository blob') }
+        if ([string]$section.Bytes -ne [string]$content.Bytes.Length) { $problems += ($label + ': declared Bytes differ from the repository blob') }
+        if ($null -eq $section.Body) { $problems += ($label + ': content block missing'); continue }
+        if (-not [string]::Equals($section.Body, (ConvertTo-CanonicalSourceText $content.Bytes), [System.StringComparison]::Ordinal)) {
+            $problems += ($label + ': embedded content differs from the repository source at the Snapshot Commit')
+        }
+        $verifiedBlobs += $repoBlobId
+    }
+    foreach ($path in $expected) {
+        if (-not $seen.ContainsKey($path)) { $problems += ("GOVERNANCE_CONTEXT.md: allowlisted source '{0}' is missing" -f $path) }
+    }
+    return [pscustomobject]@{ Problems = $problems; VerifiedBlobs = $verifiedBlobs }
 }
 
 function Test-EvidenceSet {
@@ -764,6 +952,8 @@ function Test-EvidenceSet {
     if ($declaredProjectStateSha -ne $hashes['PROJECT_STATE.md']) { $problems += 'PROJECT_STATE.md: SHA256 differs from the value declared in VECTOR_EVIDENCE.md' }
     $declaredGovernanceSha = Get-FieldValue -Text $evidenceText -Label 'Exported GOVERNANCE_CONTEXT SHA256'
     if ($declaredGovernanceSha -ne $hashes['GOVERNANCE_CONTEXT.md']) { $problems += 'GOVERNANCE_CONTEXT.md: SHA256 differs from the value declared in VECTOR_EVIDENCE.md' }
+    $declaredGovernanceBytes = Get-FieldValue -Text $evidenceText -Label 'Exported GOVERNANCE_CONTEXT Bytes'
+    if ([string]$declaredGovernanceBytes -ne [string](Get-Item -LiteralPath $governancePath).Length) { $problems += 'GOVERNANCE_CONTEXT.md: size differs from the value declared in VECTOR_EVIDENCE.md' }
     $sourcePath = Get-FieldValue -Text $evidenceText -Label 'Source Path'
     if ($sourcePath -ne $script:ProjectStateSource) { $problems += ("VECTOR_EVIDENCE.md: PROJECT_STATE Source Path is '{0}', expected {1}" -f $sourcePath, $script:ProjectStateSource) }
 
@@ -789,35 +979,29 @@ function Test-EvidenceSet {
         }
     }
 
-    $headers = Get-GovernanceHeaders -Text $governanceText
-    $problems += $headers.Problems
-    if ($headers.Commits.Count -eq 0) { $problems += 'GOVERNANCE_CONTEXT.md: no Snapshot Commit' }
-    foreach ($value in $headers.Commits) {
-        if ($value -ne $commit) { $problems += ("GOVERNANCE_CONTEXT.md: Snapshot Commit mismatch: '{0}' differs from Snapshot Commit {1}" -f $value, $commit) }
-    }
-    $expectedSections = $script:GovernanceSources.Count
-    if ($headers.Commits.Count -ne ($expectedSections + 1)) {
-        $problems += ("GOVERNANCE_CONTEXT.md: expected {0} Snapshot Commit statements (header plus {1} sources), found {2}" -f ($expectedSections + 1), $expectedSections, $headers.Commits.Count)
+    $parsed = Get-GovernanceSections -Text $governanceText
+    $problems += $parsed.Problems
+    if ($parsed.HeaderCommits.Count -ne 1) { $problems += ("GOVERNANCE_CONTEXT.md: expected exactly one header Snapshot Commit, found {0}" -f $parsed.HeaderCommits.Count) }
+    foreach ($value in $parsed.HeaderCommits) {
+        if ($value -ne $commit) { $problems += ("GOVERNANCE_CONTEXT.md: Snapshot Commit mismatch: header '{0}' differs from Snapshot Commit {1}" -f $value, $commit) }
     }
     $declaredCount = Get-FieldValue -Text $governanceText -Label 'Source Count'
-    if ([string]$declaredCount -ne [string]$expectedSections) { $problems += ("GOVERNANCE_CONTEXT.md: Source Count is '{0}', expected {1}" -f $declaredCount, $expectedSections) }
-    foreach ($path in $headers.Paths) {
-        if ($script:GovernanceSources -notcontains $path) { $problems += ("GOVERNANCE_CONTEXT.md: source '{0}' is not on the allowlist" -f $path) }
-    }
-    foreach ($path in $script:GovernanceSources) {
-        if ($headers.Paths -notcontains $path) { $problems += ("GOVERNANCE_CONTEXT.md: allowlisted source '{0}' is missing" -f $path) }
-    }
+    if ([string]$declaredCount -ne [string]$script:GovernanceSources.Count) { $problems += ("GOVERNANCE_CONTEXT.md: Source Count is '{0}', expected {1}" -f $declaredCount, $script:GovernanceSources.Count) }
     $governanceSnapshotId = Get-FieldValue -Text $governanceText -Label 'Snapshot ID'
     if ($governanceSnapshotId -ne $snapshotId) { $problems += 'GOVERNANCE_CONTEXT.md: Snapshot ID differs from VECTOR_EVIDENCE.md' }
+    $sources = Test-GovernanceSections -Parsed $parsed -Commit $commit
+    $problems += $sources.Problems
 
     foreach ($pair in @(@('VECTOR_EVIDENCE.md', $evidenceText), @('PROJECT_STATE.md', $projectStateText), @('GOVERNANCE_CONTEXT.md', $governanceText))) {
         $secret = Test-SecretPatterns -Text $pair[1] -Label $pair[0]
         if ($secret) { $problems += $secret }
     }
 
-    # Commit-bound identity of the snapshot: the commit plus every exported blob.
-    # Two generations of the same commit share it even though their timestamps differ.
-    $fingerprint = $commit + '|' + $declaredBlob + '|' + ($headers.Blobs -join ',')
+    # Commit-bound identity of the snapshot: the commit plus every exported blob, all verified
+    # against the repository above. Two generations of the same commit share it even though
+    # their timestamps differ. It is only meaningful when Problems is empty.
+    $fingerprint = $null
+    if ($problems.Count -eq 0) { $fingerprint = $commit + '|' + $declaredBlob + '|' + ($sources.VerifiedBlobs -join ',') }
 
     return [pscustomobject]@{ Problems = @($problems); Commit = $commit; Hashes = $hashes; Fingerprint = $fingerprint }
 }
@@ -853,8 +1037,10 @@ function Publish-Candidate {
             Move-Directory -Source $script:CurrentDir -Destination $previousDir -What 'move previous CURRENT aside'
         } catch {
             [void](Remove-DirectoryQuietly $script:StagingDir)
+            $script:CurrentStatus = 'untouched (previous set left in place)'
             Stop-Blocked ('could not move the existing CURRENT aside (it is left untouched): ' + (Get-SafeErrorText $_.Exception.Message))
         }
+        $script:CurrentStatus = 'MOVED ASIDE, not yet restored; recovery material at ' + $previousDir
     }
 
     try {
@@ -865,32 +1051,91 @@ function Publish-Candidate {
     } catch {
         $publishError = Get-SafeErrorText $_.Exception.Message
         [void](Remove-DirectoryQuietly $script:StagingDir)
-        if ($null -eq $previousDir) { Stop-Blocked ('publication failed, no previous CURRENT existed: ' + $publishError) }
-        if (Test-Path -LiteralPath $script:CurrentDir) {
-            Stop-Blocked ('publication failed and an unexpected CURRENT exists; previous evidence preserved at ' + $previousDir + ': ' + $publishError)
+        if ($null -eq $previousDir) {
+            $script:CurrentStatus = 'not present (no previous set existed)'
+            Stop-Blocked ('publication failed, no previous CURRENT existed: ' + $publishError)
         }
-        try {
-            Move-Directory -Source $previousDir -Destination $script:CurrentDir -What 'restore previous CURRENT'
-        } catch {
-            Stop-Blocked ('publication failed and the previous CURRENT could not be restored; recovery material at ' + $previousDir + ': ' + $publishError)
-        }
-        Stop-Blocked ('publication failed; previous CURRENT restored: ' + $publishError)
+        Restore-PreviousCurrent -PreviousDir $previousDir -Reason ('publication failed: ' + $publishError)
     }
 
-    $published = Test-EvidenceSet -Directory $script:CurrentDir -ExpectedCommit $CandidateValidation.Commit -ExpectedBranchName $ExpectedBranch
-    $consistent = ($published.Problems.Count -eq 0) -and (Test-SameHashes $published.Hashes $CandidateValidation.Hashes)
-    if (-not $consistent) {
-        foreach ($problem in $published.Problems) { Write-Host ('CAUSE: ' + $problem) }
-        $failedDir = Join-Path $script:EvidenceDir ('.failed-' + $script:RunId)
-        try { Move-Directory -Source $script:CurrentDir -Destination $failedDir -What 'move failed publication aside' } catch { }
-        if ($null -ne $previousDir -and -not (Test-Path -LiteralPath $script:CurrentDir)) {
-            try { Move-Directory -Source $previousDir -Destination $script:CurrentDir -What 'restore previous CURRENT' } catch { }
+    # Post-publication validation. Returned problems and thrown exceptions are both failures
+    # and both go through Restore-PreviousCurrent.
+    $failure = $null
+    try {
+        if ($TestOnlySimulatePublishFailure -eq 'CorruptPublishedSet') {
+            Remove-Item -LiteralPath (Join-Path $script:CurrentDir 'PROJECT_STATE.md') -Force
         }
-        Stop-Blocked ('published CURRENT failed post-publication validation; failed output kept at ' + $failedDir)
+        if ($TestOnlySimulatePublishFailure -eq 'ThrowDuringPostValidation') {
+            throw (New-Object System.IO.IOException 'simulated exception during post-publication validation (test hook)')
+        }
+        $published = Test-EvidenceSet -Directory $script:CurrentDir -ExpectedCommit $CandidateValidation.Commit -ExpectedBranchName $ExpectedBranch
+        if ($published.Problems.Count -gt 0) {
+            foreach ($problem in $published.Problems) { Write-Host ('CAUSE: ' + $problem) }
+            $failure = 'published CURRENT failed post-publication validation'
+        } elseif (-not (Test-SameHashes $published.Hashes $CandidateValidation.Hashes)) {
+            $failure = 'published CURRENT differs from the validated candidate'
+        }
+    } catch {
+        $failure = 'post-publication validation threw: ' + (Get-SafeErrorText $_.Exception.Message)
+    }
+    if ($null -ne $failure) {
+        # Move the unvalidated replacement out of CURRENT first; it is never left as CURRENT.
+        $failedDir = Join-Path $script:EvidenceDir ('.failed-' + $script:RunId)
+        $replacementMoved = $true
+        try { Move-Directory -Source $script:CurrentDir -Destination $failedDir -What 'move failed publication aside' } catch { $replacementMoved = $false }
+        if (-not $replacementMoved) {
+            $script:CurrentStatus = 'INVALID replacement could not be moved out of CURRENT'
+            if ($null -ne $previousDir) { $script:CurrentStatus += '; previous set preserved at ' + $previousDir }
+            Stop-Blocked ($failure + '; the invalid replacement is still in CURRENT and must be removed by hand')
+        }
+        if ($null -eq $previousDir) {
+            [void](Remove-DirectoryQuietly $failedDir)
+            $script:CurrentStatus = 'not present (no previous set existed; invalid output discarded)'
+            Stop-Blocked $failure
+        }
+        Restore-PreviousCurrent -PreviousDir $previousDir -Reason $failure -DiscardDir $failedDir
     }
     Write-Step 'Published CURRENT' 'PASS'
+    $script:CurrentStatus = 'published and validated'
 
     if ($null -ne $previousDir) { [void](Remove-DirectoryQuietly $previousDir) }
+}
+
+function Restore-PreviousCurrent {
+    # Single restoration path for every publication failure after the previous CURRENT was moved
+    # aside. Restores the previous set, verifies it, discards the failed replacement only after a
+    # successful restore, records the exact local state and always ends in Stop-Blocked.
+    param([string]$PreviousDir, [string]$Reason, [string]$DiscardDir)
+    if (Test-Path -LiteralPath $script:CurrentDir) {
+        $script:CurrentStatus = 'UNEXPECTED directory in CURRENT; previous set preserved at ' + $PreviousDir
+        Stop-Blocked ($Reason + '; an unexpected CURRENT exists, previous evidence preserved at ' + $PreviousDir)
+    }
+    try {
+        Move-Directory -Source $PreviousDir -Destination $script:CurrentDir -What 'restore previous CURRENT'
+    } catch {
+        $script:CurrentStatus = 'NOT RESTORED; previous set preserved at ' + $PreviousDir
+        if ($DiscardDir) { $script:CurrentStatus += '; failed replacement kept at ' + $DiscardDir }
+        Stop-Blocked ($Reason + '; the previous CURRENT could not be restored: ' + (Get-SafeErrorText $_.Exception.Message))
+    }
+    $verification = 'restored'
+    try {
+        $entries = @(Get-ChildItem -LiteralPath $script:CurrentDir -Force)
+        if ($entries.Count -eq 0) {
+            $verification = 'restored (the previous CURRENT was empty)'
+        } else {
+            $restored = Test-EvidenceSet -Directory $script:CurrentDir
+            if ($restored.Problems.Count -eq 0) {
+                $verification = 'previous set restored and verified (Snapshot Commit ' + $restored.Commit + ')'
+            } else {
+                $verification = 'previous set restored but it does NOT validate (' + $restored.Problems.Count + ' problem(s))'
+            }
+        }
+    } catch {
+        $verification = 'previous set restored but its verification threw: ' + (Get-SafeErrorText $_.Exception.Message)
+    }
+    if ($DiscardDir) { [void](Remove-DirectoryQuietly $DiscardDir) }
+    $script:CurrentStatus = $verification
+    Stop-Blocked ($Reason + '; ' + $verification)
 }
 
 function Publish-Archive {
@@ -973,9 +1218,12 @@ try {
     Write-Host 'RESULT: BLOCKED'
     Write-Host ('CAUSE: ' + $message.Substring(9))
     if ($script:StagingDir -and (Test-Path -LiteralPath $script:StagingDir)) { [void](Remove-DirectoryQuietly $script:StagingDir) }
-    if ($script:CurrentDir) {
+    if ($script:CurrentStatus) {
+        Write-Host ('CURRENT: ' + $script:CurrentStatus)
+    } elseif ($script:CurrentDir) {
+        # The run failed before publication started, so CURRENT was never touched.
         if (Test-Path -LiteralPath $script:CurrentDir) {
-            Write-Host ('CURRENT: preserved (' + $script:CurrentDir + ')')
+            Write-Host ('CURRENT: untouched by this run (' + $script:CurrentDir + ')')
         } else {
             Write-Host 'CURRENT: not present'
         }
