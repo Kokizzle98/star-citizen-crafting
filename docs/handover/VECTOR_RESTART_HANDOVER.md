@@ -11,25 +11,27 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Blueprint Ownership / Tracking` — PR 1 merged (#36); PR 2 not started; this rotation pull request records the DB environment governance
-- Branch: `develop`
+- Work package: `WP-AOM-01 Agentic Operating Model Foundation` — Implementation Gate 1 (compact project state, repository-native AI operating model, commit-bound Project Lead evidence generator); `Blueprint Ownership / Tracking` is paused after PR 1 (#36)
+- Branch: `feat/wp-aom-01-evidence-foundation`
 - Base: `develop`
 - Checkpoint date: `2026-11-11`
-- Work-package base (historical): `1ee9efa90abd7f6c75c6fb620f642a96290b877f`
-- Active checkpoint anchor: `895c1533508b09d282c678327f72a789e4285ba6`
+- Work-package base: `615a6e9017eec54651be7a53d4c0bd7b3df76d70`
+- Active checkpoint anchor: `615a6e9017eec54651be7a53d4c0bd7b3df76d70`
 - Working-tree expectation: `CLEAN`
-- Active PR: none once the rotation pull request that introduces this block is merged; while that pull request is open, its branch `docs/db-env-governance` is the only permitted deviation from the expected branch
+- Active PR: the Gate 1 pull request from `feat/wp-aom-01-evidence-foundation` against `develop`; while it is open, that branch is the only permitted deviation from the expected branch `develop`, and its checkpoint control revision belongs in the pull request description; none once it is merged
 - PR base: `develop`
 
-The anchor is the verified `develop` head after PR #36 (squash merge of PR 1). This block is written so that it is valid both on the rotation branch and after its merge into `develop`: the only paths that change after the anchor are the ones listed below. PR 2 starts on its own new branch; its first commit rotates this checkpoint again and names the PR 2 branch and paths. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The anchor is the verified `develop` head after PR #37. This block is written so that it is valid both on the feature branch and after its merge into `develop`: the only paths that change after the anchor are the ones listed below. `docs/PROJECT_STATE.md` is the compact state view for restarts; this block remains the recovery control block and is not duplicated there. Current HEAD may advance beyond the anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
-- `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`
-- `docs/RULE_INDEX.md`
 - `AGENTS.md`
-- `README.md`
+- `docs/PROJECT_STATE.md`
+- `docs/governance/AI_OPERATING_MODEL.md`
+- `docs/governance/PROJECT_LEAD_EVIDENCE.md`
+- `docs/handover/VECTOR_RESTART_HANDOVER.md`
+- `scripts/export-project-lead-evidence.ps1`
+- `tests/project-lead-evidence.test.mjs`
 
 Recovery control block:
 
@@ -57,6 +59,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#34` (Repository Cleanup and Baseline v1: lockfile, handover, dashboard text, `AGENTS.md`/`CLAUDE.md`): merged into `develop` on 2026-11-10.
 - PR `#35` (`AGENTS.md` token hygiene and checkpoint rotation to the idle baseline): merged into `develop` on 2026-11-10.
 - PR `#36` (Blueprint Ownership / Tracking PR 1: SCMDB blueprint catalog and reward readers): squash-merged into `develop` on 2026-11-11 as `895c153`; reviewed feature head `5077c1f`.
+- PR `#37` (DB environment governance v1 FROZEN and checkpoint rotation after PR 1): merged into `develop` on 2026-11-11 as `615a6e9`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -100,7 +103,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Blueprint Ownership / Tracking`. Owner-approved scope and decisions are recorded in the work-package pull requests; this section is a pointer, not the decision record.
+`Blueprint Ownership / Tracking`, currently PAUSED while `WP-AOM-01` Gate 1 runs (see section 1); it resumes with PR 2 afterwards. Owner-approved scope and decisions are recorded in the work-package pull requests; this section is a pointer, not the decision record.
 
 Fixed package boundaries confirmed by the owner:
 
@@ -349,9 +352,9 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Complete and merge the rotation pull request that introduces this block (PR #37, branch `docs/db-env-governance`; owner approval required; its checkpoint control revision belongs in that pull request description).
+NEXT STEP: Review and merge the WP-AOM-01 Gate 1 pull request that introduces this block (branch `feat/wp-aom-01-evidence-foundation`; independent Stability, Maintainability and Security review, owner approval required; its checkpoint control revision belongs in that pull request description).
 
-After that, the separate work package for modernizing the agent operating contract follows. Blueprint PR 2 stays paused until the immediately preceding governance and operating-contract steps are complete; the owner's crew-contract decision for PR 2 is already recorded in section 5 and needs no further decision. When PR 2 resumes, it starts on its own new branch from `develop`, and its first commit rotates this checkpoint to the PR 2 branch and paths.
+After the merge, the owner updates the local `develop` checkout to `origin/develop` and runs the productive evidence export against the private Project Lead output root (`docs/governance/PROJECT_LEAD_EVIDENCE.md`, section 5); the resulting CURRENT set is used for the M365 Project Lead acceptance test. Blueprint PR 2 stays paused until then; the owner's crew-contract decision for PR 2 is already recorded in section 5 and needs no further decision. When PR 2 resumes, it starts on its own new branch from `develop`, and its first commit rotates this checkpoint to the PR 2 branch and paths.
 
 No Blueprint migration and no Supabase Production mutation is brought forward. Any Production migration needs a separate, explicit, named production-migration GO (`DB-ENV-04`, `DB-ENV-07`) and is followed by read-only postchecks recorded in the migration pull request (`DB-ENV-08`). Every `auth.users` row currently has a matching `profiles` row, so `profiles.nickname` is the display identity; the implementation must still stay defensive: a missing profile must never widen data access, never replace crew membership and never cause an alternative identity to be derived from e-mail, game account or any other field.
 
