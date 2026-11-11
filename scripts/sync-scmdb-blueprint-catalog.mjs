@@ -217,25 +217,25 @@ export async function run({
     const { payload } = await buildPinnedLivePayload({ root, modules })
     if (payload.p_version !== pin.version) throw new Error('SCMDB_BLUEPRINT_PAYLOAD_PIN_MISMATCH')
 
-    const summary = [
-      `channel: ${payload.p_channel}`,
-      `version: ${payload.p_version}`,
-      `catalog file: ${payload.p_catalog_source_file}`,
-      `reward file: ${payload.p_reward_source_file}`,
+    const counts = [
       `blueprints: ${payload.p_blueprint_total} (valid ${payload.p_blueprint_valid}, review required ${payload.p_blueprint_review_required})`,
       `rewards: ${payload.p_reward_total} (duplicate source rows ${payload.p_duplicate_source_rows})`,
     ]
 
     if (!options.apply) {
+      // Dry run: non-sensitive validation details only.
       out('SCMDB blueprint catalog sync — DRY RUN (no network, no database)')
-      summary.forEach(out)
+      out(`channel: ${payload.p_channel}`)
+      out(`version: ${payload.p_version}`)
+      out(`catalog file: ${payload.p_catalog_source_file}`)
+      out(`reward file: ${payload.p_reward_source_file}`)
+      counts.forEach(out)
       out('payload: valid')
       out(`Writing needs a separate owner GO and: --apply --expect-version ${pin.version}`)
       return EXIT_OK
     }
 
-    out('SCMDB blueprint catalog sync — APPLY')
-    summary.forEach(out)
+    // Apply: the successful result is the dataset id and the counts, nothing else.
     const client = await createClient(url, secret)
     const { data, error } = await client.rpc(SYNC_RPC, payload)
     if (error) {
@@ -247,7 +247,7 @@ export async function run({
       return EXIT_FAILED
     }
     out(`dataset id: ${data}`)
-    out('result: synchronized (the function returns the same id for an identical repeated run)')
+    counts.forEach(out)
     return EXIT_OK
   } catch (error) {
     err(error instanceof Error ? error.message : 'SCMDB_BLUEPRINT_SYNC_FAILED')

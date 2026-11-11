@@ -122,7 +122,53 @@ test('PR 3: PTU and channel conflicts are rejected', () => {
   rejects(() => build(ptu.catalog, live.rewards), 'CHANNEL_UNSUPPORTED')
   rejects(() => build({ ...live.catalog, channel: 'PTU' }, live.rewards), 'CHANNEL_UNSUPPORTED')
   rejects(() => build(live.catalog, { ...live.rewards, channel: 'PTU' }), 'CHANNEL_UNSUPPORTED')
-  rejects(() => build(live.catalog, live.rewards, { ...pin, channel: 'PTU' }), 'CHANNEL_UNSUPPORTED')
+  // PTU stays rejected even when it is labelled with the pinned LIVE version.
+  rejects(() => build({ ...ptu.catalog, version: pin.version }, { ...ptu.rewards, version: pin.version }),
+    'CHANNEL_UNSUPPORTED')
+})
+
+test('PR 3 fix: the dataset pin is fixed to 4.10.2-live.12913470 and cannot be replaced', () => {
+  // Exactly the pinned LIVE dataset is accepted.
+  assert.equal(build(live.catalog, live.rewards).p_version, '4.10.2-live.12913470')
+  assert.equal(build.length, 2, 'the builder takes no pin parameter')
+
+  // Another LIVE dataset version is rejected, also when a caller tries to
+  // pass a matching pin as an extra argument.
+  const other = '4.10.3-live.13100000'
+  const otherCatalog = { ...live.catalog, version: other }
+  const otherRewards = { ...live.rewards, version: other }
+  rejects(() => build(otherCatalog, otherRewards), 'PIN_MISMATCH')
+  rejects(() => build(otherCatalog, otherRewards, { ...pin, version: other }), 'PIN_MISMATCH')
+
+  // The exported pin is frozen; it cannot be changed at runtime.
+  assert.ok(Object.isFrozen(pin))
+  assert.throws(() => { pin.version = other }, TypeError)
+  assert.equal(pin.version, '4.10.2-live.12913470')
+})
+
+test('PR 3 fix: blueprint source GUIDs must be canonical lowercase UUIDs, uncorrected', () => {
+  const variants = guid => [guid.toUpperCase(), ` ${guid}`, `${guid} `, `{${guid}}`, guid.replaceAll('-', ''),
+    guid.slice(0, -1), `${guid.slice(0, -1)}g`, 'not-a-uuid', '', null, 42]
+
+  for (const bad of variants(live.catalog.blueprints[0].sourceGuid)) {
+    const catalog = clone(live.catalog)
+    catalog.blueprints[0].sourceGuid = bad
+    rejects(() => build(catalog, live.rewards), 'INVALID_GUID')
+  }
+
+  // A reward reference is checked before resolution, so an uppercase or padded
+  // variant of a GUID that exists in the catalog is not matched to it.
+  const known = live.rewards.rewards[0].blueprintSourceGuid
+  assert.ok(live.catalog.blueprints.some(b => b.sourceGuid === known))
+  for (const bad of variants(known)) {
+    const rewards = clone(live.rewards)
+    rewards.rewards[0].blueprintSourceGuid = bad
+    rejects(() => build(live.catalog, rewards), 'INVALID_GUID')
+  }
+
+  // The real pinned dataset passes unchanged.
+  assert.ok(build(live.catalog, live.rewards).p_blueprints.every(b =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(b.source_guid)))
 })
 
 test('PR 3: catalog and rewards must come from the same dataset version', () => {
@@ -175,10 +221,13 @@ test('PR 3: wrong counts and anything but the pinned dataset are rejected', () =
   fewer.counts.rewards = fewer.rewards.length
   fewer.counts.duplicateSourceRows = 2
   rejects(() => build(live.catalog, fewer), 'PIN_MISMATCH')
-  for (const change of [{ version: '4.10.3-live.1' }, { blueprintTotal: 1617 }, { blueprintValid: 1609 },
-    { blueprintReviewRequired: 9 }, { rewardTotal: 7481 }, { duplicateSourceRows: 5 }]) {
-    rejects(() => build(live.catalog, live.rewards, { ...pin, ...change }), 'PIN_MISMATCH')
-  }
+  const smaller = clone(live.catalog)
+  const unreferenced = new Set(live.rewards.rewards.map(r => r.blueprintSourceGuid))
+  const drop = smaller.blueprints.findIndex(b => !unreferenced.has(b.sourceGuid) && b.reviewState === 'VALID')
+  smaller.blueprints.splice(drop, 1)
+  smaller.counts.total -= 1
+  smaller.counts.valid -= 1
+  rejects(() => build(smaller, live.rewards), 'PIN_MISMATCH')
 
   const badIndex = clone(live.rewards)
   badIndex.rewards[0].sourcePoolEntryIndex = -1

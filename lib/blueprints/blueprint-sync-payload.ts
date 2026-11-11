@@ -32,7 +32,8 @@ export type ScmdbBlueprintSyncPin = {
 /**
  * Owner decision 2026-11-11: PR 3 syncs exactly the mirrored and tested LIVE
  * dataset. A newer SCMDB dataset is a separate data work package and changes
- * this pin together with the mirror and its tests.
+ * this pin together with the mirror and its tests. The pin is frozen and is
+ * not a builder parameter: no caller can substitute another dataset.
  */
 export const SCMDB_BLUEPRINT_LIVE_SYNC_PIN: Readonly<ScmdbBlueprintSyncPin> = Object.freeze({
   channel: 'LIVE',
@@ -104,6 +105,15 @@ const index = (value: unknown): value is number =>
 const byCodepoint = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
 /**
+ * The database contract for SCMDB blueprint identities (`blueprints.source_guid`
+ * CHECK and the sync function): a canonical lowercase UUID. Values are checked
+ * as they are, never trimmed, lowercased or otherwise corrected.
+ */
+const CANONICAL_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+const canonicalUuid = (value: unknown): value is string =>
+  typeof value === 'string' && CANONICAL_UUID.test(value)
+
+/**
  * The field mapping only: reader rows to snake_case RPC rows, in a
  * deterministic order. It applies no policy (no channel, count, pin or
  * reference check) and must never be sent on its own; the sync path calls it
@@ -164,12 +174,12 @@ export function mapScmdbBlueprintSyncRows(
 export function buildScmdbBlueprintSyncPayload(
   catalog: ClassifiedScmdbBlueprintDataset,
   rewards: ScmdbBlueprintRewardDataset,
-  pin: Readonly<ScmdbBlueprintSyncPin> = SCMDB_BLUEPRINT_LIVE_SYNC_PIN,
 ): ScmdbBlueprintSyncPayload {
-  if (!catalog || !rewards || !pin) fail('INVALID')
+  const pin = SCMDB_BLUEPRINT_LIVE_SYNC_PIN
+  if (!catalog || !rewards) fail('INVALID')
 
   // LIVE only: PTU and anything else are rejected before any other check.
-  if (catalog.channel !== 'LIVE' || rewards.channel !== 'LIVE' || pin.channel !== 'LIVE') {
+  if (catalog.channel !== 'LIVE' || rewards.channel !== 'LIVE') {
     fail('CHANNEL_UNSUPPORTED')
   }
 
@@ -189,10 +199,11 @@ export function buildScmdbBlueprintSyncPayload(
   let valid = 0
   let reviewRequired = 0
   for (const b of catalog.blueprints) {
-    if (!b || !nonempty(b.sourceGuid) || typeof b.scmdbIsDefault !== 'boolean' ||
+    if (!b || typeof b.scmdbIsDefault !== 'boolean' ||
         typeof b.scmdbCigDataError !== 'boolean' || !Array.isArray(b.issues) || !b.recipe) {
       fail('INVALID')
     }
+    if (!canonicalUuid(b.sourceGuid)) fail('INVALID_GUID')
     if (guids.has(b.sourceGuid)) fail('DUPLICATE_GUID')
     guids.add(b.sourceGuid)
     if (b.reviewState === 'VALID' && b.issues.length === 0) valid++
@@ -208,10 +219,13 @@ export function buildScmdbBlueprintSyncPayload(
   // Rewards: every reference resolves inside this catalog (no fallback, no
   // synthetic blueprint), every source occurrence is unique.
   for (const r of rewards.rewards) {
-    if (!r || !nonempty(r.contractId) || !nonempty(r.poolGuid) || !nonempty(r.blueprintSourceGuid) ||
+    if (!r || !nonempty(r.contractId) || !nonempty(r.poolGuid) ||
         !index(r.sourceRewardIndex) || !index(r.sourcePoolEntryIndex)) {
       fail('INVALID')
     }
+    // Checked before resolution, so a malformed reference is reported as
+    // such and never matched against a corrected form.
+    if (!canonicalUuid(r.blueprintSourceGuid)) fail('INVALID_GUID')
   }
   if (unresolvedRewardBlueprints(rewards.rewards, guids).length > 0) fail('UNRESOLVED_REFERENCE')
 

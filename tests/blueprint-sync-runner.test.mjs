@@ -127,9 +127,14 @@ test('PR 3 runner: apply makes exactly one RPC call to sync_scmdb_blueprint_cata
   assert.equal(args.p_blueprints.length, 1618)
   assert.equal(args.p_rewards.length, 7480)
   assert.equal(args.p_duplicate_source_rows, 4)
-  assert.match(out, new RegExp(`dataset id: ${DATASET_ID}`))
-  assert.match(out, /blueprints: 1618 \(valid 1610, review required 8\)/)
-  assert.match(out, /rewards: 7480 \(duplicate source rows 4\)/)
+  // PR 3 fix: the successful apply output is the dataset id and the counts only.
+  assert.deepEqual(out.split('\n').filter(Boolean), [
+    `dataset id: ${DATASET_ID}`,
+    'blueprints: 1618 (valid 1610, review required 8)',
+    'rewards: 7480 (duplicate source rows 4)',
+  ])
+  assert.doesNotMatch(out, /\.json|crafting_blueprints|merged-|data\/scmdb|channel|version|https?:/i)
+  assert.equal(err, '')
   assert.ok(!(out + err).includes(SECRET))
 })
 
