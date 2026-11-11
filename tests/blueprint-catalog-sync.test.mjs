@@ -223,6 +223,12 @@ test('F: a new version supersedes the old one and keeps stable blueprint identit
     'SELECT id FROM public.blueprints WHERE source_guid = $1', [live.blueprints[0].source_guid])
   await as(db, 'authenticated', user, tx => tx.query('SELECT public.mark_blueprint_owned($1)', [blueprintId]))
 
+  const rewardIds = async datasetId => (await db.query(
+    'SELECT id FROM public.scmdb_blueprint_reward_sources WHERE dataset_id = $1 ORDER BY id', [datasetId],
+  )).rows.map(r => r.id)
+  const firstRewards = await rewardIds(firstId)
+  assert.equal(firstRewards.length, live.rewardTotal)
+
   const next = { ...clone(live), version: `${live.version}-next` }
   const secondId = await sync(db, next)
   assert.notEqual(secondId, firstId)
@@ -237,11 +243,16 @@ test('F: a new version supersedes the old one and keeps stable blueprint identit
   const { rows: owned } = await db.query('SELECT blueprint_id FROM public.user_blueprint_ownership')
   assert.deepEqual(owned.map(r => r.blueprint_id), [blueprintId])
 
-  // Reward rows are never claimed to be the same row across revisions.
-  const { rows: [{ shared }] } = await db.query(`SELECT count(*)::int AS shared
-    FROM public.scmdb_blueprint_reward_sources a JOIN public.scmdb_blueprint_reward_sources b ON a.id = b.id
-    WHERE a.dataset_id = $1 AND b.dataset_id = $2`, [firstId, secondId])
-  assert.equal(shared, 0)
+  // Each revision keeps its own complete reward rows: none of the first
+  // revision's rows is deleted or reassigned, and the second has all of its own.
+  const { rows: perDataset } = await db.query(`SELECT dataset_id, count(*)::int AS rewards
+    FROM public.scmdb_blueprint_reward_sources GROUP BY dataset_id`)
+  assert.deepEqual(Object.fromEntries(perDataset.map(r => [r.dataset_id, r.rewards])),
+    { [firstId]: live.rewardTotal, [secondId]: live.rewardTotal })
+  assert.deepEqual(await rewardIds(firstId), firstRewards)
+  const secondRewards = await rewardIds(secondId)
+  assert.equal(secondRewards.length, live.rewardTotal)
+  assert.equal(secondRewards.filter(id => firstRewards.includes(id)).length, 0)
 })
 
 test('F: scmdb_is_default is stored as a raw value and creates no ownership', async () => {

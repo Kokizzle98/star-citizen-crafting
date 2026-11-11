@@ -13,12 +13,27 @@ BEGIN;
 -- repository migrations. Their verified contract is required here; anything
 -- else fails closed instead of creating functions against an unknown schema.
 -- New objects are created without IF NOT EXISTS / OR REPLACE, so an unexpected
--- existing blueprint object makes the migration fail.
+-- existing blueprint table makes the migration fail. Functions can be
+-- overloaded, so any existing public function with one of the four new names
+-- is rejected here, whatever its argument list; nothing is dropped or replaced.
 -- ---------------------------------------------------------------------------
 DO $$
 DECLARE
   v_missing text[];
+  v_existing_functions text[];
 BEGIN
+  SELECT array_agg(p.proname || '(' || pg_catalog.pg_get_function_identity_arguments(p.oid) || ')'
+           ORDER BY p.proname, pg_catalog.pg_get_function_identity_arguments(p.oid))
+    INTO v_existing_functions
+  FROM pg_catalog.pg_proc p
+  JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+    AND p.proname IN ('sync_scmdb_blueprint_catalog', 'mark_blueprint_owned',
+      'unmark_blueprint_owned', 'get_active_crew_blueprint_status');
+  IF v_existing_functions IS NOT NULL THEN
+    RAISE EXCEPTION 'BLUEPRINT_MIGRATION_EXISTING_FUNCTION: %', v_existing_functions;
+  END IF;
+
   SELECT array_agg(r.table_name || '.' || r.column_name ORDER BY r.table_name, r.column_name)
     INTO v_missing
   FROM (VALUES
@@ -185,7 +200,13 @@ REVOKE ALL ON public.scmdb_blueprint_datasets, public.blueprints, public.scmdb_b
   public.scmdb_blueprint_reward_sources, public.user_blueprint_ownership
   FROM PUBLIC, anon, authenticated, service_role;
 
--- Catalog: readable by signed-in users only; written only by the sync path.
+-- Catalog: readable by signed-in users only. anon and authenticated have no
+-- write privilege. service_role is the trusted server path and technically
+-- holds direct write privileges; its intended application path is
+-- sync_scmdb_blueprint_catalog(), which enforces the LIVE-only,
+-- classification and count checks. Those checks are not a database boundary
+-- against a deliberate direct service_role write. service_role credentials
+-- stay server-side only.
 GRANT SELECT ON public.scmdb_blueprint_datasets, public.blueprints, public.scmdb_blueprint_catalog,
   public.scmdb_blueprint_reward_sources TO authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.scmdb_blueprint_datasets, public.scmdb_blueprint_catalog,
@@ -208,9 +229,10 @@ CREATE POLICY user_blueprint_ownership_read_own ON public.user_blueprint_ownersh
   FOR SELECT TO authenticated USING (user_id = (SELECT auth.uid()));
 
 -- ---------------------------------------------------------------------------
--- sync_scmdb_blueprint_catalog: privileged server path (service_role) only.
--- SECURITY INVOKER: service_role already holds the explicit table grants above,
--- so no definer rights are needed. LIVE only in this version; PTU import stays
+-- sync_scmdb_blueprint_catalog: executable by service_role only.
+-- SECURITY INVOKER: it runs with service_role's own table grants above, so no
+-- definer rights are needed; its checks bind callers of this function, not a
+-- direct service_role write. LIVE only in this version; PTU import stays
 -- out of scope. Validation completes before anything is written; the whole
 -- call is one transaction.
 -- ---------------------------------------------------------------------------

@@ -13,8 +13,9 @@ evidence is the migration itself and the contract tests listed at the end.
 ## 001 — catalog, personal ownership, derived crew view
 
 The migration creates objects only. It imports no data, changes no existing table, policy or function,
-and fails instead of adapting when a blueprint object already exists or the verified crew and profile
-columns are missing.
+and fails instead of adapting when a blueprint table already exists, any `public` function with one of
+the four function names below exists (any argument list, so overloads included), or the verified crew
+and profile columns are missing. Existing objects are never dropped or replaced.
 
 ### Catalog (global SCMDB data, signed-in users only)
 
@@ -55,7 +56,7 @@ ownership deletes the row.
 
 | Function | Caller | Behaviour |
 | --- | --- | --- |
-| `sync_scmdb_blueprint_catalog(...)` | `service_role` only | LIVE only; validates everything before writing; idempotent for an identical dataset; one transaction; fails closed on count, classification, duplicate-row, occurrence or unresolved-reference mismatches |
+| `sync_scmdb_blueprint_catalog(...)` | `service_role` only (`SECURITY INVOKER`) | intended catalog write path; LIVE only; validates everything before writing; idempotent for an identical dataset; one transaction; fails closed on count, classification, duplicate-row, occurrence or unresolved-reference mismatches |
 | `mark_blueprint_owned(blueprint_id)` | `authenticated` | acts for `auth.uid()` only, writes `MANUAL`, idempotent |
 | `unmark_blueprint_owned(blueprint_id)` | `authenticated` | removes only the caller's own row |
 | `get_active_crew_blueprint_status()` | `authenticated` | derived view of the active crew; same error contract as `get_active_group_inventory()`: `AUTH_REQUIRED`, `ACTIVE_GROUP_REQUIRED`, `ACTIVE_GROUP_NOT_ALLOWED`; no self-only fallback; status `SELF` before `CREW`; lists other members' `profiles.nickname` only; blueprints without known ownership are not returned |
@@ -65,7 +66,12 @@ The crew never owns blueprints. Own ownership is read directly from `user_bluepr
 
 ### Access model
 
-- Catalog tables: `SELECT` for `authenticated`; no access for `anon`; writes only through the sync.
+- Catalog tables: `SELECT` for `authenticated`; no access for `anon`; no write privilege for `anon` or
+  `authenticated`.
+- `service_role` is the privileged trusted-server path and technically holds direct write privileges on
+  the catalog tables. Its intended application path is `sync_scmdb_blueprint_catalog()`, which enforces
+  the LIVE-only, classification and count checks. These checks are not a database boundary against a
+  deliberate direct `service_role` write. `service_role` credentials stay server-side only.
 - Ownership table: own rows readable by `authenticated`; no direct insert, update or delete for
   application users; other members' ownership only through the crew function.
 - Grants and revokes are explicit for every application role, independent of default privileges.

@@ -327,8 +327,51 @@ test('migration fails closed on an unexpected existing blueprint object', async 
 
   const twice = await createDb()
   try {
-    await rejects(twice.exec(migration), /already exists/)
+    await rejects(twice.exec(migration), /BLUEPRINT_MIGRATION_EXISTING_FUNCTION/)
   } finally { await twice.close() }
+})
+
+test('migration fails closed on any existing overload of the new function names', async () => {
+  const overloads = [
+    'CREATE FUNCTION public.mark_blueprint_owned(p_blueprint_id uuid, p_user_id uuid) RETURNS void LANGUAGE sql AS $$ SELECT $$',
+    'CREATE FUNCTION public.sync_scmdb_blueprint_catalog() RETURNS void LANGUAGE sql AS $$ SELECT $$',
+    'CREATE FUNCTION public.unmark_blueprint_owned(text) RETURNS void LANGUAGE sql AS $$ SELECT $$',
+    'CREATE FUNCTION public.get_active_crew_blueprint_status(uuid) RETURNS void LANGUAGE sql AS $$ SELECT $$',
+  ]
+  for (const overload of overloads) {
+    const fresh = new PGlite()
+    try {
+      await fresh.exec(productionContractFixture)
+      await fresh.exec(overload)
+      await rejects(fresh.exec(migration), /BLUEPRINT_MIGRATION_EXISTING_FUNCTION/)
+      await fresh.exec('ROLLBACK')
+      const { rows: [state] } = await fresh.query(`SELECT
+        (SELECT count(*)::int FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'public' AND c.relname IN ('scmdb_blueprint_datasets', 'blueprints',
+            'scmdb_blueprint_catalog', 'scmdb_blueprint_reward_sources', 'user_blueprint_ownership')) AS tables,
+        (SELECT array_agg(p.oid::regprocedure::text ORDER BY 1) FROM pg_catalog.pg_proc p
+          JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+          WHERE n.nspname = 'public' AND p.proname IN ('sync_scmdb_blueprint_catalog', 'mark_blueprint_owned',
+            'unmark_blueprint_owned', 'get_active_crew_blueprint_status')) AS functions`)
+      assert.equal(state.tables, 0, 'no table created')
+      // Only the pre-existing overload remains, untouched: nothing created, dropped or replaced.
+      assert.equal(state.functions.length, 1)
+      assert.ok(overload.includes(state.functions[0].replace(/^public\./, '').split('(')[0]))
+    } finally { await fresh.close() }
+  }
+
+  // The error names the exact overload; that overload keeps its own grants.
+  const fresh = new PGlite()
+  try {
+    await fresh.exec(productionContractFixture)
+    await fresh.exec(overloads[0])
+    await rejects(fresh.exec(migration),
+      /BLUEPRINT_MIGRATION_EXISTING_FUNCTION: \{"mark_blueprint_owned\(p_blueprint_id uuid, p_user_id uuid\)"\}/)
+    await fresh.exec('ROLLBACK')
+    const { rows: [{ untouched }] } = await fresh.query(`SELECT has_function_privilege('anon',
+      'public.mark_blueprint_owned(uuid, uuid)', 'EXECUTE') AS untouched`)
+    assert.equal(untouched, true, 'fixture default privileges are not revoked by a failed migration')
+  } finally { await fresh.close() }
 })
 
 test('migration fails closed when the verified crew/profile contract is missing', async () => {
