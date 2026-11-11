@@ -11,33 +11,30 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Blueprint Ownership / Tracking` — PR 2 Database Foundation (first Blueprint migration `database/migrations/blueprints/001`, five tables, RLS and grants, ownership and crew functions, reward source-occurrence indices in the extractor, PGlite contract tests). `WP-AOM-01` Gate 1 is merged (#38); its later gates stay separate future work
-- Branch: `feat/blueprint-ownership-database-foundation`
+- Work package: `Blueprint Ownership / Tracking` — PR 3 LIVE Blueprint Catalog Sync (pure payload builder `lib/blueprints/blueprint-sync-payload.ts`, owner-side CLI runner `scripts/sync-scmdb-blueprint-catalog.mjs` with dry run by default, tests). PR 2 = `PRODUCTION COMPLETE`: merged as #39 (`debcd4e`), migration 001 applied to Production under an explicit named owner GO, `DB-ENV-08` postchecks PASS, the five Blueprint tables empty (evidence: comments on PR #39)
+- Branch: `feat/blueprint-live-catalog-sync`
 - Base: `develop`
 - Checkpoint date: `2026-11-11`
 - Work-package base: `0426896bbc46747bd68d4020ca013012af4e2d06`
-- Active checkpoint anchor: `0426896bbc46747bd68d4020ca013012af4e2d06`
+- Active checkpoint anchor: `debcd4e295960e5785ce981a1e5ea004ef3d541a`
 - Working-tree expectation: `CLEAN`
-- Active PR: the Blueprint PR 2 pull request from `feat/blueprint-ownership-database-foundation` against `develop`; while it is open, that branch is the only permitted deviation from the expected branch `develop`, and its checkpoint control revision belongs in the pull request description; none once it is merged
+- Active PR: the Blueprint PR 3 pull request from `feat/blueprint-live-catalog-sync` against `develop`; while it is open, that branch is the only permitted deviation from the expected branch `develop`, and its checkpoint control revision belongs in the pull request description; none once it is merged
 - PR base: `develop`
 
-The anchor is the verified `develop` head after PR #38 (Project Lead evidence snapshot commit). This block is written so that it is valid both on the feature branch and after its merge into `develop`: the only paths that change after the anchor are the ones listed below. `docs/PROJECT_STATE.md` is the compact state view for restarts; this block remains the recovery control block and is not duplicated there. Current HEAD may advance beyond the anchor only when all recovery invariants pass.
+The anchor is the verified `develop` head after PR #39 (Blueprint PR 2 squash merge). This block is written so that it is valid both on the feature branch and after its merge into `develop`: the only paths that change after the anchor are the ones listed below. `docs/PROJECT_STATE.md` is the compact state view for restarts; this block remains the recovery control block and is not duplicated there. Current HEAD may advance beyond the anchor only when all recovery invariants pass.
 
-Merging this pull request does not apply its migration. Supabase Production stays unchanged until a separate, explicit, named production-migration GO (`DB-ENV-04`, `DB-ENV-07`).
+Merging this pull request does not synchronize any data. The first Production run of the runner with `--apply` is a Production mutation and needs its own separate, explicit, named owner GO (`DB-ENV-04`); PR approval is not that GO.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
-- `database/migrations/blueprints/001_blueprint_ownership_foundation.sql`
-- `database/migrations/blueprints/README.md`
+- `database/migrations/blueprints/README.md` (Production status line only)
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `lib/blueprints/blueprint-reward-extractor.ts`
-- `lib/blueprints/blueprint-types.ts`
+- `lib/blueprints/blueprint-sync-payload.ts`
+- `scripts/sync-scmdb-blueprint-catalog.mjs`
 - `tests/blueprint-db-fixture.mjs`
-- `tests/blueprint-database-schema.test.mjs`
-- `tests/blueprint-ownership-security.test.mjs`
-- `tests/blueprint-catalog-sync.test.mjs`
-- `tests/blueprint-reward-source-occurrence.test.mjs`
+- `tests/blueprint-sync-payload.test.mjs`
+- `tests/blueprint-sync-runner.test.mjs`
 
 Recovery control block:
 
@@ -67,6 +64,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#36` (Blueprint Ownership / Tracking PR 1: SCMDB blueprint catalog and reward readers): squash-merged into `develop` on 2026-11-11 as `895c153`; reviewed feature head `5077c1f`.
 - PR `#37` (DB environment governance v1 FROZEN and checkpoint rotation after PR 1): merged into `develop` on 2026-11-11 as `615a6e9`.
 - PR `#38` (`WP-AOM-01` Implementation Gate 1: compact project state, AI operating model, commit-bound Project Lead evidence): merged into `develop` on 2026-11-11 as `0426896`.
+- PR `#39` (Blueprint Ownership / Tracking PR 2: database foundation, migration 001): squash-merged into `develop` on 2026-11-11 as `debcd4e`; reviewed head `6cbf71e`. Migration 001 applied to Production on 2026-11-11 under an explicit named owner GO; `DB-ENV-08` postchecks PASS (recorded on PR #39).
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -110,7 +108,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Blueprint Ownership / Tracking`, ACTIVE with PR 2 (see section 1) after `WP-AOM-01` Gate 1 was merged as #38. Owner-approved scope and decisions are recorded in the work-package pull requests; this section is a pointer, not the decision record.
+`Blueprint Ownership / Tracking`, ACTIVE with PR 3 (see section 1); PR 2 is merged (#39) and its migration is applied to Production. Owner-approved scope and decisions are recorded in the work-package pull requests; this section is a pointer, not the decision record.
 
 Fixed package boundaries confirmed by the owner:
 
@@ -157,8 +155,8 @@ Read-only EXECUTE precheck (2026-11-11, Production, `DB-ENV-03`): the five funct
 Sequential pull requests inside this package:
 
 - PR 1: checkpoint rotation and the `lib/blueprints/` catalog and reward readers with tests; no database, no UI. **Merged as #36.**
-- PR 2: `database/migrations/blueprints/001` with the five tables, RLS and the ownership and crew functions, plus contract tests. Applied to Production only after an explicit, named production-migration GO and followed by read-only postchecks (`DB-ENV-06` to `DB-ENV-08`).
-- PR 3: the admin synchronization of the LIVE catalog and reward relations into the database; LIVE only, no PTU import, no end-user UI.
+- PR 2: `database/migrations/blueprints/001` with the five tables, RLS and the ownership and crew functions, plus contract tests. **Merged as #39; migration 001 applied to Production, `DB-ENV-08` postchecks PASS.**
+- PR 3: the admin synchronization of the LIVE catalog and reward relations into the database; LIVE only, no PTU import, no end-user UI. Owner decisions 2026-11-11: an owner-side local CLI runner (no admin route, no server action, no network-reachable `service_role` endpoint); only the repository-pinned LIVE mirror `4.10.2-live.12913470` (no mirror refresh); dry run by default; the only intended write path is the RPC `sync_scmdb_blueprint_catalog()`. **Active.**
 - PR 4: `/vector/blueprints` with the LIVE catalog, search, filters, the personal manual ownership toggle, the non-colour-only status display, the review hint, the sidebar link and the dashboard text.
 
 Out of scope for the whole package: the `where do I get this?` and mission UI, automatic blueprint detection, Game Log, Companion, RSI linking, Pledge Hangar, an `isDefault` ownership rule, the crafting link, wipe logic and any PTU ownership UI.
@@ -359,10 +357,6 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Finish Blueprint PR 2 on `feat/blueprint-ownership-database-foundation`: the migration `database/migrations/blueprints/001_blueprint_ownership_foundation.sql`, the reward source-occurrence indices in the extractor and the PGlite contract tests; then the validation gate (`npm run typecheck`, `npm run lint`, `npm test`, `git diff --check`), the pull request against `develop`, CI, one independent Stability, Maintainability and Security review of the stable head, and owner review. Its checkpoint control revision belongs in that pull request description.
+NEXT STEP: Finish Blueprint PR 3 on `feat/blueprint-live-catalog-sync`: the payload builder `lib/blueprints/blueprint-sync-payload.ts` (the only production camelCase-to-snake_case mapping, also used by the test fixture), the owner-side runner `scripts/sync-scmdb-blueprint-catalog.mjs` (dry run by default; `--apply --expect-version 4.10.2-live.12913470` calls only the RPC `sync_scmdb_blueprint_catalog()`), the tests, the Production status line in `database/migrations/blueprints/README.md`; then the validation gate (`npm run typecheck`, `npm run lint`, `npm test`, `git diff --check`), the pull request against `develop`, CI and owner review. Its checkpoint control revision belongs in that pull request description.
 
-After PR 2 is merged: the migration is still not applied. It needs a separate, explicit, named production-migration GO (`DB-ENV-04`, `DB-ENV-07`), followed by read-only postchecks recorded on the PR 2 pull request (`DB-ENV-08`). PR 3 (LIVE catalog synchronization) starts only after that, on its own branch, and its first commit rotates this checkpoint.
-
-No Supabase Production mutation is brought forward. Every `auth.users` row currently has a matching `profiles` row, so `profiles.nickname` is the display identity; the implementation must still stay defensive: a missing profile must never widen data access, never replace crew membership and never cause an alternative identity to be derived from e-mail, game account or any other field.
-
-Do not reopen SCMDB Location work without a concrete defect, and do not reopen merged PRs.
+After PR 3 is merged: no data is synchronized yet. The first Production run with `--apply` needs a separate, explicit, named owner GO (`DB-ENV-04`), read-only prechecks before and read-only postchecks after the run. PR 4 (`/vector/blueprints`) starts only after that, on its own branch, and its first commit rotates this checkpoint.
