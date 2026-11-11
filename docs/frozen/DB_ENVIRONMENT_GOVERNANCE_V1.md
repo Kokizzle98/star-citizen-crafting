@@ -27,6 +27,20 @@ An environment can be technically Production while holding only test data. Holdi
 ## 2. Relationship to other rules
 
 - `VECTOR_GOVERNANCE_V1.md` §7 maps the Git branches to the Vercel environments. It does not map Supabase environments. This document adds the Supabase mapping and does not change the Vercel mapping.
+- `VECTOR_GOVERNANCE_V1.md` §10 ("validate in Preview before Production") refers, in its deployment context, to Vercel Preview and runtime validation (owner interpretation of 2026-11-11). It does not require a separate, paid Supabase preview or staging database. This clarifies the existing contract and does not change `VECTOR_GOVERNANCE_V1.md`. The two validation paths are:
+
+  ```text
+  APPLICATION / RUNTIME
+  feature or change -> develop -> Vercel Preview -> runtime and release validation
+                    -> main -> Vercel Production
+
+  DATABASE
+  versioned repository migration -> local and PGlite contract tests
+                                 -> typecheck, lint, tests and review
+                                 -> explicit owner production-migration gate
+                                 -> VECTOR Supabase Production
+                                 -> exact read-only postchecks
+  ```
 - `ROLLBACK_POLICY_V1.md` keeps its rules for database recovery and forward-fixes; this document adds the gates that apply before and after a migration.
 - `PROPOSED` specifications that assume a staging or preview database (for example `MIGRATION_TEST_CONTRACT_V1.md` §18) do not override this document; a separate staging environment is `DEFERRED` by `DB-ENV-09`.
 - Per `VECTOR_GOVERNANCE_V1.md` §5, this rule becomes Production-authoritative after merge into `main`. Until then the owner's decision of 2026-11-11 recorded here is the binding working rule on `develop`.
@@ -46,6 +60,8 @@ environment:   PRODUCTION
 ```
 
 It must not be called staging. The mapping was confirmed by the owner in the Supabase interface.
+
+Current deployment binding: Vercel Preview and Vercel Production currently use this same VECTOR Supabase Production database. Vercel Preview isolates the application code and the deployment, not the database. A Preview deployment may therefore read current Production test data and, as far as the application allows, also write it. Preview status is not database isolation. This describes the current technical state and is not a rule that Preview and Production must always share one database. The Production write gates of this document apply unchanged, and a separate Supabase preview or staging environment remains `DEFERRED` (`DB-ENV-09`).
 
 ### DB-ENV-02 — Current data classification
 
@@ -117,6 +133,17 @@ There is no silent migration after a merge. Merging a pull request that contains
 ### DB-ENV-08 — Postdeployment verification
 
 Every approved Production migration is followed by explicit read-only SQL postchecks. Their results are compared with the expected contract and recorded.
+
+The primary place of evidence is the pull request that contains the migration. The evidence contains at least:
+
+- the exact migration or migration file;
+- the time or a clear execution context;
+- the read-only postchecks that were run;
+- their actual results;
+- `PASS` or `FAIL` against the expected contract;
+- the required follow-up action on `FAIL`.
+
+If a migration is applied only after its pull request was merged and that pull request can no longer be amended sensibly, the evidence is recorded as a traceable comment on, or a linked GitHub record of, exactly that migration pull request. Postcheck evidence never remains only in a chat or a local document.
 
 ### DB-ENV-09 — Separate staging or preview environment
 
