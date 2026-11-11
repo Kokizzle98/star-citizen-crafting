@@ -4,8 +4,8 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **State verified through commit:** `b24a2e09b5101abf03a057f996314a12fac614d3`
-- **Updated by work package:** Blueprint Ownership / Tracking PR 4 (Usable Blueprint UI)
+- **State verified through commit:** `a8ee27c9b3118725a060f0b95f9e6948abad528b`
+- **Updated by work package:** Blueprint Ownership / Tracking — post-merge checkpoint after PR 4 (package complete)
 - **Checkpoint date:** 2026-11-11
 
 ## How to read this file
@@ -26,10 +26,12 @@
 - WP-AOM-01 Implementation Gate 1: compact project state, AI operating model, commit-bound Project Lead evidence generator (PR #38, merged 2026-11-11 as `0426896`).
 - Blueprint Ownership / Tracking PR 2 — Database Foundation: **PRODUCTION COMPLETE**. Squash-merged as #39 (`debcd4e`); migration `database/migrations/blueprints/001_blueprint_ownership_foundation.sql` applied to Supabase Production on 2026-11-11 under an explicit named owner GO; `DB-ENV-08` postchecks PASS, the five Blueprint tables empty, no unexpected drift (evidence on PR #39).
 - Blueprint Ownership / Tracking PR 3 — LIVE Blueprint Catalog Sync: **PRODUCTION COMPLETE**. Squash-merged as #40 (`b24a2e0`); the first LIVE sync ran once on 2026-11-11 under an explicit named owner GO (`DB-ENV-04`). Active dataset `d5a91245-a5d4-4836-9265-d30cd32527c9`, `LIVE`, `4.10.2-live.12913470`, `ACTIVE`: 1618 blueprints (1610 `VALID`, 8 `REVIEW_REQUIRED`), 7480 reward rows, `duplicateSourceRows = 4`, 0 PTU rows, 0 ownership rows; read-only postchecks PASS (evidence on PR #40).
+- Blueprint Ownership / Tracking PR 4 — Usable Blueprint UI: **DONE**. Squash-merged as #41 (`a8ee27c`): `/vector/blueprints` with the active LIVE catalog, search, filters, sort, 100-plus-100 display, personal manual ownership toggle through `mark_blueprint_owned()` / `unmark_blueprint_owned()`, derived crew view, status `Du` / `Crew` / `Nicht bekannt`, `REVIEW_REQUIRED` hint, sidebar link and dashboard entry. UI only; no migration, no Production mutation.
+- **Blueprint Ownership / Tracking package: COMPLETE** (PRs 1 to 4: #36, #39, #40, #41). LIVE Blueprint dataset `4.10.2-live.12913470` is `ACTIVE` in Production.
 
 ## ACTIVE
 
-- **Blueprint Ownership / Tracking PR 4 — Usable Blueprint UI** (branch `feat/blueprint-catalog-ui`, pull request against `develop`): route `/vector/blueprints` with the active LIVE catalog, search, filters, sort, 100-plus-100 display, the personal manual ownership toggle through `mark_blueprint_owned()` / `unmark_blueprint_owned()`, the derived crew view, the status `Du` / `Crew` / `Nicht bekannt` (never colour only), the `REVIEW_REQUIRED` hint, sidebar link and dashboard entry. UI only: no migration, no RLS, policy, grant or function change, no Production mutation. Owner decisions `PR4-OD-01 = B`, `PR4-OD-02 = A`, `PR4-OD-03 = A` (see the restart handover, section 5).
+- None (idle baseline after the Blueprint Ownership / Tracking package).
 
 ## PAUSED
 
@@ -41,13 +43,13 @@
 
 ## NEXT
 
-1. Validation gate, pull request, CI, Vercel Preview and owner review of PR 4; remediation if needed; merge.
-2. Then the next checkpoint records the state of the `Blueprint Ownership / Tracking` package and the next work package.
+1. Owner refreshes the private Project Lead evidence (`Evidence\CURRENT`) from the clean, synchronized local `develop` with the existing generator (`docs/governance/PROJECT_LEAD_EVIDENCE.md`).
+2. Next product milestone: **Fabricator**. Scope to be defined by the Project Lead and owner; then a new work package on its own branch, whose first commit rotates the restart-handover checkpoint.
 
 ## OPEN DECISIONS
 
 - No owner decision is pending for the active work package.
-- Known items that will need a decision later, none started: the `Crew Security Hardening` work package (LOW to MEDIUM findings, due before the first user outside the current test group); archiving or removing the legacy audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders (separate Cleanup Gate); Rule Index remediation items R1, R2, R4 and R5; the later WP-AOM-01 gates (Security Finding Register, Backup Gate, Cleanup Gate), which stay separate future work.
+- Known items that will need a decision later, none started: a later UX / design pass (blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, the narrow app shell / sidebar on small screens); the known crew `active_group` inconsistency (`getCrewContext()` falls back to the first crew while the crew RPCs report `ACTIVE_GROUP_REQUIRED`), deliberately unchanged; the `Crew Security Hardening` work package (LOW to MEDIUM findings, due before the first user outside the current test group); archiving or removing the legacy audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders (separate Cleanup Gate); Rule Index remediation items R1, R2, R4 and R5; the later WP-AOM-01 gates (Security Finding Register, Backup Gate, Cleanup Gate), which stay separate future work.
 
 ## OPEN INFRASTRUCTURE WORK
 

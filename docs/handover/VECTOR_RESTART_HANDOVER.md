@@ -11,40 +11,22 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Blueprint Ownership / Tracking` — PR 4 Usable Blueprint UI (`/vector/blueprints`: active LIVE catalog, search, filters, sort, 100-plus-100 display, personal manual ownership toggle through `mark_blueprint_owned()` / `unmark_blueprint_owned()`, derived crew view, non-colour-only status `Du` / `Crew` / `Nicht bekannt`, `REVIEW_REQUIRED` hint, sidebar link, dashboard entry, tests). PR 3 = `PRODUCTION COMPLETE`: merged as #40 (`b24a2e0`); the first LIVE sync ran once on 2026-11-11 under an explicit named owner GO (`DB-ENV-04`); dataset `d5a91245-a5d4-4836-9265-d30cd32527c9`, `LIVE`, `4.10.2-live.12913470`, `ACTIVE`; 1618 blueprints (1610 `VALID`, 8 `REVIEW_REQUIRED`), 7480 reward rows, `duplicateSourceRows = 4`, 0 PTU rows, 0 ownership rows; read-only postchecks PASS (evidence: comments on PR #40)
-- Branch: `feat/blueprint-catalog-ui`
+- Work package: `none (idle baseline)`; the previous package `Blueprint Ownership / Tracking` is complete: PR 1 (#36), PR 2 (#39, migration 001 applied to Production), PR 3 (#40, first LIVE sync run on Production) and PR 4 (#41, usable Blueprint UI `/vector/blueprints`) are merged. LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production. Next product milestone: `Fabricator` (not started; scope still to be defined)
+- Branch: `develop`
 - Base: `develop`
 - Checkpoint date: `2026-11-11`
-- Work-package base: `0426896bbc46747bd68d4020ca013012af4e2d06`
-- Active checkpoint anchor: `b24a2e09b5101abf03a057f996314a12fac614d3`
+- Work-package base (historical): `a8ee27c9b3118725a060f0b95f9e6948abad528b`
+- Active checkpoint anchor: `a8ee27c9b3118725a060f0b95f9e6948abad528b`
 - Working-tree expectation: `CLEAN`
-- Active PR: the Blueprint PR 4 pull request from `feat/blueprint-catalog-ui` against `develop`; while it is open, that branch is the only permitted deviation from the expected branch `develop`, and its checkpoint control revision belongs in the pull request description; none once it is merged
+- Active PR: none once the rotation PR that introduces this block is merged; while that PR is open, its branch `docs/blueprint-package-complete` is the only permitted deviation from the expected branch
 - PR base: `develop`
 
-The anchor is the verified `develop` head after PR #40 (Blueprint PR 3 squash merge). This block is written so that it is valid both on the feature branch and after its merge into `develop`: the only paths that change after the anchor are the ones listed below. `docs/PROJECT_STATE.md` is the compact state view for restarts; this block remains the recovery control block and is not duplicated there. Current HEAD may advance beyond the anchor only when all recovery invariants pass.
-
-PR 4 is UI only. It adds no migration, changes no table, RLS policy, grant or function, and performs no Production mutation. Ownership writes happen only at runtime, by signed-in users through the existing RPCs.
+The work-package base and anchor are the verified `develop` head after PR #41 (Blueprint PR 4 squash merge; tree identical to the reviewed head `c3732cf`). This block is written so that it is valid both on the rotation branch and after its merge into `develop`: the only paths that change after the anchor are the two listed below. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
-- `app/globals.css`
-- `app/vector/blueprints/actions.ts`
-- `app/vector/blueprints/page.tsx`
-- `app/vector/page.tsx`
-- `components/blueprints/BlueprintCatalogView.tsx`
-- `components/layout/VectorSidebar.tsx`
-- `database/migrations/blueprints/README.md` (one factual status statement only)
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `lib/blueprints/blueprint-catalog-read.ts`
-- `lib/blueprints/blueprint-catalog-result.ts`
-- `lib/blueprints/blueprint-messages.ts`
-- `lib/blueprints/blueprint-ownership-write.ts`
-- `lib/blueprints/blueprint-search-filter-sort.ts`
-- `tests/blueprint-catalog-read.test.mjs`
-- `tests/blueprint-catalog-ui.test.mjs`
-- `tests/blueprint-ownership-write.test.mjs`
-- `tests/blueprint-search-filter-sort.test.mjs`
 
 Recovery control block:
 
@@ -76,6 +58,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#38` (`WP-AOM-01` Implementation Gate 1: compact project state, AI operating model, commit-bound Project Lead evidence): merged into `develop` on 2026-11-11 as `0426896`.
 - PR `#39` (Blueprint Ownership / Tracking PR 2: database foundation, migration 001): squash-merged into `develop` on 2026-11-11 as `debcd4e`; reviewed head `6cbf71e`. Migration 001 applied to Production on 2026-11-11 under an explicit named owner GO; `DB-ENV-08` postchecks PASS (recorded on PR #39).
 - PR `#40` (Blueprint Ownership / Tracking PR 3: LIVE blueprint catalog sync builder and owner-side runner): squash-merged into `develop` on 2026-11-11 as `b24a2e0`; reviewed head `55f9914`. First LIVE sync run on Production on 2026-11-11 under an explicit named owner GO; read-only postchecks PASS (recorded on PR #40).
+- PR `#41` (Blueprint Ownership / Tracking PR 4: usable Blueprint UI `/vector/blueprints`): squash-merged into `develop` on 2026-11-11 as `a8ee27c`; reviewed head `c3732cf` (tree identical). UI only; no migration and no Production mutation.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -119,7 +102,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Blueprint Ownership / Tracking`, ACTIVE with PR 4 (see section 1); PR 2 is merged (#39) and its migration is applied to Production; PR 3 is merged (#40) and the LIVE catalog `4.10.2-live.12913470` is synchronized and `ACTIVE` in Production. Owner-approved scope and decisions are recorded in the work-package pull requests; this section is a pointer, not the decision record.
+`Blueprint Ownership / Tracking` is **complete** (PRs 1 to 4 merged: #36, #39, #40, #41). PR 2's migration is applied to Production; the LIVE catalog `4.10.2-live.12913470` is synchronized and `ACTIVE` in Production; PR 4 delivers the usable UI. This section stays as the record of the package's owner decisions; no work package is active (see section 1). Owner-approved scope and decisions are recorded in the work-package pull requests; this section is a pointer, not the decision record.
 
 Fixed package boundaries confirmed by the owner:
 
@@ -168,13 +151,15 @@ Sequential pull requests inside this package:
 - PR 1: checkpoint rotation and the `lib/blueprints/` catalog and reward readers with tests; no database, no UI. **Merged as #36.**
 - PR 2: `database/migrations/blueprints/001` with the five tables, RLS and the ownership and crew functions, plus contract tests. **Merged as #39; migration 001 applied to Production, `DB-ENV-08` postchecks PASS.**
 - PR 3: the admin synchronization of the LIVE catalog and reward relations into the database; LIVE only, no PTU import, no end-user UI. Owner decisions 2026-11-11: an owner-side local CLI runner (no admin route, no server action, no network-reachable `service_role` endpoint); only the repository-pinned LIVE mirror `4.10.2-live.12913470` (no mirror refresh); dry run by default; the only intended write path is the RPC `sync_scmdb_blueprint_catalog()`. **Merged as #40; first LIVE sync run on Production, read-only postchecks PASS.**
-- PR 4: `/vector/blueprints` with the LIVE catalog, search, filters, the personal manual ownership toggle, the non-colour-only status display, the review hint, the sidebar link and the dashboard text. **Active.** Owner decisions 2026-11-11: `PR4-OD-01 = B` (after confirmed server success, update ownership locally; no optimistic update before confirmation; no full catalog reload after every toggle); `PR4-OD-02 = A` (show the first 100 filtered and sorted results, `Weitere 100 anzeigen` adds 100 at a time; search, filter and sort work on the fully loaded catalog); `PR4-OD-03 = A` (the one outdated status statement in `database/migrations/blueprints/README.md` is corrected in the checkpoint commit, nothing else in the migration documentation).
+- PR 4: `/vector/blueprints` with the LIVE catalog, search, filters, the personal manual ownership toggle, the non-colour-only status display, the review hint, the sidebar link and the dashboard text. **Merged as #41 (`a8ee27c`).** Owner decisions 2026-11-11: `PR4-OD-01 = B` (after confirmed server success, update ownership locally; no optimistic update before confirmation; no full catalog reload after every toggle); `PR4-OD-02 = A` (show the first 100 filtered and sorted results, `Weitere 100 anzeigen` adds 100 at a time; search, filter and sort work on the fully loaded catalog); `PR4-OD-03 = A` (the one outdated status statement in `database/migrations/blueprints/README.md` is corrected in the checkpoint commit, nothing else in the migration documentation).
 
 Out of scope for the whole package: the `where do I get this?` and mission UI, automatic blueprint detection, Game Log, Companion, RSI linking, Pledge Hangar, an `isDefault` ownership rule, the crafting link, wipe logic and any PTU ownership UI.
 
 Known open items, none of them started:
 
 - after this package: linking Crafting with Crew Inventory (see `SCMDB_LOCATION_HANDOVER.md`);
+- a later UX / design pass (not started, not part of any active package): blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, and the narrow app shell / sidebar on small screens;
+- known crew `active_group` inconsistency, deliberately unchanged: when `user_settings.active_group_id` is not set, `getCrewContext()` falls back to the first crew while `get_active_group_inventory()` and `get_active_crew_blueprint_status()` report `ACTIVE_GROUP_REQUIRED` (same behaviour on Inventory and Blueprints);
 - older audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders: archive or remove only after a separate, explicit decision;
 - Rule Index items R2, R4 and R5 remain as listed in `docs/RULE_INDEX.md`.
 - open crew authorization and privacy hardening findings, currently rated LOW to MEDIUM. They are not part of the Blueprint work package and are not repaired here. Target: a separate work package `Crew Security Hardening`, to be completed or re-assessed at the latest before the first user outside the current test group. They do not block Blueprint PR 2, because the new crew function must not use the affected helpers as its sole authorization boundary.
@@ -370,6 +355,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Finish Blueprint PR 4 on `feat/blueprint-catalog-ui`: the route `/vector/blueprints` (server read boundary `lib/blueprints/blueprint-catalog-read.ts` for the active LIVE catalog, the caller's own ownership and the optional crew status; pure result, status, search, filter and sort modules; server actions that call only `mark_blueprint_owned()` / `unmark_blueprint_owned()`; the client view with the 100-plus-100 display), the sidebar link, the dashboard entry, the styles and the tests; then the validation gate (`npm run typecheck`, `npm run lint`, `npm test`, `git diff --check`), the pull request against `develop`, CI, the Vercel Preview and owner review. Its checkpoint control revision belongs in that pull request description.
-
-PR 4 performs no Production mutation: no migration, no RLS, policy, grant or function change, no test ownership against Production. Merging it completes the planned PR sequence of the `Blueprint Ownership / Tracking` package; the next checkpoint records the package state and the next work package.
+NEXT STEP: Merge the rotation pull request that introduces this block (owner approval required; no further rotation is needed afterwards). Then the owner refreshes the private Project Lead evidence from the clean, synchronized local `develop` with the existing generator (`docs/governance/PROJECT_LEAD_EVIDENCE.md`, section 5 and section 11). The next product milestone is `Fabricator`: its scope is defined by the Project Lead and owner first; then start it in a new conversation from `AGENTS.md` and this handover with a short plan and a dedicated feature branch whose first commit rotates this checkpoint to that work package. Do not reopen merged Blueprint PRs without a concrete defect. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
