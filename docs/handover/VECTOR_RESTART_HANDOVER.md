@@ -11,27 +11,33 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `WP-AOM-01 Agentic Operating Model Foundation` — Implementation Gate 1 (compact project state, repository-native AI operating model, commit-bound Project Lead evidence generator); `Blueprint Ownership / Tracking` is paused after PR 1 (#36)
-- Branch: `feat/wp-aom-01-evidence-foundation`
+- Work package: `Blueprint Ownership / Tracking` — PR 2 Database Foundation (first Blueprint migration `database/migrations/blueprints/001`, five tables, RLS and grants, ownership and crew functions, reward source-occurrence indices in the extractor, PGlite contract tests). `WP-AOM-01` Gate 1 is merged (#38); its later gates stay separate future work
+- Branch: `feat/blueprint-ownership-database-foundation`
 - Base: `develop`
 - Checkpoint date: `2026-11-11`
-- Work-package base: `615a6e9017eec54651be7a53d4c0bd7b3df76d70`
-- Active checkpoint anchor: `615a6e9017eec54651be7a53d4c0bd7b3df76d70`
+- Work-package base: `0426896bbc46747bd68d4020ca013012af4e2d06`
+- Active checkpoint anchor: `0426896bbc46747bd68d4020ca013012af4e2d06`
 - Working-tree expectation: `CLEAN`
-- Active PR: the Gate 1 pull request from `feat/wp-aom-01-evidence-foundation` against `develop`; while it is open, that branch is the only permitted deviation from the expected branch `develop`, and its checkpoint control revision belongs in the pull request description; none once it is merged
+- Active PR: the Blueprint PR 2 pull request from `feat/blueprint-ownership-database-foundation` against `develop`; while it is open, that branch is the only permitted deviation from the expected branch `develop`, and its checkpoint control revision belongs in the pull request description; none once it is merged
 - PR base: `develop`
 
-The anchor is the verified `develop` head after PR #37. This block is written so that it is valid both on the feature branch and after its merge into `develop`: the only paths that change after the anchor are the ones listed below. `docs/PROJECT_STATE.md` is the compact state view for restarts; this block remains the recovery control block and is not duplicated there. Current HEAD may advance beyond the anchor only when all recovery invariants pass.
+The anchor is the verified `develop` head after PR #38 (Project Lead evidence snapshot commit). This block is written so that it is valid both on the feature branch and after its merge into `develop`: the only paths that change after the anchor are the ones listed below. `docs/PROJECT_STATE.md` is the compact state view for restarts; this block remains the recovery control block and is not duplicated there. Current HEAD may advance beyond the anchor only when all recovery invariants pass.
+
+Merging this pull request does not apply its migration. Supabase Production stays unchanged until a separate, explicit, named production-migration GO (`DB-ENV-04`, `DB-ENV-07`).
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
-- `AGENTS.md`
+- `database/migrations/blueprints/001_blueprint_ownership_foundation.sql`
+- `database/migrations/blueprints/README.md`
 - `docs/PROJECT_STATE.md`
-- `docs/governance/AI_OPERATING_MODEL.md`
-- `docs/governance/PROJECT_LEAD_EVIDENCE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `scripts/export-project-lead-evidence.ps1`
-- `tests/project-lead-evidence.test.mjs`
+- `lib/blueprints/blueprint-reward-extractor.ts`
+- `lib/blueprints/blueprint-types.ts`
+- `tests/blueprint-db-fixture.mjs`
+- `tests/blueprint-database-schema.test.mjs`
+- `tests/blueprint-ownership-security.test.mjs`
+- `tests/blueprint-catalog-sync.test.mjs`
+- `tests/blueprint-reward-source-occurrence.test.mjs`
 
 Recovery control block:
 
@@ -60,6 +66,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#35` (`AGENTS.md` token hygiene and checkpoint rotation to the idle baseline): merged into `develop` on 2026-11-10.
 - PR `#36` (Blueprint Ownership / Tracking PR 1: SCMDB blueprint catalog and reward readers): squash-merged into `develop` on 2026-11-11 as `895c153`; reviewed feature head `5077c1f`.
 - PR `#37` (DB environment governance v1 FROZEN and checkpoint rotation after PR 1): merged into `develop` on 2026-11-11 as `615a6e9`.
+- PR `#38` (`WP-AOM-01` Implementation Gate 1: compact project state, AI operating model, commit-bound Project Lead evidence): merged into `develop` on 2026-11-11 as `0426896`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -103,7 +110,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Blueprint Ownership / Tracking`, currently PAUSED while `WP-AOM-01` Gate 1 runs (see section 1); it resumes with PR 2 afterwards. Owner-approved scope and decisions are recorded in the work-package pull requests; this section is a pointer, not the decision record.
+`Blueprint Ownership / Tracking`, ACTIVE with PR 2 (see section 1) after `WP-AOM-01` Gate 1 was merged as #38. Owner-approved scope and decisions are recorded in the work-package pull requests; this section is a pointer, not the decision record.
 
 Fixed package boundaries confirmed by the owner:
 
@@ -352,10 +359,10 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Review and merge the WP-AOM-01 Gate 1 pull request that introduces this block (branch `feat/wp-aom-01-evidence-foundation`; independent Stability, Maintainability and Security review, owner approval required; its checkpoint control revision belongs in that pull request description).
+NEXT STEP: Finish Blueprint PR 2 on `feat/blueprint-ownership-database-foundation`: the migration `database/migrations/blueprints/001_blueprint_ownership_foundation.sql`, the reward source-occurrence indices in the extractor and the PGlite contract tests; then the validation gate (`npm run typecheck`, `npm run lint`, `npm test`, `git diff --check`), the pull request against `develop`, CI, one independent Stability, Maintainability and Security review of the stable head, and owner review. Its checkpoint control revision belongs in that pull request description.
 
-After the merge, the owner updates the local `develop` checkout to `origin/develop` and runs the productive evidence export against the private Project Lead output root (`docs/governance/PROJECT_LEAD_EVIDENCE.md`, section 5); the resulting CURRENT set is used for the M365 Project Lead acceptance test. Blueprint PR 2 stays paused until then; the owner's crew-contract decision for PR 2 is already recorded in section 5 and needs no further decision. When PR 2 resumes, it starts on its own new branch from `develop`, and its first commit rotates this checkpoint to the PR 2 branch and paths.
+After PR 2 is merged: the migration is still not applied. It needs a separate, explicit, named production-migration GO (`DB-ENV-04`, `DB-ENV-07`), followed by read-only postchecks recorded on the PR 2 pull request (`DB-ENV-08`). PR 3 (LIVE catalog synchronization) starts only after that, on its own branch, and its first commit rotates this checkpoint.
 
-No Blueprint migration and no Supabase Production mutation is brought forward. Any Production migration needs a separate, explicit, named production-migration GO (`DB-ENV-04`, `DB-ENV-07`) and is followed by read-only postchecks recorded in the migration pull request (`DB-ENV-08`). Every `auth.users` row currently has a matching `profiles` row, so `profiles.nickname` is the display identity; the implementation must still stay defensive: a missing profile must never widen data access, never replace crew membership and never cause an alternative identity to be derived from e-mail, game account or any other field.
+No Supabase Production mutation is brought forward. Every `auth.users` row currently has a matching `profiles` row, so `profiles.nickname` is the display identity; the implementation must still stay defensive: a missing profile must never widen data access, never replace crew membership and never cause an alternative identity to be derived from e-mail, game account or any other field.
 
 Do not reopen SCMDB Location work without a concrete defect, and do not reopen merged PRs.
