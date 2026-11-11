@@ -116,6 +116,25 @@ $script:FinalFiles = @('VECTOR_EVIDENCE.md', 'PROJECT_STATE.md', 'GOVERNANCE_CON
 $script:StatusVerified = 'VERIFIED_AT_GENERATION'
 $script:MaxSourceBytes = 512KB
 $script:MaxTotalBytes = 4MB
+# Per-file limits of a published evidence set, checked from file metadata before any read.
+$script:MaxEvidenceFileBytes = @{
+    'VECTOR_EVIDENCE.md'    = 512KB
+    'PROJECT_STATE.md'      = 512KB
+    'GOVERNANCE_CONTEXT.md' = 4MB
+}
+# Upper bounds for captured git output. The largest legitimate stdout is one allowlisted blob
+# (at most 512 KB); the largest legitimate stderr is a short diagnostic.
+$script:MaxStdoutBytes = 2MB
+$script:MaxStderrBytes = 64KB
+$script:RemoteEvidenceValues = @(
+    'FRESHLY_FETCHED',
+    'LOCALLY_CACHED (fetch failed)',
+    'LOCALLY_CACHED (fetch timed out)',
+    'LOCALLY_CACHED (tracking ref not refreshed)',
+    'NOT_APPLICABLE (local baseline ref)',
+    'NOT_APPLICABLE (configured remote not found)'
+)
+$script:RepositoryIdentityPattern = '^(other-transport|local-path:[A-Za-z0-9._ -]+|local checkout \(no remote baseline\)|[A-Za-z0-9.-]+(/[^\s?#@\\:]*)?)$'
 $script:MaxChangedFiles = 200
 $script:RetryCount = 3
 $script:RetryDelayMs = 400
@@ -187,6 +206,7 @@ function Get-SafeErrorText {
     $line = $line -replace '[A-Za-z][A-Za-z0-9+.-]*://[^\s''"]+', '<url>'
     $line = $line -replace '[A-Za-z][A-Za-z0-9+.-]*::[^''"]*', '<helper-transport>'
     $line = $line -replace '\\\\[^\s''"]+', '<unc-path>'
+    $line = $line -replace '(?<![:/A-Za-z0-9])//[^\s''"/]+/[^\s''"]*', '<unc-path>'
     $line = $line -replace '[A-Za-z]:[\\/][^\s''"]*', '<local-path>'
     if ($line.Length -gt 200) { $line = $line.Substring(0, 200) + '...' }
     return $line
@@ -243,9 +263,12 @@ function Stop-ProcessTree {
 }
 
 function Invoke-Git {
-    # Bounded git invocation: the timeout covers the process, its subprocess tree and the
-    # collection of redirected output. A helper that keeps the pipes open after the timeout
-    # cannot stall the export; the call then reports a controlled failure.
+    # Bounded git invocation. One loop reads stdout and stderr incrementally into buffers with
+    # explicit byte limits (MaxStdoutBytes, MaxStderrBytes) until both pipes reach EOF, under one
+    # deadline for the whole invocation. A timeout or an exceeded output limit stops the process
+    # tree started by this call, abandons the pipes and returns a controlled failure without
+    # partial output. Replacement objects are disabled for every git process, so object reads
+    # always return the objects the declared commit really references.
     param(
         [string[]]$Arguments,
         [int]$TimeoutMs = $script:GitTimeoutMs,
@@ -263,57 +286,76 @@ function Invoke-Git {
     $startInfo.EnvironmentVariables['GIT_TERMINAL_PROMPT'] = '0'
     $startInfo.EnvironmentVariables['GIT_OPTIONAL_LOCKS'] = '0'
     $startInfo.EnvironmentVariables['GCM_INTERACTIVE'] = 'never'
+    $startInfo.EnvironmentVariables['GIT_NO_REPLACE_OBJECTS'] = '1'
 
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $startInfo
     [void]$process.Start()
     $startedAt = [DateTime]::Now
     try { $startedAt = $process.StartTime } catch { }
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
     $process.StandardInput.Close()
-    $errorTask = $process.StandardError.ReadToEndAsync()
-    $outputStream = New-Object System.IO.MemoryStream
-    $outputTask = $process.StandardOutput.BaseStream.CopyToAsync($outputStream)
 
-    $timedOut = $false
-    if (-not $process.WaitForExit($TimeoutMs)) {
-        $timedOut = $true
+    $collectors = @(
+        [pscustomobject]@{ Name = 'stdout'; Stream = $process.StandardOutput.BaseStream; Limit = $script:MaxStdoutBytes; Buffer = (New-Object byte[] 65536); Data = (New-Object System.IO.MemoryStream); Task = $null; Done = $false },
+        [pscustomobject]@{ Name = 'stderr'; Stream = $process.StandardError.BaseStream; Limit = $script:MaxStderrBytes; Buffer = (New-Object byte[] 65536); Data = (New-Object System.IO.MemoryStream); Task = $null; Done = $false }
+    )
+    foreach ($collector in $collectors) { $collector.Task = $collector.Stream.ReadAsync($collector.Buffer, 0, $collector.Buffer.Length) }
+
+    $failure = $null   # $null, 'timeout' or the name of the stream that exceeded its limit
+    while ($null -eq $failure) {
+        $active = @($collectors | Where-Object { -not $_.Done })
+        if ($active.Count -eq 0) { break }
+        $remaining = ($deadline - [DateTime]::UtcNow).TotalMilliseconds
+        if ($remaining -le 0) { $failure = 'timeout'; break }
+        $tasks = [System.Threading.Tasks.Task[]]@($active | ForEach-Object { $_.Task })
+        try { [void][System.Threading.Tasks.Task]::WaitAny($tasks, [int][Math]::Min($remaining, 250)) } catch { }
+        foreach ($collector in $active) {
+            if (-not $collector.Task.IsCompleted) { continue }
+            $count = 0
+            if (-not $collector.Task.IsFaulted -and -not $collector.Task.IsCanceled) { $count = $collector.Task.Result }
+            if ($count -le 0) { $collector.Done = $true; continue }
+            if ($collector.Data.Length + $count -gt $collector.Limit) { $failure = $collector.Name; break }
+            $collector.Data.Write($collector.Buffer, 0, $count)
+            $collector.Task = $collector.Stream.ReadAsync($collector.Buffer, 0, $collector.Buffer.Length)
+        }
+    }
+    if ($null -eq $failure) {
+        $remaining = [int][Math]::Max(1, ($deadline - [DateTime]::UtcNow).TotalMilliseconds)
+        if (-not $process.WaitForExit($remaining)) { $failure = 'timeout' }
+    }
+    if ($null -ne $failure) {
         Stop-ProcessTree -RootProcessId $process.Id -NotBefore $startedAt
         [void]$process.WaitForExit($script:StreamGraceMs)
-    }
-
-    $streamsComplete = $false
-    try {
-        $tasks = [System.Threading.Tasks.Task[]]@($outputTask, $errorTask)
-        $streamsComplete = [System.Threading.Tasks.Task]::WaitAll($tasks, $script:StreamGraceMs)
-    } catch {
-        $streamsComplete = $false
-    }
-    if (-not $streamsComplete) {
         # Abandon the pipes; a surviving holder must not block the export.
-        try { $process.StandardOutput.Dispose() } catch { }
-        try { $process.StandardError.Dispose() } catch { }
+        foreach ($collector in $collectors) { try { $collector.Stream.Dispose() } catch { } }
     }
 
-    $errorText = ''
-    if ($errorTask.IsCompleted -and -not $errorTask.IsFaulted -and -not $errorTask.IsCanceled) { $errorText = $errorTask.Result }
-    $bytes = $outputStream.ToArray()
     $exitCode = -1
     if ($process.HasExited) { $exitCode = $process.ExitCode }
     $process.Dispose()
+    $bytes = $collectors[0].Data.ToArray()
+    $errorText = $script:Utf8NoBom.GetString($collectors[1].Data.ToArray())
+    $timedOut = ($failure -eq 'timeout')
     if ($timedOut) {
         $exitCode = -1
+        $bytes = New-Object byte[] 0
         $errorText = 'timeout after ' + $TimeoutMs + ' ms (process tree stopped)'
-    } elseif (-not $streamsComplete) {
-        $exitCode = -2
-        $errorText = 'output collection did not finish within ' + $script:StreamGraceMs + ' ms'
+    } elseif ($null -ne $failure) {
+        $exitCode = -3
+        $bytes = New-Object byte[] 0
+        $limit = $collectors[0].Limit
+        if ($failure -eq 'stderr') { $limit = $collectors[1].Limit }
+        $errorText = $failure + ' exceeded the limit of ' + $limit + ' bytes (process tree stopped)'
     }
 
     return [pscustomobject]@{
-        ExitCode = $exitCode
-        TimedOut = $timedOut
-        Bytes    = $bytes
-        Text     = $script:Utf8NoBom.GetString($bytes)
-        Error    = $errorText
+        ExitCode            = $exitCode
+        TimedOut            = $timedOut
+        OutputLimitExceeded = ($null -ne $failure -and -not $timedOut)
+        Bytes               = $bytes
+        Text                = $script:Utf8NoBom.GetString($bytes)
+        Error               = $errorText
     }
 }
 
@@ -446,6 +488,23 @@ function Get-RepositoryPathIdentity {
     return $clean.TrimEnd('/')
 }
 
+function Get-LocalRepositoryIdentity {
+    # Local, UNC or file-URI path: only the leaf name is exported, '.git' removed. A leaf with
+    # characters outside a conservative set is ambiguous and exported generically.
+    param([string]$Path)
+    $leaf = (($Path.TrimEnd('\', '/')) -split '[\\/]')[-1]
+    if ($leaf.EndsWith('.git')) { $leaf = $leaf.Substring(0, $leaf.Length - 4) }
+    if ($leaf -notmatch '^[A-Za-z0-9._ -]+$') { return 'local-path:unnamed' }
+    return 'local-path:' + $leaf
+}
+
+function Test-UtcTimestamp {
+    param([string]$Value)
+    if ($Value -notmatch $script:TimestampPattern) { return $false }
+    $parsed = [DateTime]::MinValue
+    return [DateTime]::TryParseExact($Value, 'yyyy-MM-ddTHH:mm:ssZ', [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AdjustToUniversal, [ref]$parsed)
+}
+
 function Get-NormalizedRemoteIdentity {
     # Exported identity of the remote, in this fixed order:
     #   1. helper and double-colon transports (ext::, fd::, ...) -> 'other-transport'
@@ -458,9 +517,21 @@ function Get-NormalizedRemoteIdentity {
     param([string]$Url)
     $value = $Url.Trim()
     if ($value -match '^[A-Za-z][A-Za-z0-9+.-]*::') { return 'other-transport' }
-    if ($value -match '^[A-Za-z]:[\\/]' -or $value -match '^\\\\' -or $value -match '^file:' -or $value -match '^[\\/]') {
-        $leaf = Split-Path -Leaf (($value -replace '^file:/*', '').TrimEnd('\', '/'))
-        return 'local-path:' + $leaf
+    if ($value -match '^file:') {
+        # File URI: must be a valid absolute file URI. .NET Framework keeps '?' inside
+        # LocalPath for file URIs, so the escaped path is cut at the first '?' or '#' before it
+        # is unescaped; an encoded '?' or '#' inside the name then fails the safe-leaf check.
+        $uri = $null
+        if (-not [System.Uri]::TryCreate($value, [System.UriKind]::Absolute, [ref]$uri) -or -not $uri.IsFile) { return 'other-transport' }
+        $escaped = $value.Substring(5)
+        $cut = $escaped.IndexOfAny([char[]]@('?', '#'))
+        if ($cut -ge 0) { $escaped = $escaped.Substring(0, $cut) }
+        $unescaped = $null
+        try { $unescaped = [System.Uri]::UnescapeDataString($escaped) } catch { return 'other-transport' }
+        return Get-LocalRepositoryIdentity $unescaped
+    }
+    if ($value -match '^[A-Za-z]:[\\/]' -or $value -match '^\\\\' -or $value -match '^[\\/]') {
+        return Get-LocalRepositoryIdentity $value
     }
     if ($value -match '^(https?|ssh|git|ftps?)://') {
         $uri = $null
@@ -518,9 +589,13 @@ function ConvertTo-CanonicalSourceText {
     # and with exactly one trailing LF. The generator writes it and the validator recomputes it
     # from the Git blob at the declared commit.
     param([byte[]]$Bytes)
+    # Raw blob bytes stay authoritative for Git Blob, SHA256 and Bytes; this canonical text is
+    # used only for the embedded body. CRLF becomes LF; a lone CR is not normalized and is
+    # refused at generation time (Get-CommitSource). Trailing LFs collapse to exactly one.
     $text = $script:Utf8NoBom.GetString($Bytes)
     if ($text.Length -gt 0 -and $text[0] -eq [char]0xFEFF) { $text = $text.Substring(1) }
-    if (-not $text.EndsWith("`n")) { $text += "`n" }
+    $text = $text.Replace("`r`n", "`n")
+    $text = $text.TrimEnd([char]10) + "`n"
     return $text
 }
 
@@ -681,13 +756,16 @@ function Get-PreviousSnapshot {
     # the comparison NOT_AVAILABLE; it never blocks the creation of the new snapshot.
     param([string]$Head)
     $result = [pscustomobject]@{ Commit = $null; Status = 'NOT_AVAILABLE (no previous CURRENT evidence)'; Files = @(); Truncated = $false }
-    if (-not (Test-Path -LiteralPath $script:CurrentDir -PathType Container)) { return $result }
-    if (@(Get-ChildItem -LiteralPath $script:CurrentDir -Force).Count -eq 0) { return $result }
+    # Every probe of the previous CURRENT (existence, enumeration, emptiness, validation) runs in
+    # this one guarded block; an unreadable predecessor only makes the comparison unavailable.
+    # Publication later moves CURRENT through the normal fail-closed path.
     $validation = $null
     try {
+        if (-not (Test-Path -LiteralPath $script:CurrentDir -PathType Container)) { return $result }
+        if (@(Get-ChildItem -LiteralPath $script:CurrentDir -Force -ErrorAction Stop).Count -eq 0) { return $result }
         $validation = Test-EvidenceSet -Directory $script:CurrentDir
     } catch {
-        $validation = [pscustomobject]@{ Problems = @('validation threw: ' + (Get-SafeErrorText $_.Exception.Message)); Commit = $null; DeclaredBranch = $null }
+        $validation = [pscustomobject]@{ Problems = @('could not be inspected: ' + (Get-SafeErrorText $_.Exception.Message)); Commit = $null; DeclaredBranch = $null }
     }
     if ($validation.Problems.Count -gt 0) {
         Write-Step 'Previous CURRENT' ('not a valid snapshot (' + $validation.Problems.Count + ' problem(s)); comparison NOT_AVAILABLE')
@@ -741,8 +819,13 @@ function Get-CommitSource {
     $exists = Invoke-Git -Arguments @('cat-file', '-e', $spec)
     if ($exists.ExitCode -ne 0) { Stop-Blocked ("mandatory source '{0}' is missing at Snapshot Commit {1}" -f $RelativePath, $Commit) }
     $blobId = Get-GitText -Arguments @('rev-parse', '--verify', $spec) -What ('rev-parse ' + $RelativePath)
+    # Size from the object database before the content is read.
+    $size = Get-GitText -Arguments @('cat-file', '-s', $spec) -What ('cat-file -s ' + $RelativePath)
+    if ([int64]$size -gt $script:MaxSourceBytes) {
+        Stop-Blocked ("mandatory source '{0}' exceeds the size limit of {1} bytes" -f $RelativePath, $script:MaxSourceBytes)
+    }
     $content = Invoke-Git -Arguments @('cat-file', 'blob', $spec)
-    if ($content.ExitCode -ne 0) { Stop-Blocked ("mandatory source '{0}' could not be read at Snapshot Commit" -f $RelativePath) }
+    if ($content.ExitCode -ne 0) { Stop-Blocked ("mandatory source '{0}' could not be read at Snapshot Commit: {1}" -f $RelativePath, (Get-SafeErrorText $content.Error)) }
     if ($content.Bytes.Length -eq 0) { Stop-Blocked ("mandatory source '{0}' is empty" -f $RelativePath) }
     if ($content.Bytes.Length -gt $script:MaxSourceBytes) {
         Stop-Blocked ("mandatory source '{0}' exceeds the size limit of {1} bytes" -f $RelativePath, $script:MaxSourceBytes)
@@ -752,6 +835,9 @@ function Get-CommitSource {
         Stop-Blocked ("mandatory source '{0}' is not readable in the working tree" -f $RelativePath)
     }
     $text = ConvertTo-CanonicalSourceText $content.Bytes
+    if ($text.Contains("`r")) {
+        Stop-Blocked ("mandatory source '{0}' contains a bare carriage return; only LF or CRLF line endings are supported" -f $RelativePath)
+    }
     $secret = Test-SecretPatterns -Text $text -Label $RelativePath
     if ($secret) { Stop-Blocked $secret }
     if ([regex]::IsMatch($text, '(?m)' + $script:MarkerPattern)) {
@@ -1122,16 +1208,23 @@ function Test-EvidenceSet {
     }
     if ($problems.Count -gt 0) { return [pscustomobject]@{ Problems = $problems; Commit = $null; DeclaredBranch = $null; Hashes = $hashes; Fingerprint = $null } }
 
+    # Phase 1: size preflight from file metadata only. Nothing is hashed or read before it passes.
+    $totalBytes = 0
+    foreach ($entry in $entries) {
+        $totalBytes += $entry.Length
+        $limit = $script:MaxEvidenceFileBytes[$entry.Name]
+        if ($entry.Length -gt $limit) { $problems += ("{0} exceeds the size limit of {1} bytes" -f $entry.Name, $limit) }
+    }
+    if ($totalBytes -gt $script:MaxTotalBytes) { $problems += ('evidence set exceeds the size limit of ' + $script:MaxTotalBytes + ' bytes') }
+    if ($problems.Count -gt 0) { return [pscustomobject]@{ Problems = $problems; Commit = $null; DeclaredBranch = $null; Hashes = $hashes; Fingerprint = $null } }
+
+    # Phase 2: content validation.
     $evidencePath = Join-Path $Directory 'VECTOR_EVIDENCE.md'
     $projectStatePath = Join-Path $Directory 'PROJECT_STATE.md'
     $governancePath = Join-Path $Directory 'GOVERNANCE_CONTEXT.md'
-    $totalBytes = 0
     foreach ($name in $script:FinalFiles) {
-        $path = Join-Path $Directory $name
-        $hashes[$name] = Get-FileSha256 $path
-        $totalBytes += (Get-Item -LiteralPath $path).Length
+        $hashes[$name] = Get-FileSha256 (Join-Path $Directory $name)
     }
-    if ($totalBytes -gt $script:MaxTotalBytes) { $problems += ('evidence set exceeds the size limit of ' + $script:MaxTotalBytes + ' bytes') }
 
     $evidenceText = Read-Utf8File $evidencePath
     $governanceText = Read-Utf8File $governancePath
@@ -1188,6 +1281,28 @@ function Test-EvidenceSet {
     if ($sourcePath -ne $script:ProjectStateSource) { $problems += ("VECTOR_EVIDENCE.md: PROJECT_STATE Source Path is '{0}', expected {1}" -f $sourcePath, $script:ProjectStateSource) }
 
     $declaredBlob = & $unique 'Exported PROJECT_STATE Git Blob'
+
+    # Remaining contract fields. Informational content (Repository value, Baseline Ref name,
+    # Recent Commits, Changed Files section, Export File lines) is format-checked or ignored.
+    $formatVersion = & $unique 'Format Version'
+    if ($null -ne $formatVersion -and $formatVersion -ne $script:FormatVersion) { $problems += ("VECTOR_EVIDENCE.md: Format Version is '{0}', expected {1}" -f $formatVersion, $script:FormatVersion) }
+    $kind = & $unique 'Evidence Kind'
+    if ($null -ne $kind -and $kind -ne 'VECTOR_EVIDENCE') { $problems += ("VECTOR_EVIDENCE.md: Evidence Kind is '{0}', expected VECTOR_EVIDENCE" -f $kind) }
+    $generator = & $unique 'Generator'
+    $expectedGenerator = $script:GeneratorPath + ' (format ' + $script:FormatVersion + ')'
+    if ($null -ne $generator -and $generator -ne $expectedGenerator) { $problems += ("VECTOR_EVIDENCE.md: Generator is '{0}', expected '{1}'" -f $generator, $expectedGenerator) }
+    $repository = & $unique 'Repository'
+    if ($null -ne $repository -and $repository -notmatch $script:RepositoryIdentityPattern) { $problems += 'VECTOR_EVIDENCE.md: Repository is not a normalized repository identity' }
+    $baselineRefName = & $unique 'Baseline Ref'
+    if ($null -ne $baselineRefName -and $baselineRefName.Length -eq 0) { $problems += 'VECTOR_EVIDENCE.md: Baseline Ref is empty' }
+    $generatedUtc = & $unique 'Generated (UTC)'
+    if ($null -ne $generatedUtc -and -not (Test-UtcTimestamp $generatedUtc)) { $problems += ("VECTOR_EVIDENCE.md: Generated (UTC) '{0}' is not a canonical UTC timestamp (yyyy-MM-ddTHH:mm:ssZ)" -f $generatedUtc) }
+    $remoteEvidence = & $unique 'Remote Evidence'
+    if ($null -ne $remoteEvidence -and $script:RemoteEvidenceValues -notcontains $remoteEvidence) { $problems += 'VECTOR_EVIDENCE.md: Remote Evidence is not one of the supported status values' }
+    $workingTree = & $unique 'Working Tree'
+    if ($null -ne $workingTree -and $workingTree -ne 'CLEAN') { $problems += ("VECTOR_EVIDENCE.md: Working Tree is '{0}', expected CLEAN" -f $workingTree) }
+    $synchronization = & $unique 'Synchronization'
+    if ($null -ne $synchronization -and $synchronization -ne 'LOCAL_HEAD_EQUALS_BASELINE_REF') { $problems += ("VECTOR_EVIDENCE.md: Synchronization is '{0}', expected LOCAL_HEAD_EQUALS_BASELINE_REF" -f $synchronization) }
     $problems += @($fieldProblems)
     $exportedBlob = Invoke-Git -Arguments @('hash-object', '--no-filters', '--', $projectStatePath)
     if ($exportedBlob.ExitCode -ne 0) {
@@ -1221,7 +1336,8 @@ function Test-EvidenceSet {
         if ($header['Snapshot ID'] -ne $snapshotId) { $problems += 'GOVERNANCE_CONTEXT.md: Snapshot ID differs from VECTOR_EVIDENCE.md' }
         if ([string]$header['Source Count'] -ne [string]$script:GovernanceSources.Count) { $problems += ("GOVERNANCE_CONTEXT.md: Source Count is '{0}', expected {1}" -f $header['Source Count'], $script:GovernanceSources.Count) }
         if ($header['Generator'] -ne $script:GeneratorPath) { $problems += ("GOVERNANCE_CONTEXT.md: Generator is '{0}', expected {1}" -f $header['Generator'], $script:GeneratorPath) }
-        if ($header['Generated (UTC)'] -notmatch $script:TimestampPattern) { $problems += 'GOVERNANCE_CONTEXT.md: Generated (UTC) is not a UTC timestamp' }
+        if (-not (Test-UtcTimestamp $header['Generated (UTC)'])) { $problems += 'GOVERNANCE_CONTEXT.md: Generated (UTC) is not a canonical UTC timestamp' }
+        if ($null -ne $generatedUtc -and $header['Generated (UTC)'] -ne $generatedUtc) { $problems += 'GOVERNANCE_CONTEXT.md: Generated (UTC) differs from VECTOR_EVIDENCE.md' }
         $sources = Test-GovernanceSections -Parsed $parsed -Commit $commit
         $problems += $sources.Problems
     }

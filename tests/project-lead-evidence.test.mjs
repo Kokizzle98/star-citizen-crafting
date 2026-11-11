@@ -9,6 +9,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  truncateSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir, userInfo } from 'node:os'
@@ -98,7 +99,7 @@ const fixtureExcluded = {
 const fixtures = []
 
 // Paths deliberately contain spaces: "work tree" and "evidence out".
-const createFixture = ({ branch = 'develop', omit = [], sources = fixtureSources } = {}) => {
+const createFixture = ({ branch = 'develop', omit = [], sources = fixtureSources, config = [] } = {}) => {
   const root = mkdtempSync(path.join(tmpdir(), 'vector-evidence-'))
   const origin = path.join(root, 'origin.git')
   const work = path.join(root, 'work tree')
@@ -107,6 +108,7 @@ const createFixture = ({ branch = 'develop', omit = [], sources = fixtureSources
   mkdirSync(out)
   git(root, ['init', '-q', '--bare', origin])
   git(work, ['init', '-q'])
+  for (const [key, value] of config) git(work, ['config', key, value])
   git(work, ['checkout', '-q', '-b', branch])
   git(work, ['remote', 'add', 'origin', origin])
   const files = { ...sources, ...fixtureExcluded }
@@ -709,7 +711,7 @@ test('a failed fetch from a local path containing the username exports only a ge
   git(fixture.work, ['remote', 'set-url', 'origin', privatePath])
   const run = runGenerator(fixture)
   const evidence = assertGenericCachedStatus(fixture, run, [privatePath, `Users\\${username}`, `Users/${username}`])
-  assert.equal(field(evidence, 'Repository'), `local-path:${path.basename(privatePath)}`)
+  assert.equal(field(evidence, 'Repository'), `local-path:${path.basename(privatePath, '.git')}`)
   assert.match(run.text, /LOCALLY_CACHED \(fetch failed\) \[/)
   assert.ok(!run.text.includes(privatePath), 'console diagnostic must redact the local path')
 })
@@ -720,7 +722,7 @@ test('a failed fetch from a UNC path exports only a generic status', { skip }, (
   git(fixture.work, ['remote', 'set-url', 'origin', unc])
   const run = runGenerator(fixture)
   const evidence = assertGenericCachedStatus(fixture, run, [unc, 'localhost', 'vector-nonexistent-share'])
-  assert.equal(field(evidence, 'Repository'), 'local-path:repo.git')
+  assert.equal(field(evidence, 'Repository'), 'local-path:repo')
   assert.ok(!run.text.includes('vector-nonexistent-share'), 'console diagnostic must redact the UNC path')
 })
 
@@ -1090,4 +1092,295 @@ test('concurrent exports on the same output root are serialized by an exclusive 
   assertPass(later)
   assert.match(later.text, /Output-root lock\s+ACQUIRED/)
   assertPass(runGenerator(fixture, ['-ValidateOnly']))
+})
+
+
+// --------------------------------------------------------------------------
+// Third review finding 1: replacement objects never substitute governance content
+// --------------------------------------------------------------------------
+
+test('replacement objects cannot substitute governance content in generated or validated evidence', { skip }, () => {
+  const fixture = createFixture()
+  const originalBlob = git(fixture.work, ['rev-parse', 'HEAD:AGENTS.md']).trim()
+  const replacementPath = path.join(fixture.root, 'replacement.md')
+  writeFileSync(replacementPath, '# Agents\n\nREPLACED_POLICY_TEXT\n')
+  const replacementBlob = git(fixture.work, ['hash-object', '-w', replacementPath]).trim()
+  git(fixture.work, ['replace', originalBlob, replacementBlob])
+  // Precondition: an ordinary Git read observes the replacement while the tree still names the original blob.
+  assert.match(git(fixture.work, ['cat-file', 'blob', 'HEAD:AGENTS.md']), /REPLACED_POLICY_TEXT/)
+  assert.equal(git(fixture.work, ['rev-parse', 'HEAD:AGENTS.md']).trim(), originalBlob)
+  const originalBytes = git(fixture.work, ['--no-replace-objects', 'cat-file', 'blob', originalBlob], { buffer: true })
+  const replacementBytes = readFileSync(replacementPath)
+
+  assertPass(runGenerator(fixture))
+  const context = readCurrent(fixture)['GOVERNANCE_CONTEXT.md']
+  assert.ok(context.includes('AGENTS_FIXTURE_MARKER'), 'generator must embed the original object')
+  assert.ok(!context.includes('REPLACED_POLICY_TEXT'), 'replacement must not enter generated evidence')
+  assert.match(context, new RegExp(`^Repository Path: AGENTS\\.md\\n(?:.*\\n){2}SHA256: ${sha256(originalBytes)}\\nBytes: ${originalBytes.length}$`, 'm'))
+
+  // A set that is consistent with the replacement (body, SHA256, Bytes) but keeps the original
+  // blob id would pass if validation honored replacement objects.
+  tamperGovernance(fixture.current, text =>
+    text
+      .replace('AGENTS_FIXTURE_MARKER', 'REPLACED_POLICY_TEXT')
+      .replace(`SHA256: ${sha256(originalBytes)}\nBytes: ${originalBytes.length}`, `SHA256: ${sha256(replacementBytes)}\nBytes: ${replacementBytes.length}`),
+  )
+  assertBlocked(runValidate(fixture), /section 'AGENTS\.md': (declared SHA256 differs|declared Bytes differ|embedded content differs)/)
+})
+
+// --------------------------------------------------------------------------
+// Third review finding 2: file URIs export only a safe leaf name
+// --------------------------------------------------------------------------
+
+test('file URIs export only the safe leaf name without query, fragment, path or username', { skip }, () => {
+  const fixture = createFixture()
+  const username = userInfo().username
+  const cases = [
+    ['file:///C:/vector-none/team/repo.git?token=q-secret', 'local-path:repo'],
+    ['file:///C:/vector-none/team/repo.git#frag-secret', 'local-path:repo'],
+    ['file:///C:/vector-none/team/repo.git?token=q-secret#frag-secret', 'local-path:repo'],
+    ['file:///C:/vector-none/team/repo.git?token=%71-secret#%66rag-secret', 'local-path:repo'],
+    ['file:///C:/vector-none/team/repo.git%3Ftoken=q-secret', 'local-path:unnamed'],
+    [`file:///C:/Users/${username}/vector-none/repo.git?token=q-secret`, 'local-path:repo'],
+    ['file://localhost/vector-none-share/team/repo.git?token=q-secret#frag-secret', 'local-path:repo'],
+  ]
+  for (const [url, expected] of cases) {
+    git(fixture.work, ['remote', 'set-url', 'origin', url])
+    const run = runGenerator(fixture)
+    assertPass(run)
+    const evidence = readCurrent(fixture)['VECTOR_EVIDENCE.md']
+    assert.equal(field(evidence, 'Repository'), expected, url)
+    assert.equal(field(evidence, 'Remote Evidence'), 'LOCALLY_CACHED (fetch failed)', url)
+    for (const value of ['q-secret', 'frag-secret', '%71-secret', '%66rag', 'token', 'vector-none', username]) {
+      assert.ok(!evidence.includes(value), `${url}: evidence contains ${value}`)
+    }
+    for (const value of ['q-secret', 'frag-secret', '%71-secret', 'vector-none']) {
+      assert.ok(!run.text.includes(value), `${url}: console contains ${value}`)
+    }
+  }
+})
+
+// --------------------------------------------------------------------------
+// Third review finding 3: captured stdout and stderr are bounded
+// --------------------------------------------------------------------------
+
+test('captured stdout beyond its limit stops the invocation with a controlled failure', { skip }, () => {
+  const fixture = createFixture()
+  const messagePath = path.join(fixture.root, 'huge-message.txt')
+  writeFileSync(messagePath, `fixture: ${'y'.repeat(3 * 1024 * 1024)}\n`)
+  writeFileSync(path.join(fixture.work, 'lib', 'app.ts'), '// changed\n')
+  git(fixture.work, ['add', '-A'])
+  git(fixture.work, ['commit', '-q', '-F', messagePath])
+  git(fixture.work, ['push', '-q', 'origin', 'develop'])
+  const started = Date.now()
+  const run = runGenerator(fixture)
+  assert.ok(Date.now() - started < 60_000, 'must return within a bounded interval')
+  assertBlocked(run, /git log failed \(exit -3\): stdout exceeded the limit of 2097152 bytes \(process tree stopped\)/)
+  assert.ok(!run.text.includes('y'.repeat(1000)), 'oversized output must not reach the console')
+  assert.deepEqual(readdirSync(fixture.current), [])
+})
+
+test('captured stderr beyond its limit stops the helper tree and the fetch reports a generic failure', { skip }, async () => {
+  const fixture = createFixture()
+  const marker = `noisy-stderr-${path.basename(fixture.root)}`
+  const noisyScript = path.join(fixture.root, `${marker}.ps1`)
+  writeFileSync(noisyScript, "[Console]::Error.Write('x' * 300000); [Console]::Error.Flush(); Start-Sleep -Seconds 120\n")
+  const command = `powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ${noisyScript.replace(/\\/g, '/').replace(/ /g, '% ')} %S`
+  git(fixture.work, ['config', 'protocol.ext.allow', 'always'])
+  git(fixture.work, ['remote', 'set-url', 'origin', `ext::${command}`])
+  try {
+    const started = Date.now()
+    const run = runGenerator(fixture, ['-FetchTimeoutSeconds', '60'])
+    const elapsed = Date.now() - started
+    assert.ok(elapsed < 45_000, `export took ${elapsed} ms; the output bound, not the 60 s timeout, must end the fetch`)
+    assertPass(run)
+    assert.match(run.text, /LOCALLY_CACHED \(fetch failed\) \[stderr exceeded the limit of 65536 bytes \(process tree stopped\)\]/)
+    const evidence = readCurrent(fixture)['VECTOR_EVIDENCE.md']
+    assert.equal(field(evidence, 'Remote Evidence'), 'LOCALLY_CACHED (fetch failed)')
+    assert.ok(!run.text.includes('x'.repeat(1000)) && !evidence.includes('x'.repeat(1000)), 'noisy output must not be copied')
+    await wait(500)
+    assert.equal(holderCount(marker), 0, 'helper process tree must have been stopped')
+  } finally {
+    spawnSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${marker}*' -and $_.ProcessId -ne $PID } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }`])
+  }
+})
+
+// --------------------------------------------------------------------------
+// Third review finding 4: canonical governance text is LF-normalized
+// --------------------------------------------------------------------------
+
+test('governance sources with CRLF, BOM or irregular trailing newlines are embedded in canonical LF form', { skip }, () => {
+  const sources = {
+    ...fixtureSources,
+    'AGENTS.md': '# Agents\r\n\r\nAGENTS_FIXTURE_MARKER\r\n',
+    'docs/RULE_INDEX.md': '\uFEFF# Rule Index\r\n\r\nRULE_INDEX_FIXTURE_MARKER\r\n',
+    'docs/governance/AI_OPERATING_MODEL.md': '# Operating Model\n\nOPERATING_MODEL_FIXTURE_MARKER',
+    'docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md': '# DB Environment\n\nDB_ENV_FIXTURE_MARKER\n\n\n',
+  }
+  const fixture = createFixture({ sources, config: [['core.autocrlf', 'false']] })
+  const raw = git(fixture.work, ['cat-file', 'blob', 'HEAD:AGENTS.md'], { buffer: true })
+  assert.ok(raw.includes(Buffer.from('\r\n')), 'precondition: the blob is stored with CRLF')
+
+  assertPass(runGenerator(fixture))
+  const contextBytes = readFileSync(path.join(fixture.current, 'GOVERNANCE_CONTEXT.md'))
+  assert.ok(!contextBytes.includes(0x0d), 'generated GOVERNANCE_CONTEXT.md must be LF only')
+  const context = contextBytes.toString('utf8')
+  assert.ok(context.includes('----- BEGIN CONTENT AGENTS.md -----\n# Agents\n\nAGENTS_FIXTURE_MARKER\n----- END CONTENT AGENTS.md -----'))
+  assert.ok(context.includes('----- BEGIN CONTENT docs/RULE_INDEX.md -----\n# Rule Index\n\nRULE_INDEX_FIXTURE_MARKER\n----- END CONTENT docs/RULE_INDEX.md -----'))
+  assert.ok(context.includes('OPERATING_MODEL_FIXTURE_MARKER\n----- END CONTENT docs/governance/AI_OPERATING_MODEL.md -----'))
+  assert.ok(context.includes('DB_ENV_FIXTURE_MARKER\n----- END CONTENT docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md -----'))
+  assert.ok(context.includes('HANDOVER_FIXTURE_MARKER\n----- END CONTENT docs/handover/VECTOR_RESTART_HANDOVER.md -----'))
+  // Metadata stays bound to the raw blob bytes.
+  assert.match(context, new RegExp(`^Repository Path: AGENTS\\.md\\n(?:.*\\n){2}SHA256: ${sha256(raw)}\\nBytes: ${raw.length}$`, 'm'))
+  assertPass(runValidate(fixture))
+
+  tamperGovernance(fixture.current, text => text.replace('AGENTS_FIXTURE_MARKER\n----- END', 'AGENTS_FIXTURE_MARKER changed\n----- END'))
+  assertBlocked(runValidate(fixture), /section 'AGENTS\.md': embedded content differs/)
+})
+
+test('a governance source with a bare carriage return is refused', { skip }, () => {
+  const fixture = createFixture({
+    sources: { ...fixtureSources, 'AGENTS.md': '# Agents\rAGENTS_FIXTURE_MARKER\n' },
+    config: [['core.autocrlf', 'false']],
+  })
+  assertBlocked(runGenerator(fixture), /mandatory source 'AGENTS\.md' contains a bare carriage return/)
+  assert.deepEqual(readdirSync(fixture.current), [])
+})
+
+// --------------------------------------------------------------------------
+// Third review finding 5: an unreadable predecessor is only unavailable
+// --------------------------------------------------------------------------
+
+const principal = () => `${process.env.USERDOMAIN}\\${process.env.USERNAME}`
+const icacls = (...args) => spawnSync('icacls', args, { encoding: 'utf8' })
+const removeDenies = fixture => {
+  for (const name of readdirSync(fixture.evidence)) {
+    const dir = path.join(fixture.evidence, name)
+    icacls(dir, '/remove:d', principal())
+    for (const file of finalFiles) if (existsSync(path.join(dir, file))) icacls(path.join(dir, file), '/remove:d', principal())
+  }
+}
+
+const assertPublishedWithoutPredecessor = (fixture, run) => {
+  assertPass(run)
+  assert.match(run.text, /Previous CURRENT\s+not a valid snapshot/)
+  assert.match(run.text, /NOTE: previous CURRENT: could not be inspected/)
+  const evidence = readCurrent(fixture)['VECTOR_EVIDENCE.md']
+  assert.equal(field(evidence, 'Status'), 'NOT_AVAILABLE (previous CURRENT is not a valid snapshot)')
+  assert.equal(field(evidence, 'Previous Snapshot Commit'), 'NONE')
+  assert.ok(!evidence.includes(fixture.root) && !evidence.includes(tmpdir()), 'no local path in evidence')
+  assert.deepEqual(readdirSync(fixture.current).sort(), [...finalFiles].sort())
+  assertPass(runValidate(fixture))
+}
+
+test('a previous CURRENT that cannot be enumerated makes the comparison unavailable and the export still publishes', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const deny = icacls(fixture.current, '/deny', `${principal()}:(RD)`)
+  assert.equal(deny.status, 0, deny.stdout + deny.stderr)
+  let run
+  try {
+    assert.throws(() => readdirSync(fixture.current), /EPERM|EACCES/, 'precondition: CURRENT cannot be listed')
+    run = runGenerator(fixture)
+  } finally {
+    removeDenies(fixture)
+  }
+  assertPublishedWithoutPredecessor(fixture, run)
+})
+
+test('a previous CURRENT whose evidence cannot be read makes the comparison unavailable and the export still publishes', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const target = path.join(fixture.current, 'VECTOR_EVIDENCE.md')
+  const deny = icacls(target, '/deny', `${principal()}:(R)`)
+  assert.equal(deny.status, 0, deny.stdout + deny.stderr)
+  let run
+  try {
+    assert.throws(() => readFileSync(target), /EPERM|EACCES/, 'precondition: the file cannot be read')
+    run = runGenerator(fixture)
+  } finally {
+    removeDenies(fixture)
+  }
+  assertPublishedWithoutPredecessor(fixture, run)
+})
+
+// --------------------------------------------------------------------------
+// Third review finding 6: size preflight before any content is read
+// --------------------------------------------------------------------------
+
+test('oversized evidence files are rejected from metadata before any content is read', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const saved = saveDir(fixture.current)
+  const grow = (name, size) => truncateSync(path.join(fixture.current, name), size)
+  const contentPhase = /SHA256 differs|size differs|missing field|duplicated field|unexpected text|Snapshot|Branch|Evidence Status/
+  const cases = [
+    ['oversized VECTOR_EVIDENCE.md', () => grow('VECTOR_EVIDENCE.md', 512 * 1024 + 1), /VECTOR_EVIDENCE\.md exceeds the size limit of 524288 bytes/],
+    ['oversized PROJECT_STATE.md', () => grow('PROJECT_STATE.md', 512 * 1024 + 1), /PROJECT_STATE\.md exceeds the size limit of 524288 bytes/],
+    ['oversized GOVERNANCE_CONTEXT.md', () => grow('GOVERNANCE_CONTEXT.md', 4 * 1024 * 1024 + 1), /GOVERNANCE_CONTEXT\.md exceeds the size limit of 4194304 bytes/],
+    [
+      'combined size over the total limit',
+      () => {
+        grow('VECTOR_EVIDENCE.md', 500 * 1024)
+        grow('PROJECT_STATE.md', 500 * 1024)
+        grow('GOVERNANCE_CONTEXT.md', 3.5 * 1024 * 1024)
+      },
+      /evidence set exceeds the size limit of 4194304 bytes/,
+    ],
+  ]
+  for (const [name, mutate, pattern] of cases) {
+    restoreDir(fixture.current, saved)
+    mutate()
+    const run = runValidate(fixture)
+    assert.notEqual(run.status, 0, `${name}: expected BLOCKED\n${run.text}`)
+    assert.match(run.text, pattern, name)
+    // Content-phase checks were never reached: no hash, field or grammar problem is reported.
+    const causes = run.text.split('\n').filter(line => line.startsWith('CAUSE: ') && !line.includes('validation failed with'))
+    assert.ok(causes.every(line => !contentPhase.test(line)), `${name}: content phase was reached\n${run.text}`)
+    if (name.startsWith('combined')) assert.doesNotMatch(run.text, /exceeds the size limit of 524288/)
+  }
+  restoreDir(fixture.current, saved)
+  assertPass(runValidate(fixture))
+})
+
+test('a near-limit PROJECT_STATE source is still exported and validated', { skip }, () => {
+  const big = `# Project State\n\n${'near limit line\n'.repeat(31_000)}`
+  const fixture = createFixture({ sources: { ...fixtureSources, 'docs/PROJECT_STATE.md': big } })
+  assertPass(runGenerator(fixture))
+  assert.ok(statSync(path.join(fixture.current, 'PROJECT_STATE.md')).size > 490_000)
+  assertPass(runValidate(fixture))
+})
+
+// --------------------------------------------------------------------------
+// Third review finding 7: freshness and safety fields are required and consistent
+// --------------------------------------------------------------------------
+
+test('required freshness and safety fields are validated exactly once and the timestamps agree', { skip }, () => {
+  const fixture = createFixture()
+  assertPass(runGenerator(fixture))
+  const saved = saveDir(fixture.current)
+  const setField = (label, value) => text => text.replace(new RegExp(`^${label}: .*$`, 'm'), `${label.replace(/\\/g, '')}: ${value}`)
+  const cases = []
+  for (const label of ['Generated \\(UTC\\)', 'Remote Evidence', 'Working Tree', 'Synchronization']) {
+    cases.push([`${label} missing`, text => text.replace(new RegExp(`^${label}: .*\\n`, 'm'), ''), new RegExp(`missing field '${label}'`)])
+    cases.push([`${label} duplicated`, text => text.replace(new RegExp(`^(${label}: .*)$`, 'm'), '$1\n$1'), new RegExp(`duplicated field '${label}'`)])
+  }
+  cases.push(['malformed timestamp', setField('Generated \\(UTC\\)', 'yesterday'), /Generated \(UTC\) 'yesterday' is not a canonical UTC timestamp/])
+  cases.push(['non-UTC timestamp', setField('Generated \\(UTC\\)', '2026-11-11T10:00:00+01:00'), /is not a canonical UTC timestamp/])
+  cases.push(['impossible date', setField('Generated \\(UTC\\)', '2026-13-45T10:00:00Z'), /is not a canonical UTC timestamp/])
+  cases.push(['timestamp differs from GOVERNANCE_CONTEXT', setField('Generated \\(UTC\\)', '2000-01-01T00:00:00Z'), /GOVERNANCE_CONTEXT\.md: Generated \(UTC\) differs from VECTOR_EVIDENCE\.md/])
+  cases.push(['unsupported Remote Evidence', setField('Remote Evidence', 'LIVE_GITHUB_ACCESS'), /Remote Evidence is not one of the supported status values/])
+  cases.push(['Remote Evidence with appended diagnostic', setField('Remote Evidence', 'LOCALLY_CACHED (fetch failed) [D:\\private\\repo]'), /Remote Evidence is not one of the supported status values/])
+  cases.push(['dirty Working Tree claim', setField('Working Tree', 'DIRTY'), /Working Tree is 'DIRTY', expected CLEAN/])
+  cases.push(['unsynchronized claim', setField('Synchronization', 'LOCAL_HEAD_BEHIND_BASELINE_REF'), /Synchronization is 'LOCAL_HEAD_BEHIND_BASELINE_REF', expected LOCAL_HEAD_EQUALS_BASELINE_REF/])
+  cases.push(['Repository with a query', setField('Repository', 'host.example/team/repo?token=abc'), /Repository is not a normalized repository identity/])
+  for (const [name, mutate, pattern] of cases) {
+    restoreDir(fixture.current, saved)
+    tamperEvidence(fixture.current, mutate)
+    const run = runValidate(fixture)
+    assert.notEqual(run.status, 0, `${name}: expected BLOCKED\n${run.text}`)
+    assert.match(run.text, pattern, name)
+  }
+  restoreDir(fixture.current, saved)
+  assertPass(runValidate(fixture))
 })
