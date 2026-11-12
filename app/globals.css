@@ -1525,6 +1525,40 @@
   margin-top: 1.25rem;
 }
 
+.fabricator-set {
+  margin-top: 1.25rem;
+}
+
+.fabricator-set__list {
+  display: grid;
+  gap: .5rem;
+  margin: .75rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fabricator-set__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem .75rem;
+  padding: .6rem .8rem;
+  border: 1px solid var(--line);
+  border-radius: .4rem;
+}
+
+.fabricator-set__slot {
+  min-width: 4.5rem;
+  color: var(--muted);
+  font-size: .8rem;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.fabricator-set__name {
+  flex: 1 1 12rem;
+}
+
 .fabricator-recipe__header {
   display: flex;
   gap: 1rem;

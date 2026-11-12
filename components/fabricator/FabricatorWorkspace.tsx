@@ -62,20 +62,30 @@ const SLOT_STATUS: Record<FabricatorSlotCraftability['status'], string> = {
   UNRESOLVED: 'Material nicht auflösbar',
 }
 
+/**
+ * Pure UI navigation state of an armor set (OD-FAB-UX-01): the overview of the
+ * variant's real components. It is never an item, blueprint, recipe,
+ * aggregated recipe or crafting job.
+ */
+const SET_OVERVIEW = 'SET'
+
 type Selection = {
   familyKey: string
   variantKey: string
-  slot: FabricatorArmorSlot | null
+  /** Armor: SET_OVERVIEW or a concrete slot; other families: the component's slot (null). */
+  slot: FabricatorArmorSlot | typeof SET_OVERVIEW | null
   /** Chosen blueprint index when the component has several; null until the user chooses. */
   blueprint: number | null
 }
 
 function initialSelection(family: FabricatorFamilyView): Selection {
   const variant = family.variants.find(v => v.isBase) ?? family.variants[0]
-  return { familyKey: family.key, variantKey: variant.variantKey, slot: variant.components[0].slot, blueprint: null }
+  const slot = family.kind === 'ARMOR_SET' ? SET_OVERVIEW : variant.components[0].slot
+  return { familyKey: family.key, variantKey: variant.variantKey, slot, blueprint: null }
 }
 
-function componentOf(variant: FabricatorVariantView, slot: FabricatorArmorSlot | null): FabricatorComponentView | null {
+function componentOf(variant: FabricatorVariantView, slot: Selection['slot']): FabricatorComponentView | null {
+  if (slot === SET_OVERVIEW) return null
   if (slot === null) return variant.components[0] ?? null
   return variant.components.find(component => component.slot === slot) ?? null
 }
@@ -255,6 +265,7 @@ function FabricatorDetail({ family, selection, onChange, catalog, recipeResults,
   crewAvailable: boolean
 }) {
   const variant = family.variants.find(v => v.variantKey === selection.variantKey) ?? family.variants[0]
+  const overview = family.kind === 'ARMOR_SET' && selection.slot === SET_OVERVIEW
   const component = componentOf(variant, selection.slot)
   const choices = component?.blueprints ?? []
   const blueprintIndex = choices.length === 1 ? choices[0] : selection.blueprint
@@ -271,9 +282,12 @@ function FabricatorDetail({ family, selection, onChange, catalog, recipeResults,
     : null
   const differs = (v: FabricatorVariantView) => v.components.some(c => c.functional === 'FUNCTIONALLY_DIFFERENT')
 
+  const nameOf = (c: FabricatorComponentView) => catalog.blueprints[c.blueprints[0]].productName ?? c.itemName ?? catalog.blueprints[c.blueprints[0]].tag
+
   function chooseVariant(next: FabricatorVariantView) {
-    const keepSlot = selection.slot !== null && next.components.some(c => c.slot === selection.slot)
-    onChange({ ...selection, variantKey: next.variantKey, slot: keepSlot ? selection.slot : next.components[0].slot, blueprint: null })
+    // Armor: a new variant / edition always opens its set overview first.
+    const slot = family.kind === 'ARMOR_SET' ? SET_OVERVIEW : next.components[0].slot
+    onChange({ ...selection, variantKey: next.variantKey, slot, blueprint: null })
   }
 
   return (
@@ -287,11 +301,11 @@ function FabricatorDetail({ family, selection, onChange, catalog, recipeResults,
           <dl className="fabricator-hero__meta">
             {family.variants.length > 1 && <><dt>Variante</dt><dd>{variantLabel(variant)}</dd></>}
             {productName && productName !== family.title && <><dt>Produkt</dt><dd>{productName}</dd></>}
-            {family.kind === 'ARMOR_SET' && <><dt>Komponente</dt><dd>{selection.slot ? FABRICATOR_SLOT_LABELS[selection.slot] : '—'}</dd></>}
+            {family.kind === 'ARMOR_SET' && <><dt>Komponente</dt><dd>{overview ? 'Rüstungsset' : selection.slot && selection.slot !== SET_OVERVIEW ? FABRICATOR_SLOT_LABELS[selection.slot] : '—'}</dd></>}
             <dt>Hersteller</dt><dd>{component?.manufacturer ?? family.manufacturer ?? <span className="fabricator-muted">Nicht angegeben</span>}</dd>
             <dt>Kategorie</dt><dd>{categoryLabel}{component?.subcategory ? ` · ${component.subcategory}` : ''}</dd>
             {component?.sizeLabel && <><dt>Größe</dt><dd>{component.sizeLabel}</dd></>}
-            <dt>Blueprint</dt><dd className="fabricator-tag">{blueprint ? blueprint.tag : choices.length > 1 ? 'Bitte auswählen' : '—'}</dd>
+            {!overview && <><dt>Blueprint</dt><dd className="fabricator-tag">{blueprint ? blueprint.tag : choices.length > 1 ? 'Bitte auswählen' : '—'}</dd></>}
           </dl>
           {component?.functional === 'FUNCTIONALLY_DIFFERENT' && (
             <p className="fabricator-notice fabricator-notice--warning" role="note">
@@ -325,6 +339,9 @@ function FabricatorDetail({ family, selection, onChange, catalog, recipeResults,
         <fieldset className="fabricator-choice">
           <legend>Komponente</legend>
           <div className="fabricator-choice__options">
+            <button type="button" aria-pressed={overview} onClick={() => onChange({ ...selection, slot: SET_OVERVIEW, blueprint: null })}>
+              Rüstungsset
+            </button>
             {family.slots.map(slot => {
               const present = variant.components.some(c => c.slot === slot)
               return (
@@ -357,10 +374,50 @@ function FabricatorDetail({ family, selection, onChange, catalog, recipeResults,
         </fieldset>
       )}
 
-      {blueprint
+      {overview
+        ? <SetOverview family={family} variant={variant} nameOf={nameOf} onSelect={slot => onChange({ ...selection, slot, blueprint: null })} />
+        : blueprint
         ? <RecipeSection recipeIndex={blueprint.recipe} catalog={catalog} result={recipeResults?.[blueprint.recipe] ?? null} crewAvailable={crewAvailable} />
         : <p className="fabricator-notice">{component ? 'Wähle einen Blueprint, um das Rezept zu sehen.' : 'Diese Komponente ist für die gewählte Variante nicht im Datensatz.'}</p>}
     </article>
+  )
+}
+
+/** Navigation only: the variant's real components, no recipe, no material sum, nothing synthesized. */
+function SetOverview({ family, variant, nameOf, onSelect }: {
+  family: FabricatorFamilyView
+  variant: FabricatorVariantView
+  nameOf: (component: FabricatorComponentView) => string
+  onSelect: (slot: FabricatorArmorSlot) => void
+}) {
+  return (
+    <section className="fabricator-set" aria-labelledby="fabricator-set-title">
+      <h3 id="fabricator-set-title">Rüstungsset</h3>
+      <p className="fabricator-muted">
+        Übersicht der Komponenten dieser Variante. Das Rüstungsset ist kein eigenes Item, kein Blueprint und kein Rezept;
+        Rezept und Crew-Bestand erscheinen erst nach Auswahl einer Komponente.
+      </p>
+      <ul className="fabricator-set__list">
+        {family.slots.map(slot => {
+          const component = variant.components.find(c => c.slot === slot) ?? null
+          return (
+            <li key={slot} className="fabricator-set__item">
+              <span className="fabricator-set__slot">{FABRICATOR_SLOT_LABELS[slot]}</span>
+              {component
+                ? (
+                  <>
+                    <span className="fabricator-set__name">{nameOf(component)}</span>
+                    {component.functional === 'FUNCTIONALLY_DIFFERENT' &&
+                      <span className="fabricator-choice__hint"><span aria-hidden="true">⚠</span> abweichende Werte</span>}
+                    <button type="button" onClick={() => onSelect(slot)}>Komponente öffnen</button>
+                  </>
+                )
+                : <span className="fabricator-muted">nicht im Datensatz</span>}
+            </li>
+          )
+        })}
+      </ul>
+    </section>
   )
 }
 

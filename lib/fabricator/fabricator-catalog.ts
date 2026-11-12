@@ -151,22 +151,30 @@ export function armorSetTitle(slotNames: readonly { slot: FabricatorArmorSlot; n
 /**
  * Variant-specific part of each name in one comparison group (same slot or
  * same tag line): the words left after removing the word prefix and suffix
- * shared by all names of the group. Groups with a single name yield ''.
+ * shared by all names of the group; quotes or parentheses around the whole
+ * remainder are dropped. A group with a single name has nothing to compare
+ * against and yields null (unknown), never ''.
  */
-export function variantRemainders(names: readonly (string | null)[]): string[] {
+export function variantRemainders(names: readonly (string | null)[]): (string | null)[] {
   const split = names.map(words)
-  if (split.length < 2) return split.map(() => '')
+  if (split.length < 2) return split.map(() => null)
   const shortest = Math.min(...split.map(parts => parts.length))
   let prefix = 0
   while (prefix < shortest && split.every(parts => parts[prefix] === split[0][prefix])) prefix += 1
   let suffix = 0
   while (suffix < shortest - prefix && split.every(parts => parts[parts.length - 1 - suffix] === split[0][split[0].length - 1 - suffix])) suffix += 1
-  return split.map(parts => parts.slice(prefix, parts.length - suffix).join(' ').replace(/^"(.*)"$/, '$1'))
+  return split.map(parts => parts.slice(prefix, parts.length - suffix).join(' ').replace(/^"(.*)"$/, '$1').replace(/^\((.*)\)$/, '$1'))
 }
 
-/** One label per variant: all non-empty remainders must agree; empty means base / standard. */
-export function variantLabel(remainders: readonly string[], isBase: boolean | null): string | null {
-  const distinct = [...new Set(remainders.filter(Boolean))]
+/**
+ * One label per variant: all non-empty remainders must agree; empty means base /
+ * standard. Without any comparable remainder there is no label (the UI then
+ * shows the full source name).
+ */
+export function variantLabel(remainders: readonly (string | null)[], isBase: boolean | null): string | null {
+  const known = remainders.filter((remainder): remainder is string => remainder !== null)
+  if (known.length === 0) return null
+  const distinct = [...new Set(known.filter(Boolean))]
   if (distinct.length === 1) return distinct[0]
   if (distinct.length === 0) return isBase ? 'Basis' : 'Standard'
   return null
@@ -218,7 +226,7 @@ export function buildFabricatorCatalog(prepared: FabricatorPreparedSource): Fabr
     }))
     if (variants.length > 1) {
       // Labels are derived per comparison group (slot, or the whole tag line) after identity resolution.
-      const remainders = new Map<FabricatorComponentView, string>()
+      const remainders = new Map<FabricatorComponentView, string | null>()
       const groups = new Map<string, FabricatorComponentView[]>()
       for (const component of variants.flatMap(variant => variant.components)) {
         groups.set(component.slot ?? '', [...(groups.get(component.slot ?? '') ?? []), component])
@@ -227,7 +235,7 @@ export function buildFabricatorCatalog(prepared: FabricatorPreparedSource): Fabr
         const parts = variantRemainders(group.map(component => blueprints[component.blueprints[0]].productName))
         group.forEach((component, index) => remainders.set(component, parts[index]))
       }
-      for (const variant of variants) variant.label = variantLabel(variant.components.map(c => remainders.get(c) ?? ''), variant.isBase)
+      for (const variant of variants) variant.label = variantLabel(variant.components.map(c => remainders.get(c) ?? null), variant.isBase)
       // The same source name can occur on two variants; keep labels distinguishable without inventing names.
       const labelCounts = new Map<string, number>()
       for (const variant of variants) if (variant.label) labelCounts.set(variant.label, (labelCounts.get(variant.label) ?? 0) + 1)
@@ -296,7 +304,7 @@ export function buildFabricatorCatalog(prepared: FabricatorPreparedSource): Fabr
   for (const family of families) titleCounts.set(family.title, (titleCounts.get(family.title) ?? 0) + 1)
   for (const family of families) {
     if ((titleCounts.get(family.title) ?? 0) < 2) continue
-    const components = family.variants[0].components
+    const components = family.variants.flatMap(variant => variant.components)
     const named = components.find(component => leadingToken(blueprints[component.blueprints[0]].productName) === family.title) ?? components[0]
     family.titleDetail = blueprints[named.blueprints[0]].productName ?? named.itemName
   }
