@@ -1,3 +1,4 @@
+import { classifyFunctionalGroup, type FabricatorFunctionalClass } from './fabricator-fingerprint'
 import type { FabricatorBlueprint, FabricatorItem } from './fabricator-types'
 
 // Product Family -> Variant / Skin -> Component / Slot -> Item -> Blueprint
@@ -16,7 +17,14 @@ import type { FabricatorBlueprint, FabricatorItem } from './fabricator-types'
 // Product names never create a relation. They act only as a consistency veto:
 // when the members of a structural family do not share the same leading name
 // token, the family is not formed and every member stays ungrouped as
-// REVIEW_REQUIRED. Unsupported shapes stay visible; nothing is synthesized.
+// REVIEW_REQUIRED. For armor sets the veto is scoped to one functional slot
+// (owner decision OD-FAB-GROUP-01, F1.1): CIG may market one slot of a set
+// under its own name (e.g. a helmet), so names must agree inside each slot,
+// not across slots. Unsupported shapes stay visible; nothing is synthesized.
+//
+// After a family is formed structurally, the functional crafting fingerprint
+// classifies the members of each slot across variants (OD-FAB-GROUP-02/03).
+// The classification never forms, splits or merges a family.
 
 export type FabricatorArmorSlot = 'Helmet' | 'Torso' | 'Arms' | 'Legs' | 'Backpack' | 'Undersuit'
 
@@ -48,6 +56,8 @@ export type FabricatorComponent = {
   itemEntityClass: string
   /** Exactly one guid unless the item is produced by several blueprints (then REVIEW_REQUIRED). */
   blueprintGuids: string[]
+  /** Functional comparison with the same slot of the other variants of this family (F1.1). */
+  functional: FabricatorFunctionalClass
 }
 
 export type FabricatorVariant = {
@@ -151,8 +161,20 @@ function nameVeto(members: readonly Member[]): FabricatorFamilyReviewReason | nu
   return new Set(tokens).size === 1 ? null : 'FAMILY_NAME_CONFLICT'
 }
 
+/** Armor: the veto applies inside each functional slot; the first failing slot decides the reason. */
+function slotScopedNameVeto(entries: readonly { member: Member; slot: FabricatorArmorSlot }[]): FabricatorFamilyReviewReason | null {
+  const bySlot = new Map<FabricatorArmorSlot, Member[]>()
+  for (const entry of entries) bySlot.set(entry.slot, [...(bySlot.get(entry.slot) ?? []), entry.member])
+  for (const slot of ARMOR_SLOT_ORDER) {
+    const members = bySlot.get(slot)
+    const veto = members ? nameVeto(members) : null
+    if (veto) return veto
+  }
+  return null
+}
+
 function component(member: Member, slot: FabricatorArmorSlot | null): FabricatorComponent {
-  return { slot, itemEntityClass: member.item.entityClass, blueprintGuids: [member.blueprint.sourceGuid] }
+  return { slot, itemEntityClass: member.item.entityClass, blueprintGuids: [member.blueprint.sourceGuid], functional: 'UNRESOLVED' }
 }
 
 function single(
@@ -171,7 +193,7 @@ function single(
     variants: [{
       variantKey: '',
       isBase: null,
-      components: [{ slot, itemEntityClass: member.item.entityClass, blueprintGuids: member.blueprintGuids }],
+      components: [{ slot, itemEntityClass: member.item.entityClass, blueprintGuids: member.blueprintGuids, functional: 'UNRESOLVED' }],
     }],
   }
 }
@@ -211,7 +233,7 @@ function armorFamilies(members: readonly Member[]): FabricatorFamily[] {
       families.push(...vetoedSingles(entries.map(entry => entry.member), 'ARMOR_DUPLICATE_VARIANT_SLOT', structuralKey))
       continue
     }
-    const veto = nameVeto(entries.map(entry => entry.member))
+    const veto = slotScopedNameVeto(entries)
     if (veto) {
       families.push(...vetoedSingles(entries.map(entry => entry.member), veto, structuralKey))
       continue
@@ -298,9 +320,41 @@ function tagLineFamilies(members: readonly Member[]): FabricatorFamily[] {
  * Builds the product hierarchy. Every blueprint ends up exactly once: either
  * inside one family component or in `unresolvedBlueprints`.
  */
+export type FabricatorHierarchyOptions = {
+  /** Functional crafting fingerprint per concrete item (F1.1); without it every component stays UNRESOLVED. */
+  fingerprint?: (blueprint: FabricatorBlueprint, item: FabricatorItem) => string | null
+}
+
+/**
+ * Classifies each slot of a structurally formed family across its variants.
+ * Components that cannot be compared (single member, several blueprints,
+ * no fingerprint) stay UNRESOLVED.
+ */
+function classifyFamily(
+  family: FabricatorFamily,
+  byGuid: ReadonlyMap<string, FabricatorBlueprint>,
+  items: ReadonlyMap<string, FabricatorItem>,
+  fingerprint: NonNullable<FabricatorHierarchyOptions['fingerprint']>,
+): void {
+  const groups = new Map<string, FabricatorComponent[]>()
+  for (const variant of family.variants) {
+    for (const component of variant.components) {
+      const key = component.slot ?? ''
+      groups.set(key, [...(groups.get(key) ?? []), component])
+    }
+  }
+  for (const group of groups.values()) {
+    const fingerprints = group.map(component => component.blueprintGuids.length === 1
+      ? fingerprint(byGuid.get(component.blueprintGuids[0])!, items.get(component.itemEntityClass)!)
+      : null)
+    classifyFunctionalGroup(fingerprints).forEach((functional, index) => { group[index].functional = functional })
+  }
+}
+
 export function buildFabricatorProductHierarchy(
   blueprints: readonly FabricatorBlueprint[],
   items: ReadonlyMap<string, FabricatorItem>,
+  options: FabricatorHierarchyOptions = {},
 ): FabricatorProductHierarchy {
   const { itemBlueprints, unresolvedBlueprints } = resolveItemBlueprints(blueprints, items)
   const byGuid = new Map(blueprints.map(blueprint => [blueprint.sourceGuid, blueprint]))
@@ -324,5 +378,10 @@ export function buildFabricatorProductHierarchy(
 
   families.push(...armorFamilies(armor), ...tagLineFamilies(others))
   families.sort((a, b) => naturalCompare(a.familyKey, b.familyKey))
+  if (options.fingerprint) {
+    for (const family of families) {
+      if (family.variants.length > 1) classifyFamily(family, byGuid, items, options.fingerprint)
+    }
+  }
   return { families, itemBlueprints, unresolvedBlueprints }
 }
