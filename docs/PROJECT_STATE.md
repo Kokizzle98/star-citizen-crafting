@@ -4,8 +4,8 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **State verified through commit:** `706267a3bcffe5fb18c6ca346bbb26758b94b699`
-- **Updated by work package:** Fabricator Phase 1 — checkpoint rotation for F3 (MANUAL Quality, Inventory-Aware Preset & Product Stats) after the F2 merge
+- **State verified through commit:** `a460201623eb94222645e550994fd4755ddab4d8`
+- **Updated by work package:** Governance – `VECTOR_SOURCE_AUTHORITY_V1` (documentation only), checkpoint rotation after the F3 merge
 - **Checkpoint date:** 2026-11-12
 
 ## How to read this file
@@ -32,10 +32,12 @@
 - Fabricator F1.1 — Product Family / Functional Variant Refinement: **DONE**. Squash-merged as #45 (`cc083c9`) after the owner merge gate; reviewed head `a83803a`.
 - Fabricator F1.2 — Armor Family Key V2: **DONE**. Squash-merged as #46 (`74d72dc`) after the owner merge gate; reviewed head `e08e3bd`. Armor family = tag prefix + set number, edition / variant = complete remainder; undersuits are no armor-set component. 652 families (62 armor sets), review states unchanged (22).
 - Fabricator F2 — Workspace + Recipe + Crew Craftability: **DONE**. Squash-merged as #44 (`706267a`) after the owner merge gate: `/vector/fabricator` with families, short set / variant / component labels, the `Rüstungsset` overview (OD-FAB-UX-01), visible functional deviation, recipe and crew craftability; read-only, no database change, no Production mutation.
+- Fabricator F3 — MANUAL Quality per material, Inventory-Aware Preset & Product Stats: **DONE**. Squash-merged as #47 (`a460201`) after owner manual acceptance: individual quality per recipe material with a global bulk control, inventory-aware preset (`OQ-F3-1`, `D-F3-1`), `lib/quality/` primitives, per-item stats, armor temperatures reconciled with SCMDB, F2 duplicate-material fix; read-only, no Production mutation.
+- Fabricator F4 evidence phase: read-only audits F4-A, F4-A.1, F4-A.2, Star Citizen Wiki API probe and UEX 22-UUID sample audit **complete** (2026-11-12). UEX identity semantics confirmed (exact CIG UUID), UEX coverage `PARTIAL`; UEX ingame and marketplace strictly separate.
 
 ## ACTIVE
 
-- **Fabricator Phase 1**, pull request **F3 – MANUAL Quality, Inventory-Aware Preset & Product Stats** (#47) on `feat/fabricator-f3-quality-stats`: MANUAL quality Q0–1000 per recipe material with a global bulk control (owner correction of acceptance points 3 / 4, 2026-11-12), inventory-aware available preset (owner domain evidence `OQ-F3-1`: quality is quantity-weighted over the quantities actually used; `D-F3-1`: the global preset is the lowest per-slot available quality), reusable quantity-weighted quality primitives in `lib/quality/`, material -> stat relation, product stats (base, crafted, absolute and relative delta) per concrete item, targeted SCMDB semantic reconciliation and the F2 duplicate-material craftability fix; read-only, no database change, no Production mutation. Decisions are recorded in the restart handover section 5. The F3 checkpoint authorizes F3 paths only.
+- **Governance – `VECTOR_SOURCE_AUTHORITY_V1`** on `docs/vector-source-authority-v1`: documentation of the owner-decided source authority contract (`docs/frozen/VECTOR_SOURCE_AUTHORITY_V1.md`, rule index entry, checkpoint rotation). Documentation only; no code, no F4-S generator, no UEX integration, no F4-B, no Production mutation.
 
 ## PAUSED
 
@@ -47,15 +49,15 @@
 
 ## NEXT
 
-1. Owner review of the F3 pull request; merge only with explicit owner approval.
-2. After F3: the later armor-set material summary built from the per-component slot selection primitives, and the inventory progressive-disclosure redesign, each as its own work package.
+1. Owner review of the `VECTOR_SOURCE_AUTHORITY_V1` pull request; merge only with explicit owner approval.
+2. Owner decision on the F4-S source / distribution gate (licence of scunpacked-data; persistence of the derived index: option A full index, A′ crafting outputs only, B not committed). F4-S stays STOPPED until then; F4-B (gameplay relevance / exclusion contract) and a UEX source foundation follow as separate work packages.
 3. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
 
 ## OPEN DECISIONS
 
-- No owner decision is pending for F3 (OQ-F3-1 and D-F3-1 decided on 2026-11-12).
+- F4-S source / distribution gate (see NEXT). No other owner decision is pending for the current work package.
 - Later UX work package (not started): compact lot / location display in the Fabricator, grouping by player and location, progressive disclosure, and a clear distinction between "available in the crew" and "available at one place".
-- Separate governance work package noted for later: `SCMDB_SOURCE_AUTHORITY_V1` (or integration into a future provider authority contract).
+- `SCMDB_SOURCE_AUTHORITY_V1` is absorbed by the FROZEN `VECTOR_SOURCE_AUTHORITY_V1`; `PROVIDER_AUTHORITY_V1` (user-state providers) stays PLANNED.
 - Known items that will need a decision later, none started: a later UX / design pass (blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, the narrow app shell / sidebar on small screens); the known crew `active_group` inconsistency (`getCrewContext()` falls back to the first crew while the crew RPCs report `ACTIVE_GROUP_REQUIRED`), deliberately unchanged; the `Crew Security Hardening` work package (LOW to MEDIUM findings, due before the first user outside the current test group); archiving or removing the legacy audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders (separate Cleanup Gate); Rule Index remediation items R1, R2, R4 and R5; the later WP-AOM-01 gates (Security Finding Register, Backup Gate, Cleanup Gate), which stay separate future work.
 
 ## OPEN INFRASTRUCTURE WORK
@@ -64,7 +66,7 @@
 
 ## RELEVANT CONTRACTS
 
-- FROZEN specifications in `docs/frozen/`, registered in `docs/RULE_INDEX.md` section 5. Most relevant right now: `DB_ENVIRONMENT_GOVERNANCE_V1.md` (Production read and write gates), `VECTOR_VERSIONING_V1_1.md` (LIVE/PTU isolation), `VECTOR_GOVERNANCE_V1.md` (global governance).
+- FROZEN specifications in `docs/frozen/`, registered in `docs/RULE_INDEX.md` section 5. Most relevant right now: `VECTOR_SOURCE_AUTHORITY_V1.md` (external source identity and authority), `DB_ENVIRONMENT_GOVERNANCE_V1.md` (Production read and write gates), `VECTOR_VERSIONING_V1_1.md` (LIVE/PTU isolation), `VECTOR_GOVERNANCE_V1.md` (global governance).
 - Operating contracts: `AGENTS.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`.
 - Recovery: `docs/handover/VECTOR_RESTART_HANDOVER.md` (control block, drift procedure, Blueprint decisions) and `SCMDB_LOCATION_HANDOVER.md` (frozen location contracts).
 - Evidence: `docs/governance/PROJECT_LEAD_EVIDENCE.md` (generator, CURRENT and ARCHIVE contract, Project Lead bootstrap).

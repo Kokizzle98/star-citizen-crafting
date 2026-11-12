@@ -11,42 +11,24 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Fabricator Phase 1`; F1 is **DONE** (PR #43, merged as `f1e0dbf`); F1.1 is **DONE** (PR #45, merged as `cc083c9`); F1.2 is **DONE** (PR #46, merged as `74d72dc`); F2 is **DONE** (PR #44, merged as `706267a`); active pull request: **F3 – MANUAL Quality, Inventory-Aware Preset & Product Stats** (opened from `feat/fabricator-f3-quality-stats`). The previous package `Blueprint Ownership / Tracking` is complete (PRs #36, #39, #40, #41, checkpoint #42); LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
-- Branch: `feat/fabricator-f3-quality-stats`
+- Work package: `Governance – VECTOR_SOURCE_AUTHORITY_V1` (documentation only). `Fabricator Phase 1` F1 to F3 are **DONE** (F3: PR #47, merged as `a460201`); the read-only audits F4-A, F4-A.1, F4-A.2, the Star Citizen Wiki API probe and the UEX 22-UUID sample audit are complete (results in the PR conversation and in `docs/frozen/VECTOR_SOURCE_AUTHORITY_V1.md`). LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
+- Branch: `docs/vector-source-authority-v1`
 - Base: `develop`
 - Checkpoint date: `2026-11-12`
-- Work-package base (historical): `84e7fc3d3c72f62dc9007ec41938b3260cf574f7`
-- Active checkpoint anchor: `706267a3bcffe5fb18c6ca346bbb26758b94b699`
+- Work-package base (historical): `a460201623eb94222645e550994fd4755ddab4d8`
+- Active checkpoint anchor: `a460201623eb94222645e550994fd4755ddab4d8`
 - Working-tree expectation: `CLEAN`
-- Active PR: the F3 pull request from `feat/fabricator-f3-quality-stats` against `develop`
+- Active PR: the governance pull request from `docs/vector-source-authority-v1` against `develop`
 - PR base: `develop`
 
-The work-package base is the `develop` head after PR #42; the active anchor is the verified `develop` head after PR #44 (F2 squash merge). The allowed scope below authorizes **F3 only**: the two checkpoint documents and exactly the F3 files (quality primitives, preset, stats, the catalog / craftability / labels / baseline / units modules F3 extends, the workspace UI, styles and F3 tests). No other F1 / F1.1 / F1.2 / F2 file is authorized here. Production mutation in F3: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #47 (F3 squash merge). The allowed scope below authorizes **documentation only**: the new FROZEN contract, the rule index and the two checkpoint documents. No code, test, data, migration or other document is authorized here. Production mutation: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `app/globals.css`
-- `components/fabricator/FabricatorQuality.tsx`
-- `components/fabricator/FabricatorWorkspace.tsx`
-- `lib/quality/quality-weighting.ts`
-- `lib/fabricator/fabricator-baseline.ts`
-- `lib/fabricator/fabricator-catalog.ts`
-- `lib/fabricator/fabricator-craftability.ts`
-- `lib/fabricator/fabricator-labels.ts`
-- `lib/fabricator/fabricator-preset.ts`
-- `lib/fabricator/fabricator-stats.ts`
-- `lib/fabricator/fabricator-units.ts`
-- `tests/fabricator-baseline-size.test.mjs`
-- `tests/fabricator-catalog.test.mjs`
-- `tests/fabricator-craftability.test.mjs`
-- `tests/fabricator-fixture.mjs`
-- `tests/fabricator-preset.test.mjs`
-- `tests/fabricator-scmdb-semantics.test.mjs`
-- `tests/fabricator-stats.test.mjs`
-- `tests/fabricator-ui.test.mjs`
-- `tests/quality-weighting.test.mjs`
+- `docs/RULE_INDEX.md`
+- `docs/frozen/VECTOR_SOURCE_AUTHORITY_V1.md`
 
 Recovery control block:
 
@@ -83,6 +65,8 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#43` (Fabricator F1 – Read & Domain Foundation): squash-merged into `develop` on 2026-11-11 as `f1e0dbf` after the owner / Project Lead merge gate; reviewed head and checkpoint control revision `14b50bd`.
 - PR `#45` (Fabricator F1.1 – Product Family / Functional Variant Refinement): squash-merged into `develop` on 2026-11-12 as `cc083c9` after the owner merge gate; reviewed head `a83803a`.
 - PR `#46` (Fabricator F1.2 – Armor Family Key V2): squash-merged into `develop` on 2026-11-12 as `74d72dc` after the owner merge gate; reviewed head `e08e3bd`, checkpoint control revision `dfb3eac`.
+- PR `#44` (Fabricator F2 – Workspace + Recipe + Crew Craftability): squash-merged into `develop` on 2026-11-12 as `706267a` after the owner merge gate.
+- PR `#47` (Fabricator F3 – MANUAL Quality per material, Inventory-Aware Preset & Product Stats): squash-merged into `develop` on 2026-11-12 as `a460201` after owner manual acceptance; read-only, no database change, no Production mutation.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -92,6 +76,7 @@ These are compact status pointers only. The repository documents themselves must
 
 - `VECTOR_VERSIONING_V1` = `SUPERSEDED` (file intentionally unchanged for traceability; see `docs/RULE_INDEX.md`)
 - `VECTOR_VERSIONING_V1_1` = `FROZEN`
+- `VECTOR_SOURCE_AUTHORITY_V1` = `FROZEN` (owner decision 2026-11-12; exact CIG UUID is the only cross-source identity, variants are separate items without unlock inheritance, SCMDB stays crafting authority, scunpacked-data is the designated structural source for F4-S, the Star Citizen Wiki API is a verification source, UEX ingame and UEX marketplace are strictly separate observation domains, `NO_EVIDENCE != NEGATIVE_EVIDENCE`, no single source signal excludes; Production-authoritative after merge into `main`)
 - `DB_ENVIRONMENT_GOVERNANCE_V1` = `FROZEN` (owner decision 2026-11-11; `DB-ENV-01` to `DB-ENV-09`; `qpbgtzjtwgkwlgpbataq` / `main` is Supabase Production holding test data, never "staging"; Production-authoritative after merge into `main`)
 - `DATA_CONTEXT_MODEL_V1` = `PROPOSED`
 - R2 = `IN_PROGRESS`
@@ -126,7 +111,16 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Fabricator Phase 1` is **active** (Fabricator F3 in progress). Owner-approved plan and decisions are recorded in the F1 pull request; this section is a pointer, not the decision record.
+`Fabricator Phase 1`: F1 to F3 are **DONE**; F4 (gameplay relevance) is in the evidence phase. Current state (2026-11-12):
+
+- audits F4-A, F4-A.1, F4-A.2, Star Citizen Wiki API probe and UEX 22-UUID sample audit: **complete** (read-only); UEX identity semantics confirmed (exact CIG UUID), UEX coverage `PARTIAL`; UEX ingame and UEX marketplace strictly separate;
+- `VECTOR_SOURCE_AUTHORITY_V1`: decided and documented as FROZEN (`docs/frozen/VECTOR_SOURCE_AUTHORITY_V1.md`);
+- F4-S (vehicle loadout source foundation): **STOPPED** at the source / distribution gate (licence and redistribution of scunpacked-data unclear; persistence of a derived index undecided: options A / A′ / B from the F4-S precheck);
+- F4-B (gameplay relevance / exclusion contract): **not started**;
+- UEX integration: **not started**;
+- no Supabase / Production mutation.
+
+The earlier Fabricator owner decisions stay as recorded below. Owner-approved plan and decisions are recorded in the F1 pull request; this section is a pointer, not the decision record.
 
 Owner decisions (2026-11-11):
 
@@ -145,7 +139,7 @@ Owner decisions (2026-11-11):
 - `OD-FAB-UX-01` (2026-11-12, for the later F2 update): after an armor family and variant / edition the workspace offers the pure navigation state `Rüstungsset` (present components with concrete product name, present / not in the dataset, functional-deviation note); it is never an item, blueprint, recipe, aggregated recipe or crafting job, and shows no synthetic recipe and no material sum;
 - `OQ-F3-1` (2026-11-12, owner domain evidence): the quality of one recipe input is quantity-weighted over the quantities actually used for the recipe; only the used part of a lot counts (example: 1.0 SCU required, 0.8 SCU Q900 plus 0.2 SCU from a 0.4 SCU Q600 lot gives Q840). For the available preset the required quantity may be composed from several lots, partial use of a lot is allowed for the calculation, and a small high-quality amount that does not cover the requirement never raises the preset; no reservation, consumption or inventory mutation;
 - `D-F3-1` (2026-11-12): every recipe slot keeps its own best really available quality (visible); the global MANUAL slider's available preset is the lowest of these slot values (the highest common quality all required slots reach under the global model). It is not an inventory average, not a slot average and not the crafted item quality. Rounding never promises a higher quality than reachable (integer Q0–1000, rounded down). The F2 duplicate-material defect (the same stock counted fully for several slots of one material) is fixed in F3 through the shared selection foundation; `lib/quality/` reuse for later inventory progressive disclosure is approved, without pulling inventory work into F3;
-- SCMDB source and semantic reference (owner decision 2026-11-11): SCMDB is the external origin of the mirrored SCMDB dataset, and SCMDB itself (scmdb.net, available SCMDB documentation and traceable SCMDB code) is the preferred source semantic reference for how SCMDB interprets, names, calculates and displays its own raw data. An unclear SCMDB field is neither interpreted from the raw JSON alone nor discarded right away. Evidence order: (1) repository-pinned SCMDB dataset, (2) scmdb.net representation of the same datum, (3) SCMDB documentation, (4) traceable SCMDB implementation, (5) VECTOR adapter / normalizer, (6) tests against the reproduced semantics. SCMDB is **not** an authority for VECTOR user ownership, crew membership, inventory ownership, auth / identity, governance, security or VECTOR-specific domain decisions (SCMDB `isDefault` stays a raw source value only). This is not a FROZEN contract; a separate governance work package `SCMDB_SOURCE_AUTHORITY_V1` (or an integration into a future provider authority contract) is noted for later.
+- SCMDB source and semantic reference (owner decision 2026-11-11): SCMDB is the external origin of the mirrored SCMDB dataset, and SCMDB itself (scmdb.net, available SCMDB documentation and traceable SCMDB code) is the preferred source semantic reference for how SCMDB interprets, names, calculates and displays its own raw data. An unclear SCMDB field is neither interpreted from the raw JSON alone nor discarded right away. Evidence order: (1) repository-pinned SCMDB dataset, (2) scmdb.net representation of the same datum, (3) SCMDB documentation, (4) traceable SCMDB implementation, (5) VECTOR adapter / normalizer, (6) tests against the reproduced semantics. SCMDB is **not** an authority for VECTOR user ownership, crew membership, inventory ownership, auth / identity, governance, security or VECTOR-specific domain decisions (SCMDB `isDefault` stays a raw source value only). The planned governance package `SCMDB_SOURCE_AUTHORITY_V1` is absorbed by the FROZEN `VECTOR_SOURCE_AUTHORITY_V1` (2026-11-12).
 
 Sequential pull requests inside this package:
 
@@ -153,9 +147,9 @@ Sequential pull requests inside this package:
 - F1.1 (**DONE**, #45 as `cc083c9`): slot-scoped armor name veto, functional crafting fingerprint and the FUNCTIONALLY_EQUIVALENT / FUNCTIONALLY_DIFFERENT / UNRESOLVED classification; no UI, no database change, no Production mutation;
 - F1.2 (**DONE**, #46 as `74d72dc`): Armor Family Key V2 (`OD-FAB-GROUP-04` to `08`; undersuits are no armor-set component); foundation only, no UI, no database change, no Production mutation;
 - F2 (**DONE**, #44 as `706267a`): `/vector/fabricator` workspace on the F1.2 foundation, short set / variant / component labels, `Rüstungsset` overview (`OD-FAB-UX-01`), visible functional deviation, recipe materials and crew craftability through the existing `get_active_group_inventory()`; read-only, no inventory mutation;
-- F3 (**ACTIVE**): MANUAL quality Q0–1000 per recipe material plus a global bulk control (owner correction of acceptance points 3 / 4), inventory-aware available preset, quantity-weighted quality primitives (`lib/quality/`), material -> stat relation and product stats (base, crafted, absolute and relative delta) computed per concrete item, targeted SCMDB semantic reconciliation and the F2 duplicate-material craftability fix; read-only, no database change, no Production mutation.
+- F3 (**DONE**, #47 as `a460201`): MANUAL quality Q0–1000 per recipe material plus a global bulk control (owner correction of acceptance points 3 / 4), inventory-aware available preset, quantity-weighted quality primitives (`lib/quality/`), material -> stat relation and product stats (base, crafted, absolute and relative delta) computed per concrete item, targeted SCMDB semantic reconciliation and the F2 duplicate-material craftability fix; read-only, no database change, no Production mutation.
 
-Planned governance follow-up, not part of this package: `SCMDB_SOURCE_AUTHORITY_V1`.
+Governance follow-up `SCMDB_SOURCE_AUTHORITY_V1`: absorbed by `VECTOR_SOURCE_AUTHORITY_V1` (FROZEN, 2026-11-12).
 
 Out of scope for the whole package: SMART, MAX and SAVE PREMIUM strategies, reservation, consumption, shopping lists, multi-blueprint planning, simulation fallback, PTU and any database migration.
 
@@ -414,4 +408,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Implement Fabricator F3 on `feat/fabricator-f3-quality-stats` within the allowed scope above, validate (tests, typecheck, lint, build, diff check, scope, CI, Vercel preview) and stop at READY FOR OWNER REVIEW. No Production mutation, no Copilot review, no merge without explicit owner approval. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Owner review of the governance pull request for `VECTOR_SOURCE_AUTHORITY_V1` (documentation only); merge only with explicit owner approval. Afterwards the owner decides the F4-S source / distribution gate (licence of scunpacked-data, persistence option A / A′ / B) before F4-S implementation; F4-B and any UEX source foundation follow as separate work packages. No Production mutation. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
