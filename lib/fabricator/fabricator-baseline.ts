@@ -50,10 +50,15 @@ export const FABRICATOR_BASELINE_RULES: Readonly<Record<string, BaselineRule>> =
   weapon_hullscraping_radius: { path: ['radiusMultiplier'], attachTypes: ['SalvageModifier'], sourceUnit: null },
   weapon_hullscraping_efficiency: { path: ['extractionEfficiency'], attachTypes: ['SalvageModifier'], sourceUnit: null },
   armor_radiationdissipation: { path: ['radiationResistance', 'dissipationRate'], attachTypes: ARMOR_ATTACH_TYPES, sourceUnit: null },
+  // F3 SCMDB reconciliation (scmdb.net LIVE 4.10.2-live.12913470, shipped code and Fabricator view):
+  // crafted = temperatureResistance.min / .max * modifier, a plain multiplication of the signed value
+  // (TrueDef-Pro Arms at Q750: min -75.0 °C -> -82.5 °C shown as -10.00 %, max 75.0 °C -> 82.5 °C +10.00 %;
+  // the percent is relative to |base|, exactly as VECTOR_CRAFT_CALC_V1).
+  armor_temperaturemin: { path: ['temperatureResistance', 'min'], attachTypes: ARMOR_ATTACH_TYPES, sourceUnit: null },
+  armor_temperaturemax: { path: ['temperatureResistance', 'max'], attachTypes: ARMOR_ATTACH_TYPES, sourceUnit: null },
 })
 
 export type FabricatorBaselineReviewReason =
-  | 'SIGNED_VALUE_MULTIPLIER_SEMANTICS_UNVERIFIED'
   | 'UNIT_UNVERIFIED'
   | 'MULTI_CHANNEL_SOURCE'
   | 'MULTI_MODE_SOURCE'
@@ -63,9 +68,9 @@ export type FabricatorBaselineReviewReason =
 
 /** Known properties whose baseline is deliberately not resolved yet, with the reason. */
 export const FABRICATOR_BASELINE_REVIEW: Readonly<Record<string, FabricatorBaselineReviewReason>> = Object.freeze({
-  armor_temperaturemin: 'SIGNED_VALUE_MULTIPLIER_SEMANTICS_UNVERIFIED',
-  armor_temperaturemax: 'SIGNED_VALUE_MULTIPLIER_SEMANTICS_UNVERIFIED',
   quantum_fuelrequirement: 'UNIT_UNVERIFIED',
+  // SCMDB (F3): each of the six damage channels becomes 1 - (1 - multiplier) * modifier; one
+  // property yields six values, so it stays out of the single-value stat model for now.
   armor_damagemitigation: 'MULTI_CHANNEL_SOURCE',
   weapon_damage: 'MULTI_CHANNEL_SOURCE',
   weapon_firerate: 'MULTI_MODE_SOURCE',

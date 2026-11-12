@@ -1,3 +1,4 @@
+import { isQuality, selectBestQuality, type QualityPart } from '../quality/quality-weighting'
 import type { FabricatorMaterialView, FabricatorRecipeView } from './fabricator-catalog'
 
 // Crew craftability for one recipe (Fabricator F2).
@@ -13,6 +14,14 @@ import type { FabricatorMaterialView, FabricatorRecipeView } from './fabricator-
 // - A lot counts only when quality >= minQuality. Lots below stay visible.
 // - "Available in the crew" never means "available at one place": the result
 //   reports how many locations and players the usable lots are spread over.
+// - F3: when the same material occurs in several slots of one recipe, the
+//   stock is shared: it is allocated once over the total requirement of those
+//   slots (in slot order) and never counted fully for every slot (owner-
+//   approved fix of the F2 duplicate-material defect).
+// - F3 (OQ-F3-1, D-F3-1): every covered slot carries its best reachable
+//   quantity-weighted input quality (only the used part of a lot counts,
+//   highest qualities first, rounded down). Shared slots get the quality of the
+//   joint selection, which is the best common value for all of them.
 
 export type FabricatorCrewLot = {
   id: string
@@ -31,7 +40,7 @@ export type FabricatorLotUse = {
   /** Quantity in the material's dimension; null when it cannot be read exactly. */
   quantity: bigint | null
   usable: boolean
-  reason: null | 'BELOW_MIN_QUALITY' | 'DIMENSION_MISMATCH' | 'QUANTITY_INVALID'
+  reason: null | 'BELOW_MIN_QUALITY' | 'DIMENSION_MISMATCH' | 'QUANTITY_INVALID' | 'QUALITY_INVALID'
 }
 
 export type FabricatorSlotStatus = 'COVERED' | 'INSUFFICIENT' | 'NONE' | 'UNRESOLVED'
@@ -40,12 +49,25 @@ export type FabricatorSlotCraftability = {
   slotKey: string
   status: FabricatorSlotStatus
   required: bigint
+  /**
+   * Usable quantity available for this slot. For a material shared by several
+   * slots this is the part left after the earlier slots of that material.
+   */
   available: bigint
   missing: bigint
   surplus: bigint
   lots: FabricatorLotUse[]
   locationCount: number
   playerCount: number
+  /** Other slot keys of this recipe that need the same material (shared stock). */
+  sharedWith: string[]
+  /**
+   * Best reachable input quality (integer, rounded down) for the requirement;
+   * only set when the slot, and for shared stock its whole material group, is covered.
+   */
+  quality: number | null
+  /** The lot parts that reach `quality` (for shared stock: the whole material group). */
+  selection: QualityPart[]
 }
 
 export type FabricatorCraftabilityStatus = 'AVAILABLE' | 'PARTIAL' | 'UNAVAILABLE' | 'UNRESOLVED'
@@ -90,42 +112,77 @@ export function indexCrewLots(lots: readonly FabricatorCrewLot[]): Map<string, F
   return index
 }
 
-function slotCraftability(
-  slotKey: string,
-  material: FabricatorMaterialView,
-  lotsByMaterial: ReadonlyMap<string, readonly FabricatorCrewLot[]>,
-): FabricatorSlotCraftability {
-  const required = BigInt(material.required)
-  const lots: FabricatorLotUse[] = (lotsByMaterial.get(material.name) ?? []).map(lot => {
+function lotUses(material: FabricatorMaterialView, lotsByMaterial: ReadonlyMap<string, readonly FabricatorCrewLot[]>): FabricatorLotUse[] {
+  return (lotsByMaterial.get(material.name) ?? []).map(lot => {
     const { quantity, reason } = lotQuantity(material, lot)
     if (reason) return { lot, quantity, usable: false, reason }
+    if (!isQuality(lot.quality)) return { lot, quantity, usable: false, reason: 'QUALITY_INVALID' }
     if (lot.quality < material.minQuality) return { lot, quantity, usable: false, reason: 'BELOW_MIN_QUALITY' }
     return { lot, quantity, usable: true, reason: null }
   })
-  const usable = lots.filter(use => use.usable)
-  const available = usable.reduce((sum, use) => sum + (use.quantity ?? 0n), 0n)
-  const unresolved = material.vocabulary !== 'RESOLVED'
-  const status: FabricatorSlotStatus = unresolved
-    ? 'UNRESOLVED'
-    : available >= required ? 'COVERED' : available > 0n ? 'INSUFFICIENT' : 'NONE'
-  return {
-    slotKey,
-    status,
-    required,
-    available,
-    missing: available >= required ? 0n : required - available,
-    surplus: available > required ? available - required : 0n,
-    lots,
-    locationCount: new Set(usable.map(use => use.lot.locationId)).size,
-    playerCount: new Set(usable.map(use => use.lot.playerName)).size,
+}
+
+// Exact material identity inside one recipe (dimension + exact name). Should a
+// group ever carry different minQualities, the strictest one applies to the
+// whole group, so shared stock is never over-counted (not seen in LIVE data).
+const materialGroupKey = (material: FabricatorMaterialView) => `${material.unit}\u0000${material.name}`
+
+function slotsCraftability(
+  recipe: FabricatorRecipeView,
+  lotsByMaterial: ReadonlyMap<string, readonly FabricatorCrewLot[]>,
+): FabricatorSlotCraftability[] {
+  const groups = new Map<string, number[]>()
+  recipe.slots.forEach((slot, index) => {
+    const key = materialGroupKey(slot.material)
+    groups.set(key, [...(groups.get(key) ?? []), index])
+  })
+  const result: FabricatorSlotCraftability[] = new Array(recipe.slots.length)
+  for (const indexes of groups.values()) {
+    const first = recipe.slots[indexes[0]].material
+    const minQuality = Math.max(...indexes.map(i => recipe.slots[i].material.minQuality))
+    const lots = lotUses({ ...first, minQuality }, lotsByMaterial)
+    const usable = lots.filter(use => use.usable && use.quantity !== null)
+    const parts: QualityPart[] = usable.map(use => ({ ref: use.lot.id, quantity: use.quantity as bigint, quality: use.lot.quality }))
+    const totalRequired = indexes.reduce((sum, i) => sum + BigInt(recipe.slots[i].material.required), 0n)
+    const joint = totalRequired > 0n && parts.length > 0 ? selectBestQuality(totalRequired, parts) : null
+    const covered = joint?.status === 'COVERED'
+    const locationCount = new Set(usable.map(use => use.lot.locationId)).size
+    const playerCount = new Set(usable.map(use => use.lot.playerName)).size
+    let remaining = parts.reduce((sum, part) => sum + part.quantity, 0n)
+    indexes.forEach((index, position) => {
+      const slot = recipe.slots[index]
+      const required = BigInt(slot.material.required)
+      const last = position === indexes.length - 1
+      const available = last ? remaining : remaining < required ? remaining : required
+      remaining -= available
+      const unresolved = slot.material.vocabulary !== 'RESOLVED'
+      const status: FabricatorSlotStatus = unresolved
+        ? 'UNRESOLVED'
+        : available >= required ? 'COVERED' : available > 0n ? 'INSUFFICIENT' : 'NONE'
+      result[index] = {
+        slotKey: slot.slotKey,
+        status,
+        required,
+        available,
+        missing: available >= required ? 0n : required - available,
+        surplus: available > required ? available - required : 0n,
+        lots,
+        locationCount,
+        playerCount,
+        sharedWith: indexes.filter(other => other !== index).map(other => recipe.slots[other].slotKey),
+        quality: !unresolved && covered ? joint.quality : null,
+        selection: !unresolved && covered ? joint.used : [],
+      }
+    })
   }
+  return result
 }
 
 export function recipeCraftability(
   recipe: FabricatorRecipeView,
   lotsByMaterial: ReadonlyMap<string, readonly FabricatorCrewLot[]>,
 ): FabricatorRecipeCraftability {
-  const slots = recipe.slots.map(slot => slotCraftability(slot.slotKey, slot.material, lotsByMaterial))
+  const slots = slotsCraftability(recipe, lotsByMaterial)
   const usableLocations = new Set(slots.flatMap(slot => slot.lots.filter(use => use.usable).map(use => use.lot.locationId)))
   const multiLocation = usableLocations.size > 1
   if (recipe.status !== 'RESOLVED' || slots.length === 0 || slots.some(slot => slot.status === 'UNRESOLVED')) {

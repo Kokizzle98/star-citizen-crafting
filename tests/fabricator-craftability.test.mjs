@@ -94,3 +94,32 @@ test('family list status is the best option; no mutation of the lots', () => {
   run(recipe(material('Iron', 'SCU', '1')), lots)
   assert.equal(JSON.stringify(lots), snapshot)
 })
+
+test('F3: shared stock of one material over several slots is allocated once (F2 duplicate-material fix)', () => {
+  const r = recipe(material('X', 'SCU', '1000000'), material('X', 'SCU', '1000000'))
+  const result = run(r, [lot('X', 700, 1_500_000)])
+  assert.equal(result.status, 'PARTIAL')
+  assert.deepEqual(result.slots.map(s => [s.status, s.available, s.missing, s.surplus]),
+    [['COVERED', 1_000_000n, 0n, 0n], ['INSUFFICIENT', 500_000n, 500_000n, 0n]])
+  assert.deepEqual(result.slots.map(s => s.sharedWith), [['1'], ['0']])
+  assert.deepEqual(result.slots.map(s => s.quality), [null, null], 'no quality while the material group is not covered')
+  const enough = run(r, [lot('X', 900, 1_000_000), lot('X', 600, 1_500_000)])
+  assert.equal(enough.status, 'AVAILABLE')
+  assert.deepEqual(enough.slots.map(s => [s.available, s.surplus, s.quality]), [[1_000_000n, 0n, 750], [1_500_000n, 500_000n, 750]])
+})
+
+test('F3: covered slots carry the best reachable weighted input quality (OQ-F3-1)', () => {
+  const r = recipe(material('Tungsten', 'SCU', '1000000'), material('Gem', 'COUNT', '2', 500))
+  const result = run(r, [
+    lot('Tungsten', 600, 400_000, { playerName: 'B', locationId: 'L2' }),
+    lot('Tungsten', 900, 800_000),
+    lot('Gem', 400, 5, { inputUnit: 'COUNT' }),
+    lot('Gem', 800, 1, { inputUnit: 'COUNT' }),
+    lot('Gem', 700, 1, { inputUnit: 'COUNT' }),
+  ])
+  assert.deepEqual(result.slots.map(s => s.quality), [840, 750])
+  assert.deepEqual(result.slots[0].selection.map(p => [p.quantity, p.quality]), [[800_000n, 900], [200_000n, 600]])
+  assert.equal(result.slots[1].lots.find(u => u.lot.quality === 400).reason, 'BELOW_MIN_QUALITY')
+  const invalid = run(recipe(material('Iron', 'SCU', '1')), [lot('Iron', 500.5, 5)]).slots[0]
+  assert.deepEqual([invalid.status, invalid.lots[0].reason], ['NONE', 'QUALITY_INVALID'])
+})

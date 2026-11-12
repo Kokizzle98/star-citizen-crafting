@@ -81,7 +81,8 @@ test('Glacis: one component with both blueprints, no default choice encoded', ()
 })
 
 test('recipes: deduplicated, exact integer requirements, units and minQuality', () => {
-  assert.equal(catalog.recipes.length, 469)
+  // F3: recipes now carry their modifier groups, so recipes with equal materials but different modifiers stay distinct.
+  assert.equal(catalog.recipes.length, 480)
   const js400 = catalog.recipes[catalog.blueprints.find(b => b.tag === 'BP_CRAFT_POWR_AMRS_S02_JS400_SCItem').recipe]
   assert.deepEqual(js400.slots.map(s => [s.name, s.material.name, s.material.unit, s.material.required, s.material.minQuality]), [
     ['Shell', 'Stileron', 'SCU', '1220000', 1], ['Voltage Regulator', 'Beryl', 'SCU', '500000', 1], ['Stator Cores', 'Savrilium', 'SCU', '850000', 1],
@@ -91,13 +92,29 @@ test('recipes: deduplicated, exact integer requirements, units and minQuality', 
     ['RESOURCE', 'SCU', '2000000', 900], ['RESOURCE', 'SCU', '2000000', 800], ['ITEM', 'COUNT', '4', 0],
   ])
   for (const recipe of catalog.recipes) for (const slot of recipe.slots) assert.match(slot.material.required, /^[1-9]\d*$/)
+  // F3: modifier groups per slot (material -> stat) and the concrete item's baselines.
+  assert.deepEqual(js400.slots.map(s => s.modifiers.map(m => [m.propertyKey, m.operation, m.segments.length])), [
+    [['health_maxhealth', 'MULTIPLICATIVE', 2]], [['itemresource_powergeneration', 'ADDITIVE', 5]], [['itemresource_powergeneration', 'ADDITIVE', 5]],
+  ])
+  assert.deepEqual(js400.slots[0].modifiers[0].segments, [[0, 500, 0.8, 1], [501, 1000, 1, 1.2]])
+  const jsBlueprint = catalog.blueprints.find(b => b.tag === 'BP_CRAFT_POWR_AMRS_S02_JS400_SCItem')
+  assert.deepEqual(catalogModule.blueprintBaselines(catalog, jsBlueprint), {
+    health_maxhealth: { status: 'RESOLVED', value: 980 }, itemresource_powergeneration: { status: 'RESOLVED', value: 21 },
+  })
+  assert.deepEqual(catalog.properties.health_maxhealth, { name: 'Integrity', unitFormat: null })
+  for (const blueprint of catalog.blueprints) {
+    const recipe = catalog.recipes[blueprint.recipe]
+    const keys = new Set(recipe.slots.flatMap(s => s.modifiers.map(m => m.propertyKey)))
+    assert.deepEqual(Object.keys(blueprint.baselines).sort(), [...keys].sort(), blueprint.tag)
+  }
 })
 
 test('the client payload is compact and carries no raw SCMDB data', () => {
   const json = JSON.stringify(catalog)
-  assert.ok(json.length < 1_200_000, `payload ${json.length} bytes`)
+  // F3 adds the validated modifier groups (compact segment tuples) and a deduplicated baseline table.
+  assert.ok(json.length < 1_400_000, `payload ${json.length} bytes`)
   assert.ok(zlib.gzipSync(json).length < 120_000)
-  for (const raw of ['"tiers"', '"modifiers"', '"modifierAtStart"', '"entityClass"', '"productEntityClass"', '"source"', '"tags"']) {
+  for (const raw of ['"tiers"', '"options"', '"modifierAtStart"', '"propertyName"', '"entityClass"', '"productEntityClass"', '"source"', '"tags"']) {
     assert.equal(json.includes(raw), false, raw)
   }
 })

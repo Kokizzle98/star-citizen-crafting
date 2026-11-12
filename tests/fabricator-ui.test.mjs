@@ -145,3 +145,52 @@ test('armor set overview (OD-FAB-UX-01): pure navigation state, default after fa
   assert.match(overview, /onClick=\{\(\) => onSelect\(slot\)\}>Komponente öffnen/)
   assert.match(css, /\.fabricator-set__item \{/)
 })
+
+// Fabricator F3: MANUAL quality, available preset, material -> stat and stats.
+const [quality, stats] = await Promise.all([
+  read('components/fabricator/FabricatorQuality.tsx'),
+  read('lib/fabricator/fabricator-stats.ts'),
+])
+
+test('F3 slider: native range + synced number input, Q0–1000, keyboard, no server roundtrip', () => {
+  assert.match(quality, /^'use client'/)
+  assert.match(quality, /type="range" min=\{0\} max=\{1000\} step=\{1\} value=\{quality\}/)
+  assert.match(quality, /type="number" inputMode="numeric" min=\{0\} max=\{1000\} step=\{1\} value=\{draft\}/)
+  assert.match(quality, /onKeyDown=\{onSliderKey\}/)
+  assert.match(quality, /manualQualityKeyStep\(event\.key, quality\)/)
+  assert.match(quality, /clampManualQuality\(/)
+  assert.match(quality, /<label htmlFor="fabricator-quality-range">/)
+  assert.match(quality, /<label htmlFor="fabricator-quality-number"/)
+  assert.doesNotMatch(code(quality), /fetch\(|'use server'|useRouter|supabase|router\.refresh/)
+  assert.match(css, /\.fabricator-quality input:focus-visible/)
+})
+
+test('F3: available preset and manual simulation are distinct and the simulation is never a stock promise', () => {
+  assert.match(quality, /Verfügbares gemeinsames Preset/)
+  assert.match(quality, /Aktuelle manuelle Simulation/)
+  assert.match(quality, /ist eine Simulation und wird durch den aktuellen Bestand nicht garantiert/)
+  assert.match(quality, /Auf verfügbares Preset zurücksetzen/)
+  assert.match(quality, /kein Lager-Durchschnitt und nicht die Qualität des gecrafteten Items/)
+  assert.match(labels, /Kein Bestands-Preset/)
+  assert.match(workspace, /<FabricatorQuality key=\{blueprintIndex\}/, 'remount only on a new concrete item')
+})
+
+test('F3: stats are per concrete item, show Base / Crafted / Δ and status text, D4 relative effect', () => {
+  assert.match(workspace, /blueprintBaselines\(catalog, blueprint\)/)
+  assert.match(workspace, /availablePreset\(result\)/)
+  for (const header of ['Basis', 'Gecraftet', 'Δ absolut', 'Δ %', 'Status']) assert.match(quality, new RegExp(`<th scope="col">${header}</th>`))
+  assert.match(quality, /Relativer Crafting-Effekt/)
+  assert.match(quality, /Absoluter Basiswert fehlt\./)
+  assert.match(quality, /FABRICATOR_STAT_STATUS_GLYPHS\[row\.status\]\}<\/span> \{FABRICATOR_STAT_STATUS_LABELS\[row\.status\]\}/, 'never colour only')
+  for (const status of ['RESOLVED', 'REVIEW_REQUIRED', 'SOURCE_DATA_MISSING', 'UNRESOLVED']) assert.match(labels, new RegExp(`${status}: '`))
+  assert.doesNotMatch(code(stats), /family|fingerprint/i, 'no family-wide or fingerprint calculation identity')
+})
+
+test('F3: material -> affected stats and per-slot available quality in the recipe table', () => {
+  assert.match(workspace, /affectedProperties\(recipe\)/)
+  assert.match(workspace, /Beeinflusst: /)
+  assert.match(workspace, /<th scope="col">Verfügbare Q<\/th>/)
+  assert.match(workspace, /Bestand geteilt mit/)
+  assert.match(workspace, /für das Preset verwendet: /)
+  assert.match(quality, /beeinflusst durch /)
+})
