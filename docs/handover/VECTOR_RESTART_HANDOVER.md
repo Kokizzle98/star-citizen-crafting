@@ -11,39 +11,31 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Fabricator Phase 1` (sequential pull requests F1 to F3); active pull request: **F1 – Read & Domain Foundation** (no UI). The previous package `Blueprint Ownership / Tracking` is complete (PRs #36, #39, #40, #41, checkpoint #42); LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
-- Branch: `feat/fabricator-f1-read-foundation`
+- Work package: `Fabricator Phase 1`; F1 is **DONE** (PR #43, merged as `f1e0dbf`); active pull request: **F1.1 – Product Family / Functional Variant Refinement** (no UI); F2 is an open pull request (#44) waiting for F1.1; F3 (Quality / Stats) is NEXT. The previous package `Blueprint Ownership / Tracking` is complete (PRs #36, #39, #40, #41, checkpoint #42); LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
+- Branch: `feat/fabricator-f1-1-family-refinement`
 - Base: `develop`
-- Checkpoint date: `2026-11-11`
+- Checkpoint date: `2026-11-12`
 - Work-package base (historical): `84e7fc3d3c72f62dc9007ec41938b3260cf574f7`
-- Active checkpoint anchor: `84e7fc3d3c72f62dc9007ec41938b3260cf574f7`
+- Active checkpoint anchor: `f1e0dbfdeaca2de0a0d50ac7ecc0c6c585e5f4d9`
 - Working-tree expectation: `CLEAN`
-- Active PR: #43, the F1 pull request from `feat/fabricator-f1-read-foundation` against `develop`; F2 and F3 each start from `develop` on their own branch whose first commit rotates this checkpoint, including its own allowed scope
+- Active PR: the F1.1 pull request from `feat/fabricator-f1-1-family-refinement` against `develop`. PR #44 (F2, branch `feat/fabricator-f2-workspace`) stays open and unchanged while F1.1 is developed; after F1.1 is merged, F2 is updated onto the new `develop` with its own checkpoint revision. F3 starts later from `develop` on its own branch with its own checkpoint rotation and exact allowlist
 - PR base: `develop`
 
-The work-package base and anchor are the verified `develop` head after PR #42 (checkpoint after Blueprint PR 4, idle baseline). The allowed scope below authorizes **F1 only** (owner correction 2026-11-11): the two checkpoint documents and exactly the F1 files in `lib/fabricator/` and `tests/`. No future UI path is authorized here; F2 and F3 each authorize their own paths in their own checkpoint rotation. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The work-package base is the `develop` head after PR #42; the active anchor is the verified `develop` head after PR #43 (F1 squash merge, tree identical to the reviewed head `14b50bd`). The allowed scope below authorizes **F1.1 only**: the two checkpoint documents and exactly the F1.1 files in `lib/fabricator/` and `tests/`. No F2 UI path and no F3 path is authorized here. Production mutation in F1.1: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `lib/fabricator/fabricator-baseline.ts`
-- `lib/fabricator/fabricator-dataset-guard.ts`
-- `lib/fabricator/fabricator-live-source.ts`
+- `lib/fabricator/fabricator-fingerprint.ts`
 - `lib/fabricator/fabricator-live-source-cache.ts`
-- `lib/fabricator/fabricator-live-source-read.ts`
-- `lib/fabricator/fabricator-modifier-adapter.ts`
+- `lib/fabricator/fabricator-live-source.ts`
 - `lib/fabricator/fabricator-product-family.ts`
-- `lib/fabricator/fabricator-recipe.ts`
-- `lib/fabricator/fabricator-size.ts`
 - `lib/fabricator/fabricator-types.ts`
-- `lib/fabricator/fabricator-units.ts`
-- `tests/fabricator-baseline-size.test.mjs`
+- `tests/fabricator-fingerprint.test.mjs`
 - `tests/fabricator-fixture.mjs`
 - `tests/fabricator-live-source.test.mjs`
 - `tests/fabricator-product-family.test.mjs`
-- `tests/fabricator-recipe.test.mjs`
-- `tests/fabricator-scmdb-semantics.test.mjs`
 
 Recovery control block:
 
@@ -77,6 +69,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#40` (Blueprint Ownership / Tracking PR 3: LIVE blueprint catalog sync builder and owner-side runner): squash-merged into `develop` on 2026-11-11 as `b24a2e0`; reviewed head `55f9914`. First LIVE sync run on Production on 2026-11-11 under an explicit named owner GO; read-only postchecks PASS (recorded on PR #40).
 - PR `#41` (Blueprint Ownership / Tracking PR 4: usable Blueprint UI `/vector/blueprints`): squash-merged into `develop` on 2026-11-11 as `a8ee27c`; reviewed head `c3732cf` (tree identical). UI only; no migration and no Production mutation.
 - PR `#42` (checkpoint after Blueprint PR 4, idle baseline): merged into `develop` on 2026-11-11 as `84e7fc3`.
+- PR `#43` (Fabricator F1 – Read & Domain Foundation): squash-merged into `develop` on 2026-11-11 as `f1e0dbf` after the owner / Project Lead merge gate; reviewed head and checkpoint control revision `14b50bd`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -129,13 +122,17 @@ Owner decisions (2026-11-11):
 - `D3 = A`: modifiers and baseline values are read server-side from the repository-pinned LIVE SCMDB mirror; the mirror version must equal the `ACTIVE` LIVE database dataset version, otherwise fail closed. No LIVE/PTU fallback, no other mirror, no database extension in F1;
 - `D4 = A` with contract: when a multiplicative effect is exactly determined by the recipe but no reliable baseline exists, only the relative crafting effect is shown with an explicit note; never derive a synthetic base or crafted value from it;
 - `D5`: product and variant hero images stay core. The `public/assets/components` images are UI mockups, not a product image source, and must not be used as product images; a neutral placeholder is allowed in F2 while a reliable image source is investigated.
+- `OD-FAB-GROUP-01` (2026-11-12): the armor product-family name veto is scoped to one functional slot (`attachType`) instead of the whole structural line; the structural source contract stays the only mechanism that creates a family or variant relation, the name stays a pure consistency veto; no special rules for individual product names (they are regression cases only);
+- `OD-FAB-GROUP-02` (2026-11-12): the functional crafting fingerprint (slot, recipe structure, material identity, quantity, unit, minQuality, modifier property, operation and segments, functional base stats, fingerprint version, dataset version; no display names, no manufacturer, no tags) is a verification / classification contract only: it may confirm functional equality, make a deviation visible and provide review evidence, and never creates a family, joins unrelated products or overrides a structural relation;
+- `OD-FAB-GROUP-03` (2026-11-12): structurally related components are classified FUNCTIONALLY_EQUIVALENT, FUNCTIONALLY_DIFFERENT or UNRESOLVED; functionally different items stay in their structural family and the UI must say so in words (not colour only). Calculation always stays concrete-item based; the fingerprint is not a calculation identity and no family-wide stats are synthesized. Short display labels (set / variant / component) are derived only after identity resolution and never create identity;
 - SCMDB source and semantic reference (owner decision 2026-11-11): SCMDB is the external origin of the mirrored SCMDB dataset, and SCMDB itself (scmdb.net, available SCMDB documentation and traceable SCMDB code) is the preferred source semantic reference for how SCMDB interprets, names, calculates and displays its own raw data. An unclear SCMDB field is neither interpreted from the raw JSON alone nor discarded right away. Evidence order: (1) repository-pinned SCMDB dataset, (2) scmdb.net representation of the same datum, (3) SCMDB documentation, (4) traceable SCMDB implementation, (5) VECTOR adapter / normalizer, (6) tests against the reproduced semantics. SCMDB is **not** an authority for VECTOR user ownership, crew membership, inventory ownership, auth / identity, governance, security or VECTOR-specific domain decisions (SCMDB `isDefault` stays a raw source value only). This is not a FROZEN contract; a separate governance work package `SCMDB_SOURCE_AUTHORITY_V1` (or an integration into a future provider authority contract) is noted for later.
 
 Sequential pull requests inside this package:
 
-- F1: read and domain foundation in `lib/fabricator/` with tests (family/variant/slot resolution, item-to-blueprint, strict recipe, recipe-to-inventory vocabulary, modifier adapter to `VECTOR_CRAFT_CALC_V1`, baseline allowlist, size, LIVE mirror version guard); no UI, no database change, no Production mutation;
-- F2: `/vector/fabricator` workspace, recipe materials and crew craftability through the existing `get_active_group_inventory()`; read-only, no inventory mutation;
-- F3: global MANUAL quality slider Q0–1000 and resolved product stats (base, crafted, absolute and relative delta).
+- F1 (**DONE**, #43 as `f1e0dbf`): read and domain foundation in `lib/fabricator/` with tests (family/variant/slot resolution, item-to-blueprint, strict recipe, recipe-to-inventory vocabulary, modifier adapter to `VECTOR_CRAFT_CALC_V1`, baseline allowlist, size, LIVE mirror version guard); no UI, no database change, no Production mutation;
+- F1.1 (**ACTIVE**): slot-scoped armor name veto, functional crafting fingerprint and the FUNCTIONALLY_EQUIVALENT / FUNCTIONALLY_DIFFERENT / UNRESOLVED classification; no UI, no database change, no Production mutation;
+- F2 (open PR #44, waiting for F1.1): `/vector/fabricator` workspace, recipe materials and crew craftability through the existing `get_active_group_inventory()`; read-only, no inventory mutation;
+- F3 (**NEXT**): global MANUAL quality slider Q0–1000 and resolved product stats (base, crafted, absolute and relative delta).
 
 Planned governance follow-up, not part of this package: `SCMDB_SOURCE_AUTHORITY_V1`.
 
@@ -396,4 +393,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Owner review of the Fabricator F1 pull request (read and domain foundation, no UI, no database change, no Production mutation). Merge only with explicit owner approval. Do not start F2 before F1 is merged; F2 then starts from `develop` on its own branch whose first commit rotates the branch, PR and `NEXT STEP` fields of this block. Do not reopen merged Blueprint PRs without a concrete defect. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Owner review of the Fabricator F1.1 pull request (slot-scoped veto, functional fingerprint, classification; no UI, no database change, no Production mutation). Merge only with explicit owner approval. PR #44 (F2) stays unchanged until F1.1 is merged; then F2 is updated onto the new `develop` with its own checkpoint revision and the short display labels. Do not start F3 before F2 is merged. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
