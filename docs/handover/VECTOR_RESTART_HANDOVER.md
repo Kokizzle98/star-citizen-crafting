@@ -11,24 +11,25 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Governance – VECTOR_SOURCE_AUTHORITY_V1` (documentation only). `Fabricator Phase 1` F1 to F3 are **DONE** (F3: PR #47, merged as `a460201`); the read-only audits F4-A, F4-A.1, F4-A.2, the Star Citizen Wiki API probe and the UEX 22-UUID sample audit are complete (results in the PR conversation and in `docs/frozen/VECTOR_SOURCE_AUTHORITY_V1.md`). LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
-- Branch: `docs/vector-source-authority-v1`
+- Work package: `Governance – Claude agent structure (Fleet Commander)` (documentation only). The VECTOR Project Lead role is now held by Claude (Fleet Commander), the Primary Engineer role by Claude (Vector Terminal - GitHub / Claude Code), and GitHub Copilot is an optional, punctual Independent Reviewer (owner decision 2026-11-12). `VECTOR_SOURCE_AUTHORITY_V1` is merged (PR #48 as `9aeab14`). `Fabricator Phase 1` F1 to F3 are **DONE**; F4-S stays STOPPED at the source / distribution gate. LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
+- Branch: `chore/governance-claude-fleet-commander`
 - Base: `develop`
 - Checkpoint date: `2026-11-12`
-- Work-package base (historical): `a460201623eb94222645e550994fd4755ddab4d8`
-- Active checkpoint anchor: `a460201623eb94222645e550994fd4755ddab4d8`
+- Work-package base (historical): `9aeab14d9107a5684f9b05dc7fa70f4c40f210ce`
+- Active checkpoint anchor: `9aeab14d9107a5684f9b05dc7fa70f4c40f210ce`
 - Working-tree expectation: `CLEAN`
-- Active PR: the governance pull request from `docs/vector-source-authority-v1` against `develop`
+- Active PR: the governance pull request from `chore/governance-claude-fleet-commander` against `develop`
 - PR base: `develop`
 
-The active anchor is the verified `develop` head after PR #47 (F3 squash merge). The allowed scope below authorizes **documentation only**: the new FROZEN contract, the rule index and the two checkpoint documents. No code, test, data, migration or other document is authorized here. Production mutation: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #48 (`VECTOR_SOURCE_AUTHORITY_V1` merge). The allowed scope below authorizes **documentation only**: the role holders in the AI operating model, the Project Lead evidence description, one line in `AGENTS.md` and the two checkpoint documents. No code, test, data, migration, FROZEN or other document is authorized here. Production mutation: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
-- `docs/PROJECT_STATE.md`
+- `AGENTS.md`
+- `docs/governance/AI_OPERATING_MODEL.md`
+- `docs/governance/PROJECT_LEAD_EVIDENCE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `docs/RULE_INDEX.md`
-- `docs/frozen/VECTOR_SOURCE_AUTHORITY_V1.md`
+- `docs/PROJECT_STATE.md`
 
 Recovery control block:
 
@@ -67,6 +68,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#46` (Fabricator F1.2 – Armor Family Key V2): squash-merged into `develop` on 2026-11-12 as `74d72dc` after the owner merge gate; reviewed head `e08e3bd`, checkpoint control revision `dfb3eac`.
 - PR `#44` (Fabricator F2 – Workspace + Recipe + Crew Craftability): squash-merged into `develop` on 2026-11-12 as `706267a` after the owner merge gate.
 - PR `#47` (Fabricator F3 – MANUAL Quality per material, Inventory-Aware Preset & Product Stats): squash-merged into `develop` on 2026-11-12 as `a460201` after owner manual acceptance; read-only, no database change, no Production mutation.
+- PR `#48` (Governance – `VECTOR_SOURCE_AUTHORITY_V1` FROZEN, documentation only): merged into `develop` on 2026-11-12 as `9aeab14`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -408,4 +410,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Owner review of the governance pull request for `VECTOR_SOURCE_AUTHORITY_V1` (documentation only); merge only with explicit owner approval. Afterwards the owner decides the F4-S source / distribution gate (licence of scunpacked-data, persistence option A / A′ / B) before F4-S implementation; F4-B and any UEX source foundation follow as separate work packages. No Production mutation. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Owner review of the governance pull request `Claude agent structure (Fleet Commander)` (documentation only); merge only with explicit owner approval. The owner decides the F4-S source / distribution gate (licence of scunpacked-data, persistence option A / A′ / B) before F4-S implementation; F4-B and any UEX source foundation follow as separate work packages. No Production mutation. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.

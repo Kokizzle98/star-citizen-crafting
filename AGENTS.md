@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Entry point for contributors and coding agents (Claude, Copilot, others). This file only points to the authoritative documents; it does not restate or override them.
+Entry point for contributors and coding agents (Claude, GitHub Copilot as optional reviewer, others). This file only points to the authoritative documents; it does not restate or override them.
 
 ## Read first
 
