@@ -145,3 +145,71 @@ test('armor set overview (OD-FAB-UX-01): pure navigation state, default after fa
   assert.match(overview, /onClick=\{\(\) => onSelect\(slot\)\}>Komponente öffnen/)
   assert.match(css, /\.fabricator-set__item \{/)
 })
+
+// Fabricator F3: MANUAL quality, available preset, material -> stat and stats.
+const [quality, stats] = await Promise.all([
+  read('components/fabricator/FabricatorQuality.tsx'),
+  read('lib/fabricator/fabricator-stats.ts'),
+])
+
+test('F3 sliders: native range + synced number input, Q0–1000, keyboard, no server roundtrip', () => {
+  assert.match(quality, /^'use client'/)
+  assert.match(quality, /type="range" min=\{0\} max=\{1000\} step=\{1\} value=\{value\}/)
+  assert.match(quality, /type="number" inputMode="numeric" min=\{0\} max=\{1000\} step=\{1\} value=\{draft \?\? String\(value\)\}/)
+  assert.match(quality, /onKeyDown=\{onKey\}/)
+  assert.match(quality, /manualQualityKeyStep\(event\.key, value\)/)
+  assert.match(quality, /clampManualQuality\(/)
+  assert.match(quality, /<label htmlFor=\{`\$\{id\}-range`\}>/)
+  assert.match(quality, /<label htmlFor=\{`\$\{id\}-number`\}/)
+  assert.doesNotMatch(code(quality), /fetch\(|'use server'|useRouter|supabase|router\.refresh/)
+  assert.match(css, /\.fabricator-quality input:focus-visible/)
+})
+
+test('AC 3 / 4: one independent quality per material; the global control is only a bulk helper', () => {
+  // The simulation state is one value per recipe slot, never a single shared quality.
+  assert.match(quality, /useState<Record<string, number>>\(\(\) => initialSlotQualities\(recipe\.slots, craftability\)\)/)
+  assert.match(quality, /setQualities\(current => \(\{ \.\.\.current, \[slotKey\]: value \}\)\)/, 'changing one material keeps the others')
+  assert.match(quality, /fabricatorStats\(recipe, baselines, qualities, properties\)/)
+  assert.doesNotMatch(code(quality), /slotQualities\(recipe, /, 'no global value expanded over all slots for the calculation')
+  // Every quality-relevant material gets its own slider row.
+  assert.match(quality, /const relevant = recipe\.slots\.filter\(slot => slot\.modifiers\.length > 0\)/)
+  assert.match(quality, /\{relevant\.map\(slot => \{/)
+  assert.match(quality, /<QualityInput id=\{`fabricator-quality-slot-\$\{slot\.slotKey\}`\}/)
+  // Bulk: sets all, no permanent coupling.
+  assert.match(quality, /Alle Materialien gemeinsam setzen/)
+  assert.match(quality, /setQualities\(setAllSlotQualities\(recipe\.slots, value\)\)/)
+  assert.match(quality, /Danach ist jedes Material wieder einzeln einstellbar/)
+  assert.match(quality, /Auf verfügbare Material-Qualitäten zurücksetzen/)
+  // Material -> own effect, and the stat lists every contributing material separately.
+  assert.match(quality, /row\.contributions\.find\(c => c\.slotKey === slot\.slotKey\)/)
+  assert.match(quality, /beeinflusst durch \{materials\.join\(' \+ '\)\}/)
+})
+
+test('F3: available preset and simulation are distinct and the simulation is never a stock promise', () => {
+  assert.match(quality, /Verfügbares gemeinsames Preset/)
+  assert.match(quality, /Aktuelle Materialqualitäten \(Simulation\)/)
+  assert.match(quality, /ist eine Simulation und wird durch den aktuellen Bestand nicht garantiert/)
+  assert.match(quality, /kein Lager-Durchschnitt und nicht die/)
+  assert.match(labels, /Kein Bestands-Preset/)
+  assert.match(workspace, /<FabricatorQuality key=\{blueprintIndex\}/, 'remount only on a new concrete item')
+  assert.match(workspace, /preset=\{preset\} craftability=\{result\}/)
+})
+
+test('F3: stats are per concrete item, show Base / Crafted / Δ and status text, D4 relative effect', () => {
+  assert.match(workspace, /blueprintBaselines\(catalog, blueprint\)/)
+  assert.match(workspace, /availablePreset\(result\)/)
+  for (const header of ['Basis', 'Gecraftet', 'Δ absolut', 'Δ %', 'Status']) assert.match(quality, new RegExp(`<th scope="col">${header}</th>`))
+  assert.match(quality, /Relativer Crafting-Effekt/)
+  assert.match(quality, /Absoluter Basiswert fehlt\./)
+  assert.match(quality, /FABRICATOR_STAT_STATUS_GLYPHS\[row\.status\]\}<\/span> \{FABRICATOR_STAT_STATUS_LABELS\[row\.status\]\}/, 'never colour only')
+  for (const status of ['RESOLVED', 'REVIEW_REQUIRED', 'SOURCE_DATA_MISSING', 'UNRESOLVED']) assert.match(labels, new RegExp(`${status}: '`))
+  assert.doesNotMatch(code(stats), /family|fingerprint/i, 'no family-wide or fingerprint calculation identity')
+})
+
+test('F3: material -> affected stats and per-slot available quality in the recipe table', () => {
+  assert.match(workspace, /affectedProperties\(recipe\)/)
+  assert.match(workspace, /Beeinflusst: /)
+  assert.match(workspace, /<th scope="col">Verfügbare Q<\/th>/)
+  assert.match(workspace, /Bestand geteilt mit/)
+  assert.match(workspace, /für das Preset verwendet: /)
+})

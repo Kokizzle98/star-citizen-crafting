@@ -4,8 +4,8 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **State verified through commit:** `74d72dc706ede38524cc577a22159449a69b753a`
-- **Updated by work package:** Fabricator Phase 1 — checkpoint rotation for F2 (Workspace + Recipe + Crew Craftability) on the F1.2 foundation
+- **State verified through commit:** `706267a3bcffe5fb18c6ca346bbb26758b94b699`
+- **Updated by work package:** Fabricator Phase 1 — checkpoint rotation for F3 (MANUAL Quality, Inventory-Aware Preset & Product Stats) after the F2 merge
 - **Checkpoint date:** 2026-11-12
 
 ## How to read this file
@@ -31,10 +31,11 @@
 - Fabricator F1 — Read & Domain Foundation: **DONE**. Squash-merged as #43 (`f1e0dbf`) after the owner / Project Lead merge gate; reviewed head `14b50bd`.
 - Fabricator F1.1 — Product Family / Functional Variant Refinement: **DONE**. Squash-merged as #45 (`cc083c9`) after the owner merge gate; reviewed head `a83803a`.
 - Fabricator F1.2 — Armor Family Key V2: **DONE**. Squash-merged as #46 (`74d72dc`) after the owner merge gate; reviewed head `e08e3bd`. Armor family = tag prefix + set number, edition / variant = complete remainder; undersuits are no armor-set component. 652 families (62 armor sets), review states unchanged (22).
+- Fabricator F2 — Workspace + Recipe + Crew Craftability: **DONE**. Squash-merged as #44 (`706267a`) after the owner merge gate: `/vector/fabricator` with families, short set / variant / component labels, the `Rüstungsset` overview (OD-FAB-UX-01), visible functional deviation, recipe and crew craftability; read-only, no database change, no Production mutation.
 
 ## ACTIVE
 
-- **Fabricator Phase 1**, pull request **F2 – Workspace + Recipe + Crew Craftability** (#44) on `feat/fabricator-f2-workspace`, rebuilt on F1.2: `/vector/fabricator` with families, short set / variant / component labels, the `Rüstungsset` overview (OD-FAB-UX-01), visible functional deviation, recipe and crew craftability; read-only, no database change, no Production mutation; F3 is NEXT. Owner decisions D1 = A, D2 = C, D3 = A, D4 = A (with contract) and D5 (hero images core, mockups are no product image source) and the SCMDB source and semantic reference decision (SCMDB is the preferred semantic reference for SCMDB-derived data, never an authority for VECTOR user state) are recorded in the restart handover section 5 and the F1 pull request. The F2 checkpoint authorizes F2 paths only.
+- **Fabricator Phase 1**, pull request **F3 – MANUAL Quality, Inventory-Aware Preset & Product Stats** (#47) on `feat/fabricator-f3-quality-stats`: MANUAL quality Q0–1000 per recipe material with a global bulk control (owner correction of acceptance points 3 / 4, 2026-11-12), inventory-aware available preset (owner domain evidence `OQ-F3-1`: quality is quantity-weighted over the quantities actually used; `D-F3-1`: the global preset is the lowest per-slot available quality), reusable quantity-weighted quality primitives in `lib/quality/`, material -> stat relation, product stats (base, crafted, absolute and relative delta) per concrete item, targeted SCMDB semantic reconciliation and the F2 duplicate-material craftability fix; read-only, no database change, no Production mutation. Decisions are recorded in the restart handover section 5. The F3 checkpoint authorizes F3 paths only.
 
 ## PAUSED
 
@@ -46,13 +47,13 @@
 
 ## NEXT
 
-1. Owner smoke and review of PR #44; merge only with explicit owner approval.
-2. F3: global MANUAL quality slider Q0–1000 and resolved product stats, computed per concrete item.
+1. Owner review of the F3 pull request; merge only with explicit owner approval.
+2. After F3: the later armor-set material summary built from the per-component slot selection primitives, and the inventory progressive-disclosure redesign, each as its own work package.
 3. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
 
 ## OPEN DECISIONS
 
-- No owner decision is pending for F2.
+- No owner decision is pending for F3 (OQ-F3-1 and D-F3-1 decided on 2026-11-12).
 - Later UX work package (not started): compact lot / location display in the Fabricator, grouping by player and location, progressive disclosure, and a clear distinction between "available in the crew" and "available at one place".
 - Separate governance work package noted for later: `SCMDB_SOURCE_AUTHORITY_V1` (or integration into a future provider authority contract).
 - Known items that will need a decision later, none started: a later UX / design pass (blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, the narrow app shell / sidebar on small screens); the known crew `active_group` inconsistency (`getCrewContext()` falls back to the first crew while the crew RPCs report `ACTIVE_GROUP_REQUIRED`), deliberately unchanged; the `Crew Security Hardening` work package (LOW to MEDIUM findings, due before the first user outside the current test group); archiving or removing the legacy audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders (separate Cleanup Gate); Rule Index remediation items R1, R2, R4 and R5; the later WP-AOM-01 gates (Security Finding Register, Backup Gate, Cleanup Gate), which stay separate future work.

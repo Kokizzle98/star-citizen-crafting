@@ -19,17 +19,22 @@ async function loadTsModule(relativePath) {
   }).outputText
   const specifiers = new Set([...output.matchAll(/from\s+(['"])(\.{1,2}\/[^'"]+)\1/g)].map(m => m[2]))
   for (const specifier of specifiers) {
-    const dependency = path.posix.join(path.posix.dirname(relativePath), `${specifier}.ts`)
-    const url = await loadTsModule(dependency)
+    // Plain JavaScript modules (the unchanged calculation engine) are imported from their file URL.
+    const url = specifier.endsWith('.js')
+      ? new URL(path.posix.join(path.posix.dirname(relativePath), specifier), ROOT).href
+      : await loadTsModule(path.posix.join(path.posix.dirname(relativePath), `${specifier}.ts`))
     output = output.replaceAll(`'${specifier}'`, JSON.stringify(url)).replaceAll(`"${specifier}"`, JSON.stringify(url))
   }
-  if (/from\s+['"](?!data:)[^'"]+['"]/.test(output)) throw new Error(`Unexpected non-relative import in ${relativePath}`)
+  if (/from\s+['"](?!data:|file:)[^'"]+['"]/.test(output)) throw new Error(`Unexpected non-relative import in ${relativePath}`)
   const url = `data:text/javascript;base64,${Buffer.from(output).toString('base64')}`
   cache.set(relativePath, url)
   return url
 }
 
 export const loadFabricatorModule = async name => import(await loadTsModule(`lib/fabricator/${name}.ts`))
+
+/** Any lib module by repository-relative path without extension (e.g. 'lib/quality/quality-weighting'). */
+export const loadLibModule = async relativePath => import(await loadTsModule(`${relativePath}.ts`))
 
 export const readText = file => readFile(new URL(file, ROOT), 'utf8')
 export const readJson = async file => JSON.parse(await readText(file))

@@ -18,7 +18,7 @@ test('baseline statuses over every LIVE blueprint x modified stat', () => {
     return [...keys].map(key => baseline.resolveFabricatorBaseline(key, item, source.properties))
   })
   assert.deepEqual(tally(results.map(r => r.status)), {
-    REVIEW_REQUIRED: 3675, RESOLVED: 806, SOURCE_DATA_MISSING: 97, UNRESOLVED: 2,
+    REVIEW_REQUIRED: 1867, RESOLVED: 2592, SOURCE_DATA_MISSING: 111, UNRESOLVED: 10,
   })
   for (const r of results) {
     assert.equal(r.value === null, r.status !== 'RESOLVED', 'only RESOLVED carries a value')
@@ -42,8 +42,13 @@ test('representative statuses and reasons', () => {
   assert.deepEqual({ ...js400 }, { propertyKey: 'health_maxhealth', status: 'RESOLVED', value: 980, sourcePath: 'health',
     unitFormat: null, sourceUnit: null, reason: null })
   const defiance = 'BP_CRAFT_slaver_armor_heavy_core_01_01_01'
-  assert.equal(at(defiance, 'armor_temperaturemin').status, 'REVIEW_REQUIRED')
-  assert.equal(at(defiance, 'armor_temperaturemin').reason, 'SIGNED_VALUE_MULTIPLIER_SEMANTICS_UNVERIFIED')
+  // F3: armor temperatures reconciled against SCMDB (signed value * modifier).
+  const defianceItem = source.items.get(live.byTag.get(defiance).productEntityClass)
+  assert.deepEqual([at(defiance, 'armor_temperaturemin').status, at(defiance, 'armor_temperaturemin').value, at(defiance, 'armor_temperaturemin').sourcePath],
+    ['RESOLVED', defianceItem.source.temperatureResistance.min, 'temperatureResistance.min'])
+  assert.equal(at(defiance, 'armor_temperaturemax').value, defianceItem.source.temperatureResistance.max)
+  assert.deepEqual([at('BP_CRAFT_hdtc_jacket_01_01_01', 'armor_temperaturemin').status, at('BP_CRAFT_hdtc_jacket_01_01_01', 'armor_temperaturemin').reason],
+    ['UNRESOLVED', 'SCOPE_NOT_ALLOWLISTED'], 'clothing has no temperature field and is not allowlisted')
   assert.equal(at(defiance, 'armor_damagemitigation').reason, 'MULTI_CHANNEL_SOURCE')
   assert.equal(at(defiance, 'health_maxhealth').reason, 'SCOPE_NOT_ALLOWLISTED')
   assert.equal(at('BP_CRAFT_none_rifle_multi_01', 'weapon_damage').reason, 'MULTI_CHANNEL_SOURCE')

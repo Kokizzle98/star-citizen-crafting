@@ -1,10 +1,11 @@
+import { resolveFabricatorBaseline } from './fabricator-baseline'
 import { fabricatorCategoryKey } from './fabricator-labels'
 import type { FabricatorPreparedSource } from './fabricator-live-source-cache'
 import type { FabricatorFunctionalClass } from './fabricator-fingerprint'
 import type { FabricatorArmorSlot, FabricatorFamily } from './fabricator-product-family'
 import { ARMOR_SLOT_ORDER } from './fabricator-product-family'
 import { normalizeFabricatorSize } from './fabricator-size'
-import type { FabricatorBlueprint, FabricatorItem, FabricatorRecipeResult } from './fabricator-types'
+import type { FabricatorBlueprint, FabricatorItem, FabricatorRecipeResult, FabricatorResolution } from './fabricator-types'
 
 // Compact, serializable Fabricator catalog for the client (F2).
 //
@@ -26,18 +27,50 @@ export type FabricatorMaterialView = {
   vocabulary: 'RESOLVED' | 'UNRESOLVED'
 }
 
+/**
+ * One validated source segment, compact for the client payload:
+ * [startQuality, endQuality, modifierAtStart, modifierAtEnd], exactly as read.
+ */
+export type FabricatorSegmentView = readonly [number, number, number, number]
+
+/** One validated source modifier group of a slot (F3). */
+export type FabricatorModifierView = {
+  propertyKey: string
+  operation: 'MULTIPLICATIVE' | 'ADDITIVE'
+  segments: FabricatorSegmentView[]
+}
+
 export type FabricatorRecipeView = {
   status: FabricatorRecipeResult['status']
   issues: string[]
   craftTimeSeconds: number | null
-  slots: { slotKey: string; name: string; material: FabricatorMaterialView }[]
+  slots: { slotKey: string; name: string; material: FabricatorMaterialView; modifiers: FabricatorModifierView[] }[]
 }
+
+/**
+ * Baseline of one property for the blueprint's concrete product item (F3).
+ * `value` exists only for RESOLVED; absent fields mean null (compact payload).
+ */
+export type FabricatorBaselineView = {
+  status: FabricatorResolution
+  value?: number
+  reason?: string
+  sourceUnit?: 'm/s'
+}
+
+export type FabricatorPropertyView = { name: string; unitFormat: string | null }
 
 /** One blueprint; components reference it by its index in `catalog.blueprints`. */
 export type FabricatorBlueprintView = {
   tag: string
   productName: string | null
   recipe: number
+  /**
+   * F3: baselines of every property the recipe modifies, read from exactly
+   * this blueprint's product item (concrete-item calculation identity), as
+   * indexes into the deduplicated `catalog.baselines` table.
+   */
+  baselines: Record<string, number>
 }
 
 export type FabricatorComponentView = {
@@ -95,6 +128,16 @@ export type FabricatorCatalog = {
   families: FabricatorFamilyView[]
   blueprints: FabricatorBlueprintView[]
   recipes: FabricatorRecipeView[]
+  /** Deduplicated baseline table referenced by `FabricatorBlueprintView.baselines`. */
+  baselines: FabricatorBaselineView[]
+  /** SCMDB property names and display formats for the properties the recipes modify. */
+  properties: Record<string, FabricatorPropertyView>
+}
+
+/** The baselines of one blueprint, resolved from the catalog's table. */
+export function blueprintBaselines(catalog: Pick<FabricatorCatalog, 'baselines'>, blueprint: FabricatorBlueprintView):
+  Record<string, FabricatorBaselineView> {
+  return Object.fromEntries(Object.entries(blueprint.baselines).map(([key, index]) => [key, catalog.baselines[index]]))
 }
 
 function recipeView(result: FabricatorRecipeResult): FabricatorRecipeView {
@@ -115,6 +158,12 @@ function recipeView(result: FabricatorRecipeResult): FabricatorRecipeView {
         minQuality: slot.material.minQuality,
         vocabulary: slot.material.vocabulary,
       },
+      modifiers: slot.modifiers.map(group => ({
+        propertyKey: group.propertyKey,
+        operation: group.operation,
+        segments: group.segments.map(({ startQuality, endQuality, modifierAtStart, modifierAtEnd }) =>
+          [startQuality, endQuality, modifierAtStart, modifierAtEnd] as const),
+      })),
     })),
   }
 }
@@ -187,6 +236,9 @@ export function buildFabricatorCatalog(prepared: FabricatorPreparedSource): Fabr
   const recipeIndex = new Map<string, number>()
   const blueprints: FabricatorBlueprintView[] = []
   const blueprintIndex = new Map<string, number>()
+  const properties: Record<string, FabricatorPropertyView> = {}
+  const baselineTable: FabricatorBaselineView[] = []
+  const baselineIndex = new Map<string, number>()
 
   for (const blueprint of source.blueprints) {
     const view = recipeView(blueprint.recipe)
@@ -198,7 +250,33 @@ export function buildFabricatorCatalog(prepared: FabricatorPreparedSource): Fabr
       recipeIndex.set(key, index)
     }
     blueprintIndex.set(blueprint.sourceGuid, blueprints.length)
-    blueprints.push({ tag: blueprint.sourceTag, productName: blueprint.productName, recipe: index })
+    const item = source.items.get(blueprint.productEntityClass) ?? null
+    const baselines: Record<string, number> = {}
+    for (const slot of view.slots) {
+      for (const group of slot.modifiers) {
+        if (baselines[group.propertyKey]) continue
+        properties[group.propertyKey] ??= {
+          name: source.properties.get(group.propertyKey)?.name ?? group.propertyKey,
+          unitFormat: source.properties.get(group.propertyKey)?.unitFormat ?? null,
+        }
+        const baseline = resolveFabricatorBaseline(group.propertyKey, item, source.properties)
+        const view: FabricatorBaselineView = {
+          status: baseline.status,
+          ...(baseline.value !== null ? { value: baseline.value } : {}),
+          ...(baseline.reason !== null ? { reason: baseline.reason } : {}),
+          ...(baseline.sourceUnit !== null ? { sourceUnit: baseline.sourceUnit } : {}),
+        }
+        const viewKey = JSON.stringify(view)
+        let tableIndex = baselineIndex.get(viewKey)
+        if (tableIndex === undefined) {
+          tableIndex = baselineTable.length
+          baselineTable.push(view)
+          baselineIndex.set(viewKey, tableIndex)
+        }
+        baselines[group.propertyKey] = tableIndex
+      }
+    }
+    blueprints.push({ tag: blueprint.sourceTag, productName: blueprint.productName, recipe: index, baselines })
   }
 
   const componentView = (item: FabricatorItem, slot: FabricatorArmorSlot | null, guids: string[], functional: FabricatorFunctionalClass): FabricatorComponentView => {
@@ -309,5 +387,5 @@ export function buildFabricatorCatalog(prepared: FabricatorPreparedSource): Fabr
     family.titleDetail = blueprints[named.blueprints[0]].productName ?? named.itemName
   }
 
-  return { version: source.version, families, blueprints, recipes }
+  return { version: source.version, families, blueprints, recipes, baselines: baselineTable, properties }
 }

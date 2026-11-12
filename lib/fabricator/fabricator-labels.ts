@@ -88,3 +88,41 @@ export const FABRICATOR_RECIPE_ISSUE_MESSAGES: Readonly<Record<string, string>> 
   MODIFIER_SHAPE_INVALID: 'Die Qualitätsmodifikatoren haben eine unbekannte Struktur.',
   MODIFIER_PROPERTY_UNKNOWN: 'Ein Qualitätsmodifikator verweist auf eine unbekannte Eigenschaft.',
 })
+
+// F3: product stats and quality presets.
+
+export const FABRICATOR_STAT_STATUS_LABELS = Object.freeze({
+  RESOLVED: 'Berechnet',
+  REVIEW_REQUIRED: 'Prüfung nötig',
+  SOURCE_DATA_MISSING: 'Quelldaten fehlen',
+  UNRESOLVED: 'Nicht auflösbar',
+})
+
+/** Non-colour status glyphs; the text label is always shown next to them. */
+export const FABRICATOR_STAT_STATUS_GLYPHS = Object.freeze({
+  RESOLVED: '✓',
+  REVIEW_REQUIRED: '⚠',
+  SOURCE_DATA_MISSING: '∅',
+  UNRESOLVED: '?',
+})
+
+export const FABRICATOR_STAT_REASON_MESSAGES: Readonly<Record<string, string>> = Object.freeze({
+  QUALITY_OUTSIDE_SEGMENT: 'Für diese Qualität enthält SCMDB keinen Modifikator; der Wert ist hier nicht verfügbar.',
+  ADDITIVE_SHAPE_UNVERIFIED: 'Die Form des additiven Modifikators ist nicht belegt.',
+  UNIT_UNVERIFIED: 'Die Einheit des Basiswerts ist nicht belegt.',
+  MULTI_CHANNEL_SOURCE: 'Der Wert besteht aus mehreren Kanälen (z. B. Schadensarten) und wird noch nicht einzeln dargestellt.',
+  MULTI_MODE_SOURCE: 'Der Wert hängt vom Feuermodus ab und wird noch nicht einzeln dargestellt.',
+  PERCENT_SEMANTICS_UNVERIFIED: 'Die Prozent-Bedeutung dieses Werts ist nicht belegt.',
+  AMBIGUOUS_MIN_MAX_SOURCE: 'Die Quelle nennt mehrere mögliche Basiswerte.',
+  NO_VERIFIED_SOURCE_FIELD: 'Für diesen Wert ist kein belegtes Quellfeld bekannt.',
+  FIELD_MISSING: 'Das Quellfeld fehlt für dieses Item in SCMDB.',
+  ITEM_UNRESOLVED: 'Das hergestellte Item fehlt im SCMDB-Itemdatensatz.',
+  PROPERTY_UNKNOWN: 'Die Eigenschaft ist unbekannt.',
+  SCOPE_NOT_ALLOWLISTED: 'Für diese Item-Art ist der Basiswert nicht belegt.',
+})
+
+export const FABRICATOR_PRESET_MESSAGES = Object.freeze({
+  NO_CREW_INVENTORY: 'Kein Bestands-Preset: Der Crew-Bestand ist nicht verfügbar. Start bei Q500.',
+  NOT_COVERED: 'Kein Bestands-Preset: Der nutzbare Bestand deckt nicht alle Materialien. Start bei Q500.',
+  UNRESOLVED: 'Kein Bestands-Preset: Das Rezept ist nicht vollständig auflösbar. Start bei Q500.',
+})

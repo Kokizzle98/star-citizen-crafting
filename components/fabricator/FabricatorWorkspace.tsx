@@ -1,11 +1,12 @@
 'use client'
 
 import { Fragment, useMemo, useRef, useState, type KeyboardEvent } from 'react'
-import type {
-  FabricatorCatalog,
-  FabricatorComponentView,
-  FabricatorFamilyView,
-  FabricatorVariantView,
+import {
+  blueprintBaselines,
+  type FabricatorCatalog,
+  type FabricatorComponentView,
+  type FabricatorFamilyView,
+  type FabricatorVariantView,
 } from '@/lib/fabricator/fabricator-catalog'
 import {
   bestCraftability,
@@ -36,10 +37,15 @@ import {
   type FabricatorFilters,
 } from '@/lib/fabricator/fabricator-search'
 import type { FabricatorCrewResult } from '@/lib/fabricator/fabricator-workspace-read'
+import { availablePreset } from '@/lib/fabricator/fabricator-preset'
+import { affectedProperties } from '@/lib/fabricator/fabricator-stats'
+import { FabricatorQuality } from './FabricatorQuality'
 import { FabricatorVisual } from './FabricatorVisual'
 
 // Fabricator F2 workspace: product selection on the left, the selected
-// product with recipe and crew craftability on the right. Read-only: no
+// product with recipe and crew craftability on the right. F3 adds the
+// per-slot available quality, the material -> stat relation, the MANUAL
+// quality with the inventory-aware preset and the stats of the concrete item. Read-only: no
 // inventory change, reservation or consumption. Family and variant identity
 // come from the F1 contracts; search only orders and narrows the list.
 
@@ -53,6 +59,7 @@ const LOT_REASON: Record<string, string> = {
   BELOW_MIN_QUALITY: 'unter Mindestqualität – zählt nicht',
   DIMENSION_MISMATCH: 'andere Mengeneinheit – zählt nicht',
   QUANTITY_INVALID: 'Menge nicht eindeutig lesbar – zählt nicht',
+  QUALITY_INVALID: 'Qualität nicht eindeutig lesbar – zählt nicht',
 }
 
 const SLOT_STATUS: Record<FabricatorSlotCraftability['status'], string> = {
@@ -377,7 +384,7 @@ function FabricatorDetail({ family, selection, onChange, catalog, recipeResults,
       {overview
         ? <SetOverview family={family} variant={variant} nameOf={nameOf} onSelect={slot => onChange({ ...selection, slot, blueprint: null })} />
         : blueprint
-        ? <RecipeSection recipeIndex={blueprint.recipe} catalog={catalog} result={recipeResults?.[blueprint.recipe] ?? null} crewAvailable={crewAvailable} />
+        ? <RecipeSection blueprintIndex={blueprintIndex!} catalog={catalog} result={recipeResults?.[blueprint.recipe] ?? null} crewAvailable={crewAvailable} />
         : <p className="fabricator-notice">{component ? 'Wähle einen Blueprint, um das Rezept zu sehen.' : 'Diese Komponente ist für die gewählte Variante nicht im Datensatz.'}</p>}
     </article>
   )
@@ -421,13 +428,19 @@ function SetOverview({ family, variant, nameOf, onSelect }: {
   )
 }
 
-function RecipeSection({ recipeIndex, catalog, result, crewAvailable }: {
-  recipeIndex: number
+function RecipeSection({ blueprintIndex, catalog, result, crewAvailable }: {
+  blueprintIndex: number
   catalog: FabricatorCatalog
   result: FabricatorRecipeCraftability | null
   crewAvailable: boolean
 }) {
-  const recipe = catalog.recipes[recipeIndex]
+  const blueprint = catalog.blueprints[blueprintIndex]
+  const recipe = catalog.recipes[blueprint.recipe]
+  // Concrete item: baselines of exactly this blueprint's product; never a family value.
+  const baselines = useMemo(() => blueprintBaselines(catalog, blueprint), [catalog, blueprint])
+  const affects = useMemo(() => affectedProperties(recipe), [recipe])
+  const preset = useMemo(() => availablePreset(result), [result])
+  const propertyName = (key: string) => catalog.properties[key]?.name ?? key
   return (
     <section className="fabricator-recipe" aria-labelledby="fabricator-recipe-title">
       <div className="fabricator-recipe__header">
@@ -450,7 +463,8 @@ function RecipeSection({ recipeIndex, catalog, result, crewAvailable }: {
             <table>
               <thead><tr>
                 <th scope="col">Slot / Material</th><th scope="col">Art</th><th scope="col">Bedarf</th>
-                <th scope="col">Min-Q</th><th scope="col">Crew nutzbar</th><th scope="col">Fehlt</th><th scope="col">Status</th>
+                <th scope="col">Min-Q</th><th scope="col">Crew nutzbar</th><th scope="col">Fehlt</th>
+                <th scope="col">Verfügbare Q</th><th scope="col">Status</th>
               </tr></thead>
               <tbody>{recipe.slots.map((slot, index) => {
                 const craft = result?.slots[index] ?? null
@@ -461,12 +475,22 @@ function RecipeSection({ recipeIndex, catalog, result, crewAvailable }: {
                     <td>
                       <span className="fabricator-material__slot">{slot.name}</span>
                       <span className="fabricator-material__name">{slot.material.name}</span>
+                      <span className="fabricator-material__affects">
+                        {affects[slot.slotKey].length > 0
+                          ? <>Beeinflusst: {[...new Set(affects[slot.slotKey])].map(propertyName).join(', ')}</>
+                          : 'Beeinflusst keinen Produktwert'}
+                      </span>
                     </td>
                     <td>{FABRICATOR_MATERIAL_KIND_LABELS[slot.material.kind]}</td>
                     <td>{formatFabricatorQuantity(BigInt(slot.material.required), unit)}</td>
                     <td>{slot.material.minQuality > 0 ? `Q${slot.material.minQuality}` : '—'}</td>
                     <td>{craft ? formatFabricatorQuantity(craft.available, unit) : <span className="fabricator-muted">nicht verfügbar</span>}</td>
                     <td>{craft ? (craft.missing > 0n ? formatFabricatorQuantity(craft.missing, unit) : '—') : '—'}</td>
+                    <td>
+                      {craft?.quality != null
+                        ? <>Q{craft.quality}<span className="fabricator-material__quality">bestmöglich, mengengewichtet</span></>
+                        : <span className="fabricator-muted">—</span>}
+                    </td>
                     <td>
                       {slot.material.vocabulary !== 'RESOLVED'
                         ? <span className="fabricator-slot-status"><span aria-hidden="true">⚠</span> {SLOT_STATUS.UNRESOLVED}</span>
@@ -475,13 +499,14 @@ function RecipeSection({ recipeIndex, catalog, result, crewAvailable }: {
                               <span aria-hidden="true">{craft.status === 'COVERED' ? '✓' : craft.status === 'INSUFFICIENT' ? '◐' : '✕'}</span> {SLOT_STATUS[craft.status]}
                               {craft.surplus > 0n && <span className="fabricator-muted"> · Überschuss {formatFabricatorQuantity(craft.surplus, unit)}</span>}
                               {craft.locationCount > 1 && <span className="fabricator-muted"> · {craft.locationCount} Locations</span>}
+                              {craft.sharedWith.length > 0 && <span className="fabricator-muted"> · Bestand geteilt mit {craft.sharedWith.map(key => recipe.slots.find(s => s.slotKey === key)?.name ?? key).join(', ')}</span>}
                             </span>
                           : <span className="fabricator-muted">{crewAvailable ? '—' : 'Crew-Bestand nicht verfügbar'}</span>}
                     </td>
                   </tr>
                   {craft && craft.lots.length > 0 && (
                     <tr className="fabricator-lots-row">
-                      <td colSpan={7}><LotList craft={craft} unit={unit} /></td>
+                      <td colSpan={8}><LotList craft={craft} unit={unit} /></td>
                     </tr>
                   )}
                   </Fragment>
@@ -490,6 +515,11 @@ function RecipeSection({ recipeIndex, catalog, result, crewAvailable }: {
             </table>
           </div>}
       {recipe.craftTimeSeconds !== null && <p className="fabricator-muted">Herstellungszeit laut SCMDB: {recipe.craftTimeSeconds} s</p>}
+      {recipe.status === 'RESOLVED' && recipe.slots.length > 0 && (
+        // Keyed by the concrete blueprint: a new item starts from its own preset; dragging never remounts.
+        <FabricatorQuality key={blueprintIndex} recipe={recipe} baselines={baselines} properties={catalog.properties}
+          preset={preset} craftability={result} />
+      )}
     </section>
   )
 }
@@ -502,6 +532,9 @@ function LotList({ craft, unit }: { craft: FabricatorSlotCraftability; unit: 'SC
           <span aria-hidden="true">{use.usable ? '✓' : '✕'}</span>{' '}
           {use.lot.playerName} · {use.quantity !== null ? formatFabricatorQuantity(use.quantity, unit) : '—'} · Q{use.lot.quality} · {use.lot.locationName}
           {use.reason && <span className="fabricator-lot__reason"> · {LOT_REASON[use.reason]}</span>}
+          {craft.selection.filter(part => part.ref === use.lot.id).map(part => (
+            <span key={part.ref} className="fabricator-lot__reason"> · für das Preset verwendet: {formatFabricatorQuantity(part.quantity, unit)}</span>
+          ))}
         </li>
       ))}
     </ul>
