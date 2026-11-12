@@ -43,25 +43,24 @@ test('personal weapons and vehicle weapons form only verified tag lines', () => 
   }
 })
 
-test('Defiance: armor set with seven variants, Scorched keeps only its real slot, Modified line separate', () => {
+test('Defiance: armor set with seven colour variants plus Modified (Armor Family Key V2), Scorched keeps only its real slot', () => {
   const defiance = familyOfTag(live, 'BP_CRAFT_slaver_armor_heavy_core_01_01_01')
-  assert.equal(defiance.familyKey, 'ARMOR:slaver_armor_heavy_*_01_01')
+  assert.equal(defiance.familyKey, 'ARMOR:slaver_armor_heavy_*_01')
   assert.equal(defiance.kind, 'ARMOR_SET')
   assert.equal(defiance.status, 'RESOLVED')
-  assert.deepEqual(defiance.variants.map(v => v.variantKey), ['01', '03', '10', '11', '13', '14', '15'])
-  for (const variant of defiance.variants.filter(v => v.variantKey !== '14')) {
+  assert.deepEqual(defiance.variants.map(v => v.variantKey), ['01_01', '01_03', '01_10', '01_11', '01_13', '01_14', '01_15', '9tails_01'])
+  for (const variant of defiance.variants.filter(v => v.variantKey !== '01_14')) {
     assert.deepEqual(slotsOf(variant), ['Helmet', 'Torso', 'Arms', 'Legs'])
   }
-  const scorched = defiance.variants.find(v => v.variantKey === '14')
+  const scorched = defiance.variants.find(v => v.variantKey === '01_14')
   assert.deepEqual(slotsOf(scorched), ['Torso'], 'missing slots stay missing, nothing is synthesized')
   assert.equal(live.byGuid.get(scorched.components[0].blueprintGuids[0]).productName, 'Defiance Core Scorched')
   assert.ok(defiance.variants.every(v => v.isBase === null), 'armor base variant is not structurally provable')
 
-  const modified = familyOfTag(live, 'BP_CRAFT_slaver_armor_heavy_core_01_9tails_01')
-  assert.equal(modified.familyKey, 'ARMOR:slaver_armor_heavy_*_01_9tails')
-  assert.notEqual(modified.familyKey, defiance.familyKey)
-  assert.deepEqual(modified.variants.map(slotsOf), [['Helmet', 'Torso', 'Arms', 'Legs']])
-  assert.deepEqual(productNames(live, modified)[0], [
+  assert.equal(familyOfTag(live, 'BP_CRAFT_slaver_armor_heavy_core_01_9tails_01').familyKey, defiance.familyKey)
+  const modified = defiance.variants.find(v => v.variantKey === '9tails_01')
+  assert.deepEqual(slotsOf(modified), ['Helmet', 'Torso', 'Arms', 'Legs'])
+  assert.deepEqual(productNames(live, { variants: [modified] })[0], [
     'Defiance Helmet (Modified)', 'Defiance Core (Modified)', 'Defiance Arms (Modified)', 'Defiance Legs (Modified)'])
 })
 
@@ -74,15 +73,15 @@ test('armor slot always equals the source attachType', () => {
 
 test('slot-scoped name veto (F1.1): a set whose helmet is marketed under its own name stays one structural set', () => {
   const adp = familyOfTag(live, 'BP_CRAFT_cds_legacy_armor_heavy_legs_01_01_05')
-  assert.equal(adp.familyKey, 'ARMOR:cds_legacy_armor_heavy_*_01_01')
+  assert.equal(adp.familyKey, 'ARMOR:cds_legacy_armor_heavy_*_01')
   assert.equal(adp.kind, 'ARMOR_SET')
   assert.equal(adp.status, 'RESOLVED')
-  assert.equal(adp.variants.length, 20)
-  assert.ok(adp.variants.every(v => v.components.map(c => c.slot).join('/') === 'Helmet/Torso/Arms/Legs'))
-  const green = adp.variants.find(v => v.variantKey === '05')
+  assert.equal(adp.variants.length, 23)
+  assert.ok(adp.variants.filter(v => v.variantKey !== '9tails_01').every(v => v.components.map(c => c.slot).join('/') === 'Helmet/Torso/Arms/Legs'))
+  const green = adp.variants.find(v => v.variantKey === '01_05')
   assert.deepEqual(productNames(live, { variants: [green] })[0],
     ['Balor HCH Helmet Green', 'ADP Core Green', 'ADP Arms Green', 'ADP Legs Green'])
-  // Only the container line keeps a name conflict; no armor line is vetoed any more.
+  // Only the container line keeps a name conflict; no armor line is vetoed.
   const conflicts = hierarchy.families.filter(f => f.reviewReasons.includes('FAMILY_NAME_CONFLICT'))
   assert.equal(conflicts.length, 2)
   assert.ok(conflicts.every(f => f.structuralKey.startsWith('Container:')))
@@ -196,5 +195,5 @@ test('armor: slot token must agree with attachType; duplicate variant slots are 
   assert.ok(duplicate.families.every(f => f.reviewReasons[0] === 'ARMOR_DUPLICATE_VARIANT_SLOT'))
   assert.deepEqual(family.parseArmorTag('BP_CRAFT_foo_suit_01_01_01', 'Torso'), { ok: false, reason: 'ARMOR_TAG_UNSUPPORTED' })
   assert.deepEqual(family.parseArmorTag('BP_CRAFT_a_helmet_b_helmet_01_01', 'Helmet'), { ok: false, reason: 'ARMOR_TAG_UNSUPPORTED' })
-  assert.deepEqual(family.parseArmorTag('BP_CRAFT_foo_core_01_01_07', 'Torso'), { ok: true, lineKey: 'foo_*_01_01', variantKey: '07' })
+  assert.deepEqual(family.parseArmorTag('BP_CRAFT_foo_core_01_01_07', 'Torso'), { ok: true, lineKey: 'foo_*_01', variantKey: '01_07' })
 })

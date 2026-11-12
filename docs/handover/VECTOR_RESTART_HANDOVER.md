@@ -11,30 +11,25 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Fabricator Phase 1`; F1 is **DONE** (PR #43, merged as `f1e0dbf`); active pull request: **F1.1 – Product Family / Functional Variant Refinement** (no UI); F2 is an open pull request (#44) waiting for F1.1; F3 (Quality / Stats) is NEXT. The previous package `Blueprint Ownership / Tracking` is complete (PRs #36, #39, #40, #41, checkpoint #42); LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
-- Branch: `feat/fabricator-f1-1-family-refinement`
+- Work package: `Fabricator Phase 1`; F1 is **DONE** (PR #43, merged as `f1e0dbf`); F1.1 is **DONE** (PR #45, merged as `cc083c9`); active pull request: **F1.2 – Armor Family Key V2** (foundation, no UI); F2 is an open pull request (#44) waiting for F1.2; F3 (Quality / Stats) is NEXT. The previous package `Blueprint Ownership / Tracking` is complete (PRs #36, #39, #40, #41, checkpoint #42); LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
+- Branch: `feat/fabricator-f1-2-armor-family-v2`
 - Base: `develop`
 - Checkpoint date: `2026-11-12`
 - Work-package base (historical): `84e7fc3d3c72f62dc9007ec41938b3260cf574f7`
-- Active checkpoint anchor: `f1e0dbfdeaca2de0a0d50ac7ecc0c6c585e5f4d9`
+- Active checkpoint anchor: `cc083c9751389bb05445aaf6620c735cbd27b215`
 - Working-tree expectation: `CLEAN`
-- Active PR: the F1.1 pull request from `feat/fabricator-f1-1-family-refinement` against `develop`. PR #44 (F2, branch `feat/fabricator-f2-workspace`) stays open and unchanged while F1.1 is developed; after F1.1 is merged, F2 is updated onto the new `develop` with its own checkpoint revision. F3 starts later from `develop` on its own branch with its own checkpoint rotation and exact allowlist
+- Active PR: the F1.2 pull request from `feat/fabricator-f1-2-armor-family-v2` against `develop`. PR #44 (F2, branch `feat/fabricator-f2-workspace`) stays open and unchanged while F1.2 is developed; after F1.2 is merged, F2 is updated onto the new `develop` with its own checkpoint revision. F3 starts later from `develop` on its own branch with its own checkpoint rotation and exact allowlist
 - PR base: `develop`
 
-The work-package base is the `develop` head after PR #42; the active anchor is the verified `develop` head after PR #43 (F1 squash merge, tree identical to the reviewed head `14b50bd`). The allowed scope below authorizes **F1.1 only**: the two checkpoint documents and exactly the F1.1 files in `lib/fabricator/` and `tests/`. No F2 UI path and no F3 path is authorized here. Production mutation in F1.1: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The work-package base is the `develop` head after PR #42; the active anchor is the verified `develop` head after PR #45 (F1.1 squash merge). The allowed scope below authorizes **F1.2 only**: the two checkpoint documents and exactly the F1.2 files in `lib/fabricator/` and `tests/`. No F2 UI path and no F3 path is authorized here. Production mutation in F1.2: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `lib/fabricator/fabricator-fingerprint.ts`
-- `lib/fabricator/fabricator-live-source-cache.ts`
-- `lib/fabricator/fabricator-live-source.ts`
 - `lib/fabricator/fabricator-product-family.ts`
-- `lib/fabricator/fabricator-types.ts`
+- `tests/fabricator-armor-family-v2.test.mjs`
 - `tests/fabricator-fingerprint.test.mjs`
-- `tests/fabricator-fixture.mjs`
-- `tests/fabricator-live-source.test.mjs`
 - `tests/fabricator-product-family.test.mjs`
 
 Recovery control block:
@@ -70,6 +65,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#41` (Blueprint Ownership / Tracking PR 4: usable Blueprint UI `/vector/blueprints`): squash-merged into `develop` on 2026-11-11 as `a8ee27c`; reviewed head `c3732cf` (tree identical). UI only; no migration and no Production mutation.
 - PR `#42` (checkpoint after Blueprint PR 4, idle baseline): merged into `develop` on 2026-11-11 as `84e7fc3`.
 - PR `#43` (Fabricator F1 – Read & Domain Foundation): squash-merged into `develop` on 2026-11-11 as `f1e0dbf` after the owner / Project Lead merge gate; reviewed head and checkpoint control revision `14b50bd`.
+- PR `#45` (Fabricator F1.1 – Product Family / Functional Variant Refinement): squash-merged into `develop` on 2026-11-12 as `cc083c9` after the owner merge gate; reviewed head `a83803a`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -113,7 +109,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Fabricator Phase 1` is **active** (Fabricator F1 in progress). Owner-approved plan and decisions are recorded in the F1 pull request; this section is a pointer, not the decision record.
+`Fabricator Phase 1` is **active** (Fabricator F1.2 in progress). Owner-approved plan and decisions are recorded in the F1 pull request; this section is a pointer, not the decision record.
 
 Owner decisions (2026-11-11):
 
@@ -125,13 +121,18 @@ Owner decisions (2026-11-11):
 - `OD-FAB-GROUP-01` (2026-11-12): the armor product-family name veto is scoped to one functional slot (`attachType`) instead of the whole structural line; the structural source contract stays the only mechanism that creates a family or variant relation, the name stays a pure consistency veto; no special rules for individual product names (they are regression cases only);
 - `OD-FAB-GROUP-02` (2026-11-12): the functional crafting fingerprint (slot, recipe structure, material identity, quantity, unit, minQuality, modifier property, operation and segments, functional base stats, fingerprint version, dataset version; no display names, no manufacturer, no tags) is a verification / classification contract only: it may confirm functional equality, make a deviation visible and provide review evidence, and never creates a family, joins unrelated products or overrides a structural relation;
 - `OD-FAB-GROUP-03` (2026-11-12): structurally related components are classified FUNCTIONALLY_EQUIVALENT, FUNCTIONALLY_DIFFERENT or UNRESOLVED; functionally different items stay in their structural family and the UI must say so in words (not colour only). Calculation always stays concrete-item based; the fingerprint is not a calculation identity and no family-wide stats are synthesized. Short display labels (set / variant / component) are derived only after identity resolution and never create identity;
+- `OD-FAB-GROUP-04` (2026-11-12, Armor Family Key V2): for the evidenced armor tag structure `<prefix>_<slot>_<SetNr>_<rest>` the product family identity is `<prefix>` + `<SetNr>`, the component identity is the slot / `attachType`, and the edition / variant identity is the complete structural remainder after the set number (multi-part suffixes such as `hd_sec` are no longer split). Only source structure creates a relation; FCF1, display names, mission data and identical recipes or stats never create a family. No special rules for concrete names;
+- `OD-FAB-GROUP-05` to `07` (2026-11-12): the set-01 ADP lines (standard colours, Hurston Edition, Crusader Edition, Modified) form one ADP family; ADP-mk4 stays its own product family / model line and is not normalized into ADP (no synthetic series level); the set-01 Artimex lines (standard, Elysium, Modified) form one family, Artimex Hurston Dynamics Executive Security (set 02) stays separate, no microTech Artimex edition is invented;
+- `OD-FAB-GROUP-08` (2026-11-12): Modified items are `VALID_SPECIAL_VARIANT`, stay visible and are never hidden by name; incomplete slot coverage stays visible and is not filled;
+- `OD-FAB-UX-01` (2026-11-12, for the later F2 update): after an armor family and variant / edition the workspace offers the pure navigation state `Rüstungsset` (present components with concrete product name, present / not in the dataset, functional-deviation note); it is never an item, blueprint, recipe, aggregated recipe or crafting job, and shows no synthetic recipe and no material sum;
 - SCMDB source and semantic reference (owner decision 2026-11-11): SCMDB is the external origin of the mirrored SCMDB dataset, and SCMDB itself (scmdb.net, available SCMDB documentation and traceable SCMDB code) is the preferred source semantic reference for how SCMDB interprets, names, calculates and displays its own raw data. An unclear SCMDB field is neither interpreted from the raw JSON alone nor discarded right away. Evidence order: (1) repository-pinned SCMDB dataset, (2) scmdb.net representation of the same datum, (3) SCMDB documentation, (4) traceable SCMDB implementation, (5) VECTOR adapter / normalizer, (6) tests against the reproduced semantics. SCMDB is **not** an authority for VECTOR user ownership, crew membership, inventory ownership, auth / identity, governance, security or VECTOR-specific domain decisions (SCMDB `isDefault` stays a raw source value only). This is not a FROZEN contract; a separate governance work package `SCMDB_SOURCE_AUTHORITY_V1` (or an integration into a future provider authority contract) is noted for later.
 
 Sequential pull requests inside this package:
 
 - F1 (**DONE**, #43 as `f1e0dbf`): read and domain foundation in `lib/fabricator/` with tests (family/variant/slot resolution, item-to-blueprint, strict recipe, recipe-to-inventory vocabulary, modifier adapter to `VECTOR_CRAFT_CALC_V1`, baseline allowlist, size, LIVE mirror version guard); no UI, no database change, no Production mutation;
-- F1.1 (**ACTIVE**): slot-scoped armor name veto, functional crafting fingerprint and the FUNCTIONALLY_EQUIVALENT / FUNCTIONALLY_DIFFERENT / UNRESOLVED classification; no UI, no database change, no Production mutation;
-- F2 (open PR #44, waiting for F1.1): `/vector/fabricator` workspace, recipe materials and crew craftability through the existing `get_active_group_inventory()`; read-only, no inventory mutation;
+- F1.1 (**DONE**, #45 as `cc083c9`): slot-scoped armor name veto, functional crafting fingerprint and the FUNCTIONALLY_EQUIVALENT / FUNCTIONALLY_DIFFERENT / UNRESOLVED classification; no UI, no database change, no Production mutation;
+- F1.2 (**ACTIVE**): Armor Family Key V2 (`OD-FAB-GROUP-04` to `08`); foundation only, no UI, no database change, no Production mutation;
+- F2 (open PR #44, waiting for F1.2): `/vector/fabricator` workspace, recipe materials and crew craftability through the existing `get_active_group_inventory()`; read-only, no inventory mutation;
 - F3 (**NEXT**): global MANUAL quality slider Q0–1000 and resolved product stats (base, crafted, absolute and relative delta).
 
 Planned governance follow-up, not part of this package: `SCMDB_SOURCE_AUTHORITY_V1`.
@@ -393,4 +394,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Owner review of the Fabricator F1.1 pull request (slot-scoped veto, functional fingerprint, classification; no UI, no database change, no Production mutation). Merge only with explicit owner approval. PR #44 (F2) stays unchanged until F1.1 is merged; then F2 is updated onto the new `develop` with its own checkpoint revision and the short display labels. Do not start F3 before F2 is merged. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Owner review of the Fabricator F1.2 pull request (Armor Family Key V2; foundation only, no UI, no database change, no Production mutation). Merge only with explicit owner approval. PR #44 (F2) stays unchanged until F1.2 is merged; then F2 is updated onto the new `develop` with its own checkpoint revision and the `Rüstungsset` overview (`OD-FAB-UX-01`). Do not start F3 before F2 is merged. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
