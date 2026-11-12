@@ -11,37 +11,42 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Fabricator Phase 1`; F1 is **DONE** (PR #43, merged as `f1e0dbf`); F1.1 is **DONE** (PR #45, merged as `cc083c9`); F1.2 is **DONE** (PR #46, merged as `74d72dc`); active pull request: **F2 – Workspace + Recipe + Crew Craftability** (PR #44, rebuilt on the F1.2 foundation); F3 (Quality / Stats) is NEXT. The previous package `Blueprint Ownership / Tracking` is complete (PRs #36, #39, #40, #41, checkpoint #42); LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
-- Branch: `feat/fabricator-f2-workspace`
+- Work package: `Fabricator Phase 1`; F1 is **DONE** (PR #43, merged as `f1e0dbf`); F1.1 is **DONE** (PR #45, merged as `cc083c9`); F1.2 is **DONE** (PR #46, merged as `74d72dc`); F2 is **DONE** (PR #44, merged as `706267a`); active pull request: **F3 – MANUAL Quality, Inventory-Aware Preset & Product Stats** (opened from `feat/fabricator-f3-quality-stats`). The previous package `Blueprint Ownership / Tracking` is complete (PRs #36, #39, #40, #41, checkpoint #42); LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
+- Branch: `feat/fabricator-f3-quality-stats`
 - Base: `develop`
 - Checkpoint date: `2026-11-12`
 - Work-package base (historical): `84e7fc3d3c72f62dc9007ec41938b3260cf574f7`
-- Active checkpoint anchor: `74d72dc706ede38524cc577a22159449a69b753a`
+- Active checkpoint anchor: `706267a3bcffe5fb18c6ca346bbb26758b94b699`
 - Working-tree expectation: `CLEAN`
-- Active PR: #44, the F2 pull request from `feat/fabricator-f2-workspace` against `develop` (rebuilt on `74d72dc`). F3 starts later from `develop` on its own branch with its own checkpoint rotation and exact allowlist
+- Active PR: the F3 pull request from `feat/fabricator-f3-quality-stats` against `develop`
 - PR base: `develop`
 
-The work-package base is the `develop` head after PR #42; the active anchor is the verified `develop` head after PR #46 (F1.2 squash merge, tree identical to the reviewed head `e08e3bd`). The allowed scope below authorizes **F2 only**: the two checkpoint documents and exactly the F2 files (route, workspace components, navigation entries, styles, F2 domain modules and F2 tests). No F1 / F1.1 / F1.2 file and no F3 path is authorized here. Production mutation in F2: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The work-package base is the `develop` head after PR #42; the active anchor is the verified `develop` head after PR #44 (F2 squash merge). The allowed scope below authorizes **F3 only**: the two checkpoint documents and exactly the F3 files (quality primitives, preset, stats, the catalog / craftability / labels / baseline / units modules F3 extends, the workspace UI, styles and F3 tests). No other F1 / F1.1 / F1.2 / F2 file is authorized here. Production mutation in F3: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
 - `app/globals.css`
-- `app/vector/fabricator/page.tsx`
-- `app/vector/page.tsx`
-- `components/fabricator/FabricatorVisual.tsx`
+- `components/fabricator/FabricatorQuality.tsx`
 - `components/fabricator/FabricatorWorkspace.tsx`
-- `components/layout/VectorSidebar.tsx`
+- `lib/quality/quality-weighting.ts`
+- `lib/fabricator/fabricator-baseline.ts`
 - `lib/fabricator/fabricator-catalog.ts`
 - `lib/fabricator/fabricator-craftability.ts`
 - `lib/fabricator/fabricator-labels.ts`
-- `lib/fabricator/fabricator-search.ts`
-- `lib/fabricator/fabricator-workspace-read.ts`
+- `lib/fabricator/fabricator-preset.ts`
+- `lib/fabricator/fabricator-stats.ts`
+- `lib/fabricator/fabricator-units.ts`
+- `tests/fabricator-baseline-size.test.mjs`
 - `tests/fabricator-catalog.test.mjs`
 - `tests/fabricator-craftability.test.mjs`
-- `tests/fabricator-search.test.mjs`
+- `tests/fabricator-fixture.mjs`
+- `tests/fabricator-preset.test.mjs`
+- `tests/fabricator-scmdb-semantics.test.mjs`
+- `tests/fabricator-stats.test.mjs`
 - `tests/fabricator-ui.test.mjs`
+- `tests/quality-weighting.test.mjs`
 
 Recovery control block:
 
@@ -121,7 +126,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Fabricator Phase 1` is **active** (Fabricator F2 in progress). Owner-approved plan and decisions are recorded in the F1 pull request; this section is a pointer, not the decision record.
+`Fabricator Phase 1` is **active** (Fabricator F3 in progress). Owner-approved plan and decisions are recorded in the F1 pull request; this section is a pointer, not the decision record.
 
 Owner decisions (2026-11-11):
 
@@ -137,6 +142,8 @@ Owner decisions (2026-11-11):
 - `OD-FAB-GROUP-05` to `07` (2026-11-12): the set-01 ADP lines (standard colours, Hurston Edition, Crusader Edition, Modified) form one ADP family; ADP-mk4 stays its own product family / model line and is not normalized into ADP (no synthetic series level); the set-01 Artimex lines (standard, Elysium, Modified) form one family, Artimex Hurston Dynamics Executive Security (set 02) stays separate, no microTech Artimex edition is invented;
 - `OD-FAB-GROUP-08` (2026-11-12): Modified items are `VALID_SPECIAL_VARIANT`, stay visible and are never hidden by name; incomplete slot coverage stays visible and is not filled;
 - `OD-FAB-UX-01` (2026-11-12, for the later F2 update): after an armor family and variant / edition the workspace offers the pure navigation state `Rüstungsset` (present components with concrete product name, present / not in the dataset, functional-deviation note); it is never an item, blueprint, recipe, aggregated recipe or crafting job, and shows no synthetic recipe and no material sum;
+- `OQ-F3-1` (2026-11-12, owner domain evidence): the quality of one recipe input is quantity-weighted over the quantities actually used for the recipe; only the used part of a lot counts (example: 1.0 SCU required, 0.8 SCU Q900 plus 0.2 SCU from a 0.4 SCU Q600 lot gives Q840). For the available preset the required quantity may be composed from several lots, partial use of a lot is allowed for the calculation, and a small high-quality amount that does not cover the requirement never raises the preset; no reservation, consumption or inventory mutation;
+- `D-F3-1` (2026-11-12): every recipe slot keeps its own best really available quality (visible); the global MANUAL slider's available preset is the lowest of these slot values (the highest common quality all required slots reach under the global model). It is not an inventory average, not a slot average and not the crafted item quality. Rounding never promises a higher quality than reachable (integer Q0–1000, rounded down). The F2 duplicate-material defect (the same stock counted fully for several slots of one material) is fixed in F3 through the shared selection foundation; `lib/quality/` reuse for later inventory progressive disclosure is approved, without pulling inventory work into F3;
 - SCMDB source and semantic reference (owner decision 2026-11-11): SCMDB is the external origin of the mirrored SCMDB dataset, and SCMDB itself (scmdb.net, available SCMDB documentation and traceable SCMDB code) is the preferred source semantic reference for how SCMDB interprets, names, calculates and displays its own raw data. An unclear SCMDB field is neither interpreted from the raw JSON alone nor discarded right away. Evidence order: (1) repository-pinned SCMDB dataset, (2) scmdb.net representation of the same datum, (3) SCMDB documentation, (4) traceable SCMDB implementation, (5) VECTOR adapter / normalizer, (6) tests against the reproduced semantics. SCMDB is **not** an authority for VECTOR user ownership, crew membership, inventory ownership, auth / identity, governance, security or VECTOR-specific domain decisions (SCMDB `isDefault` stays a raw source value only). This is not a FROZEN contract; a separate governance work package `SCMDB_SOURCE_AUTHORITY_V1` (or an integration into a future provider authority contract) is noted for later.
 
 Sequential pull requests inside this package:
@@ -144,8 +151,8 @@ Sequential pull requests inside this package:
 - F1 (**DONE**, #43 as `f1e0dbf`): read and domain foundation in `lib/fabricator/` with tests (family/variant/slot resolution, item-to-blueprint, strict recipe, recipe-to-inventory vocabulary, modifier adapter to `VECTOR_CRAFT_CALC_V1`, baseline allowlist, size, LIVE mirror version guard); no UI, no database change, no Production mutation;
 - F1.1 (**DONE**, #45 as `cc083c9`): slot-scoped armor name veto, functional crafting fingerprint and the FUNCTIONALLY_EQUIVALENT / FUNCTIONALLY_DIFFERENT / UNRESOLVED classification; no UI, no database change, no Production mutation;
 - F1.2 (**DONE**, #46 as `74d72dc`): Armor Family Key V2 (`OD-FAB-GROUP-04` to `08`; undersuits are no armor-set component); foundation only, no UI, no database change, no Production mutation;
-- F2 (**ACTIVE**, PR #44): `/vector/fabricator` workspace on the F1.2 foundation, short set / variant / component labels, `Rüstungsset` overview (`OD-FAB-UX-01`), visible functional deviation, recipe materials and crew craftability through the existing `get_active_group_inventory()`; read-only, no inventory mutation;
-- F3 (**NEXT**): global MANUAL quality slider Q0–1000 and resolved product stats (base, crafted, absolute and relative delta).
+- F2 (**DONE**, #44 as `706267a`): `/vector/fabricator` workspace on the F1.2 foundation, short set / variant / component labels, `Rüstungsset` overview (`OD-FAB-UX-01`), visible functional deviation, recipe materials and crew craftability through the existing `get_active_group_inventory()`; read-only, no inventory mutation;
+- F3 (**ACTIVE**): global MANUAL quality slider Q0–1000, inventory-aware available preset, quantity-weighted quality primitives (`lib/quality/`), material -> stat relation and product stats (base, crafted, absolute and relative delta) computed per concrete item, targeted SCMDB semantic reconciliation and the F2 duplicate-material craftability fix; read-only, no database change, no Production mutation.
 
 Planned governance follow-up, not part of this package: `SCMDB_SOURCE_AUTHORITY_V1`.
 
@@ -406,4 +413,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Owner smoke and review of the rebuilt Fabricator F2 pull request #44 on the F1.2 foundation (read-only, no Production mutation). Merge only with explicit owner approval. Do not start F3 before F2 is merged; F3 then starts from `develop` on its own branch whose first commit rotates this checkpoint with its own exact allowlist. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Implement Fabricator F3 on `feat/fabricator-f3-quality-stats` within the allowed scope above, validate (tests, typecheck, lint, build, diff check, scope, CI, Vercel preview) and stop at READY FOR OWNER REVIEW. No Production mutation, no Copilot review, no merge without explicit owner approval. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
