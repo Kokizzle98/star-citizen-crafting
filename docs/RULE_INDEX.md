@@ -72,6 +72,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `PLATFORM_CRITICAL_ACTIONS_V1.md` | Platform-destructive/critical administrative actions | `FROZEN` | Separate from ordinary game wipes |
 | `ROLLBACK_POLICY_V1.md` | Application, database and dataset rollback/recovery | `FROZEN` | Dataset rollback does not imply game-state recovery |
 | `DB_ENVIRONMENT_GOVERNANCE_V1.md` | Supabase database environment identity, data classification, Production read and write gates, migration gates | `FROZEN` | Owner decision 2026-11-11 (`DB-ENV-01` to `DB-ENV-09`); separates technical environment classification from data classification; a separate staging environment is `DEFERRED` |
+| `VECTOR_SOURCE_AUTHORITY_V1.md` | External game-data and observation sources: cross-source item identity (exact CIG UUID), variant identity, per-domain source authority (SCMDB, scunpacked-data, Star Citizen Wiki API, UEX ingame, UEX marketplace), source freshness, evidence discipline, runtime boundary | `FROZEN` | Owner decision 2026-11-12; absorbs the planned `SCMDB_SOURCE_AUTHORITY_V1`; classifies no gameplay relevance (F4-B) and lifts no gate (F4-S stays stopped at the source / distribution gate) |
 
 ## 6. Current PROPOSED registry
 
@@ -111,6 +112,7 @@ Global invariants are cross-domain constraints. Their authoritative definition m
 | Critical-action fail-closed behavior | `PLATFORM_CRITICAL_ACTIONS_V1.md` | Platform-critical destructive actions |
 | Rollback fail-closed behavior | `ROLLBACK_POLICY_V1.md` | Application/database/dataset recovery |
 | Production database write gate | `DB_ENVIRONMENT_GOVERNANCE_V1.md` | Every persistent mutation of the VECTOR Supabase Production environment |
+| Cross-source item identity (exact CIG UUID, no name join) and `NO_EVIDENCE != NEGATIVE_EVIDENCE` for external sources | `VECTOR_SOURCE_AUTHORITY_V1.md` | Every join or interpretation across external game-data and observation sources |
 
 Until No-Guess has one canonical normative home, this index records it as a global invariant only where an existing FROZEN specification explicitly states the applicable no-guess rule. The index does not create new domain behavior by itself.
 
