@@ -62,3 +62,11 @@ test('MANUAL keyboard: arrows ±1, PageUp/PageDown ±10, Home/End, clamped', () 
     [501, 501, 499, 499, 510, 490, 0, 1000])
   assert.deepEqual([k('ArrowUp', 1000), k('PageDown', 5), k('PageUp', 995), k('Tab', 500)], [1000, 0, 1000, null])
 })
+
+test('AC 3 / 4: initial individual qualities are each slot\'s own available value; bulk sets all', () => {
+  const r = recipe(material('A', 'SCU', '1000000'), material('B', 'SCU', '1000000'), material('C', 'SCU', '1000000'))
+  const c = craft.recipeCraftability(r, craft.indexCrewLots([lot('A', 920, 2_000_000), lot('B', 900, 800_000), lot('B', 600, 200_000)]))
+  assert.deepEqual(preset.initialSlotQualities(r.slots, c), { 0: 920, 1: 840, 2: preset.DEFAULT_MANUAL_QUALITY }, 'uncovered C starts at the default')
+  assert.deepEqual(preset.initialSlotQualities(r.slots, null), { 0: 500, 1: 500, 2: 500 })
+  assert.deepEqual(preset.setAllSlotQualities(r.slots, 777), { 0: 777, 1: 777, 2: 777 })
+})

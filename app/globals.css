@@ -1691,6 +1691,26 @@
   font-weight: normal;
 }
 
+.fabricator-quality__materials,
+.fabricator-quality__effects {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fabricator-quality__material {
+  padding: .5rem 0;
+  border-top: 1px solid var(--line);
+}
+
+.fabricator-quality__material p {
+  margin: 0;
+}
+
+.fabricator-quality__effects {
+  font-size: .82rem;
+}
+
 .fabricator-stat-status {
   font-size: .82rem;
   white-space: nowrap;

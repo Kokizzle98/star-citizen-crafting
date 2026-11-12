@@ -517,7 +517,8 @@ function RecipeSection({ blueprintIndex, catalog, result, crewAvailable }: {
       {recipe.craftTimeSeconds !== null && <p className="fabricator-muted">Herstellungszeit laut SCMDB: {recipe.craftTimeSeconds} s</p>}
       {recipe.status === 'RESOLVED' && recipe.slots.length > 0 && (
         // Keyed by the concrete blueprint: a new item starts from its own preset; dragging never remounts.
-        <FabricatorQuality key={blueprintIndex} recipe={recipe} baselines={baselines} properties={catalog.properties} preset={preset} />
+        <FabricatorQuality key={blueprintIndex} recipe={recipe} baselines={baselines} properties={catalog.properties}
+          preset={preset} craftability={result} />
       )}
     </section>
   )

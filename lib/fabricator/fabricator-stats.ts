@@ -5,7 +5,10 @@ import type { FabricatorResolution } from './fabricator-types'
 import { speedFromMetresPerSecond } from './fabricator-units'
 
 // Product stats per CONCRETE item (Fabricator F3). Pure and client-safe, so
-// the MANUAL slider updates live without a server roundtrip.
+// the MANUAL sliders update live without a server roundtrip. Every recipe
+// material (slot) has its own input quality (as in SCMDB, which keys quality
+// per slot); materials affecting the same stat stay separate inputs and only
+// their effects combine, through the unchanged engine.
 //
 // Calculation identity: concrete item -> blueprint -> recipe -> per-slot input
 // quality -> baseline of exactly this item -> SCMDB modifiers. Never a family
@@ -59,9 +62,15 @@ export type FabricatorStatRow = {
   percentDelta: number | null
   /** D4 only: exact relative crafting effect in percent when no absolute baseline exists. */
   relativeEffectPercent: number | null
+  /**
+   * Per-material effect: the source modifier each slot contributes at its own
+   * quality (multiplier for MULTIPLICATIVE, added value for ADDITIVE); null
+   * when that slot's quality lies outside every source segment.
+   */
+  contributions: { slotKey: string; operation: 'MULTIPLICATIVE' | 'ADDITIVE'; quality: number; value: number | null }[]
 }
 
-/** Per-slot qualities for one global MANUAL value (D2 = C); per-slot overrides stay possible (NEXT). */
+/** Per-slot qualities from one value plus optional per-slot values (individual material qualities win). */
 export function slotQualities(
   recipe: Pick<FabricatorRecipeView, 'slots'>,
   globalQuality: number,
@@ -113,23 +122,28 @@ export function fabricatorStats(
       absoluteDelta: null,
       percentDelta: null,
       relativeEffectPercent: null,
+      contributions: [],
     }
 
-    // Effective segment per slot for the requested quality; none = no source effect stated.
-    const effects: (EngineEffect & { slotKey: string })[] = []
-    for (const { slotKey, group } of entries) {
+    // Effective segment per slot at that slot's own quality; none = no source effect stated.
+    const contributions = entries.map(({ slotKey, group }) => {
       const quality = qualities[slotKey]
       const segment = group.segments.find(([start, end]) => quality >= start && quality <= end)
-      if (segment === undefined) return { ...row, status: 'REVIEW_REQUIRED', reason: 'QUALITY_OUTSIDE_SEGMENT' }
-      if (group.operation === 'ADDITIVE' && !group.segments.every(constantInteger)) {
-        return { ...row, status: 'REVIEW_REQUIRED', reason: 'ADDITIVE_SHAPE_UNVERIFIED' }
-      }
-      effects.push({
+      return {
         slotKey,
         operation: group.operation,
-        value: engine.interpolateModifier(engineSegment(segment), quality),
-      })
+        quality,
+        value: segment === undefined ? null : engine.interpolateModifier(engineSegment(segment), quality),
+      }
+    })
+    row.contributions = contributions
+    if (contributions.some(contribution => contribution.value === null)) {
+      return { ...row, status: 'REVIEW_REQUIRED', reason: 'QUALITY_OUTSIDE_SEGMENT' }
     }
+    if (entries.some(({ group }) => group.operation === 'ADDITIVE' && !group.segments.every(constantInteger))) {
+      return { ...row, status: 'REVIEW_REQUIRED', reason: 'ADDITIVE_SHAPE_UNVERIFIED' }
+    }
+    const effects: EngineEffect[] = contributions.map(({ operation, value }) => ({ operation, value: value as number }))
 
     if (baseline.status === 'RESOLVED' && baseline.value !== undefined) {
       const result = engine.calculateCraft({

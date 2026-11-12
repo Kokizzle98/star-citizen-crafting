@@ -35,7 +35,7 @@
 
 ## ACTIVE
 
-- **Fabricator Phase 1**, pull request **F3 – MANUAL Quality, Inventory-Aware Preset & Product Stats** on `feat/fabricator-f3-quality-stats`: global MANUAL quality slider Q0–1000, inventory-aware available preset (owner domain evidence `OQ-F3-1`: quality is quantity-weighted over the quantities actually used; `D-F3-1`: the global preset is the lowest per-slot available quality), reusable quantity-weighted quality primitives in `lib/quality/`, material -> stat relation, product stats (base, crafted, absolute and relative delta) per concrete item, targeted SCMDB semantic reconciliation and the F2 duplicate-material craftability fix; read-only, no database change, no Production mutation. Decisions are recorded in the restart handover section 5. The F3 checkpoint authorizes F3 paths only.
+- **Fabricator Phase 1**, pull request **F3 – MANUAL Quality, Inventory-Aware Preset & Product Stats** (#47) on `feat/fabricator-f3-quality-stats`: MANUAL quality Q0–1000 per recipe material with a global bulk control (owner correction of acceptance points 3 / 4, 2026-11-12), inventory-aware available preset (owner domain evidence `OQ-F3-1`: quality is quantity-weighted over the quantities actually used; `D-F3-1`: the global preset is the lowest per-slot available quality), reusable quantity-weighted quality primitives in `lib/quality/`, material -> stat relation, product stats (base, crafted, absolute and relative delta) per concrete item, targeted SCMDB semantic reconciliation and the F2 duplicate-material craftability fix; read-only, no database change, no Production mutation. Decisions are recorded in the restart handover section 5. The F3 checkpoint authorizes F3 paths only.
 
 ## PAUSED
 
@@ -48,7 +48,7 @@
 ## NEXT
 
 1. Owner review of the F3 pull request; merge only with explicit owner approval.
-2. After F3: per-slot quality overrides (D2 NEXT), the later armor-set material summary built from the per-component slot selection primitives, and the inventory progressive-disclosure redesign, each as its own work package.
+2. After F3: the later armor-set material summary built from the per-component slot selection primitives, and the inventory progressive-disclosure redesign, each as its own work package.
 3. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
 
 ## OPEN DECISIONS

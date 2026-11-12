@@ -166,3 +166,48 @@ test('printf unit formats from SCMDB; no unit is invented', () => {
   assert.equal(stats.formatPercent(9.979), '+9,98 %')
   assert.equal(stats.formatPercent(-10), '-10,00 %')
 })
+
+test('AC 3.3: Beryl and Savrilium stay separate inputs; every quality combination reaches the stat', () => {
+  // JS-400: slot 1 = Beryl, slot 2 = Savrilium, both ADDITIVE on Power Pips (steps -2 / -1 / 0 / +1 / +2).
+  const recipe = catalog.recipes[blueprintByTag(JS400).recipe]
+  assert.deepEqual(recipe.slots.map(s => s.material.name), ['Stileron', 'Beryl', 'Savrilium'])
+  const power = (beryl, savrilium) => {
+    const row = statsAt(JS400, 750, { 1: beryl, 2: savrilium }).itemresource_powergeneration
+    return [row.craftedValue, row.contributions.map(c => [c.slotKey, c.quality, c.value])]
+  }
+  assert.deepEqual(power(100, 950), [21, [['1', 100, -2], ['2', 950, 2]]], 'A low / B high')
+  assert.deepEqual(power(950, 100), [21, [['1', 950, 2], ['2', 100, -2]]], 'A high / B low')
+  assert.deepEqual(power(100, 100)[0], 17, 'both low')
+  assert.deepEqual(power(950, 950)[0], 25, 'both high')
+  assert.deepEqual(power(600, 800)[0], 22, 'intermediate values')
+  assert.deepEqual(power(300, 750)[0], 21)
+  // Changing Beryl only leaves Savrilium's own contribution unchanged.
+  assert.deepEqual(power(950, 800)[1][1], power(100, 800)[1][1])
+  // Integrity depends only on Stileron (slot 0).
+  const integrity = statsAt(JS400, 750, { 1: 0, 2: 1000 }).health_maxhealth
+  assert.equal(integrity.craftedValue.toFixed(2), '1077.80')
+  assert.deepEqual(integrity.contributions.map(c => c.slotKey), ['0'])
+})
+
+test('AC 3.3: several multiplicative materials on one stat react individually (engine 1 + sum(m - 1))', () => {
+  const blueprint = catalog.blueprints.find(b => catalog.recipes[b.recipe].slots
+    .filter(s => s.modifiers.some(m => m.propertyKey === 'shield_maxhealth')).length > 1)
+  const recipe = catalog.recipes[blueprint.recipe]
+  const keys = recipe.slots.filter(s => s.modifiers.some(m => m.propertyKey === 'shield_maxhealth')).map(s => s.slotKey)
+  const at = overrides => statsAt(blueprint.tag, 750, overrides).shield_maxhealth
+  const lowHigh = at({ [keys[0]]: 200, [keys[1]]: 950 })
+  const highLow = at({ [keys[0]]: 950, [keys[1]]: 200 })
+  for (const row of [lowHigh, highLow]) {
+    const sum = row.contributions.reduce((total, c) => total + (c.value - 1), 0)
+    close(row.craftedValue, row.baseValue * (1 + sum), 1e-6)
+  }
+  assert.deepEqual(lowHigh.contributions.map(c => c.quality).slice(0, 2), [200, 950])
+  assert.deepEqual(highLow.contributions.map(c => c.quality).slice(0, 2), [950, 200])
+})
+
+test('a quality outside the segments of one material only marks that material, without a value', () => {
+  const blueprint = catalog.blueprints.find(b => catalog.recipes[b.recipe].slots.some(s =>
+    s.modifiers.some(m => m.propertyKey === 'armor_temperaturemax' && m.segments[0][0] === 500)))
+  const row = statsAt(blueprint.tag, 499).armor_temperaturemax
+  assert.ok(row.contributions.some(c => c.value === null))
+})
