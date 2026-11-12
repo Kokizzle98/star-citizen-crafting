@@ -144,8 +144,8 @@ test('negative: container line stays unresolved, suits stay review; _crus01 / _h
 
 test('measured totals of the refined resolution', () => {
   const kinds = tally(hierarchy.families.map(f => `${f.kind}/${f.status}`))
-  assert.deepEqual(kinds, { 'ARMOR_SET/RESOLVED': 73, 'SINGLE/RESOLVED': 517, 'SINGLE/REVIEW_REQUIRED': 24, 'TAG_LINE/RESOLVED': 38 })
-  assert.deepEqual(tally(hierarchy.families.flatMap(f => f.reviewReasons)), { ARMOR_TAG_UNSUPPORTED: 19, FAMILY_NAME_CONFLICT: 4, MULTIPLE_BLUEPRINTS: 1 })
+  assert.deepEqual(kinds, { 'ARMOR_SET/RESOLVED': 62, 'SINGLE/RESOLVED': 530, 'SINGLE/REVIEW_REQUIRED': 22, 'TAG_LINE/RESOLVED': 38 })
+  assert.deepEqual(tally(hierarchy.families.flatMap(f => f.reviewReasons)), { ARMOR_TAG_UNSUPPORTED: 19, FAMILY_NAME_CONFLICT: 2, MULTIPLE_BLUEPRINTS: 1 })
   const all = hierarchy.families.flatMap(classes)
   assert.deepEqual(tally(all), { FUNCTIONALLY_EQUIVALENT: 973, FUNCTIONALLY_DIFFERENT: 6, UNRESOLVED: 637 })
   assert.ok(hierarchy.families.filter(f => f.kind === 'SINGLE').every(f => classes(f).every(c => c === 'UNRESOLVED')))

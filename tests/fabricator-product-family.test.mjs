@@ -81,10 +81,10 @@ test('slot-scoped name veto (F1.1): a set whose helmet is marketed under its own
   const green = adp.variants.find(v => v.variantKey === '01_05')
   assert.deepEqual(productNames(live, { variants: [green] })[0],
     ['Balor HCH Helmet Green', 'ADP Core Green', 'ADP Arms Green', 'ADP Legs Green'])
-  // Name conflicts: the container line and the cds set-01 undersuits (different names inside one slot).
+  // Only the container line keeps a name conflict; no armor line is vetoed.
   const conflicts = hierarchy.families.filter(f => f.reviewReasons.includes('FAMILY_NAME_CONFLICT'))
-  assert.deepEqual(conflicts.map(f => f.structuralKey).sort(),
-    ['ARMOR:cds_*_01', 'ARMOR:cds_*_01', 'Container:Cargo_ShipMining_Pod_Golem', 'Container:Cargo_ShipMining_Pod_Golem'])
+  assert.equal(conflicts.length, 2)
+  assert.ok(conflicts.every(f => f.structuralKey.startsWith('Container:')))
 })
 
 test('names stay a pure veto: every resolved family is name-consistent per slot (armor) or per line', () => {

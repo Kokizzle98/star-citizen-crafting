@@ -147,13 +147,29 @@ test('Modified items are VALID_SPECIAL_VARIANT: visible, inside their structural
   assert.ok(familyOfTag(live, coda.sourceTag), 'the non-armor Modified item stays visible')
 })
 
-test('a structural set whose names disagree inside one slot is vetoed, not merged: cds undersuits become REVIEW_REQUIRED', () => {
-  const tcs = familyOfTag(live, 'BP_CRAFT_cds_undersuit_01_01_01')
-  const fbl = familyOfTag(live, 'BP_CRAFT_cds_undersuit_01_02_02')
-  for (const f of [tcs, fbl]) {
-    assert.deepEqual([f.kind, f.status, f.reviewReasons, f.structuralKey], ['SINGLE', 'REVIEW_REQUIRED', ['FAMILY_NAME_CONFLICT'], 'ARMOR:cds_*_01'])
+test('undersuits are no armor-set component: TCS-4 and FBL-8u stay separate resolved products despite the shared cds_undersuit_01 structure', () => {
+  const tcsTag = 'BP_CRAFT_cds_undersuit_01_01_01'
+  const fblTag = 'BP_CRAFT_cds_undersuit_01_02_02'
+  const tcs = familyOfTag(live, tcsTag)
+  const fbl = familyOfTag(live, fblTag)
+  for (const [f, tag] of [[tcs, tcsTag], [fbl, fblTag]]) {
+    assert.deepEqual([f.kind, f.status, f.reviewReasons, f.structuralKey], ['SINGLE', 'RESOLVED', [], null], tag)
+    assert.deepEqual(f.variants.map(v => v.components.map(c => [c.slot, c.blueprintGuids])), [[['Undersuit', [live.byTag.get(tag).sourceGuid]]]])
   }
   assert.notEqual(tcs.familyKey, fbl.familyKey)
+  assert.deepEqual(productNames(live, tcs), [['TCS-4 Undersuit']])
+  assert.deepEqual(productNames(live, fbl), [['FBL-8u Undersuit SecondWind']])
+  assert.equal(JSON.stringify(live.byTag.get(tcsTag).recipe.recipe), JSON.stringify(live.byTag.get(fblTag).recipe.recipe), 'same recipe')
+  assert.equal(fingerprintOf(tcsTag), fingerprintOf(fblTag), 'same functional fingerprint')
+})
+
+test('no undersuit forms or joins an armor family; no review state is caused by the non-applicable set resolver', () => {
+  const undersuitFamilies = hierarchy.families.filter(f => f.variants.some(v => v.components.some(c => c.slot === 'Undersuit')))
+  assert.ok(undersuitFamilies.every(f => f.kind === 'SINGLE' && f.variants.length === 1 && f.variants[0].components.length === 1))
+  assert.equal(undersuitFamilies.filter(f => f.status === 'RESOLVED').length, 13)
+  assert.deepEqual(tally(undersuitFamilies.flatMap(f => f.reviewReasons)), { ARMOR_TAG_UNSUPPORTED: 12 }, 'only unsupported suit tags stay review')
+  assert.equal(hierarchy.families.filter(f => (f.structuralKey ?? '').startsWith('ARMOR:') && f.reviewReasons.includes('FAMILY_NAME_CONFLICT')).length, 0)
+  assert.equal(family.ARMOR_SET_SLOTS.has('Undersuit'), false)
 })
 
 // --- negatives -----------------------------------------------------------------
@@ -204,6 +220,22 @@ test('negative: no slot synthesis and no edition synthesis — every variant / s
     const parsed = family.parseArmorTag(blueprint.sourceTag, component.slot)
     assert.deepEqual([`ARMOR:${parsed.lineKey}`, parsed.variantKey], [familyKey, variantKey], blueprint.sourceTag)
   }
+})
+
+test('negative: undersuits sharing prefix and set number, recipe and fingerprint form no family and no name conflict', () => {
+  const result = build([
+    [1, 'Char_Armor_Undersuit', 'BP_CRAFT_aaa_undersuit_01_01_01', 'Foo Undersuit'],
+    [2, 'Char_Armor_Undersuit', 'BP_CRAFT_aaa_undersuit_01_02_02', 'Bar Undersuit'],
+    [3, 'Char_Armor_Undersuit', 'BP_CRAFT_aaa_undersuit_01_01_02', 'Foo Undersuit Red'],
+  ], { fingerprint: () => 'identical' })
+  assert.deepEqual(result.families.map(f => [f.kind, f.status, f.reviewReasons, f.variants[0].components[0].functional]),
+    Array(3).fill(['SINGLE', 'RESOLVED', [], 'UNRESOLVED']))
+  const withSet = build([
+    [1, 'Char_Armor_Torso', 'BP_CRAFT_aaa_core_01_01_01', 'Foo Core'],
+    [2, 'Char_Armor_Undersuit', 'BP_CRAFT_aaa_undersuit_01_01_01', 'Foo Undersuit'],
+  ])
+  assert.deepEqual(withSet.families.map(f => [f.kind, f.variants.flatMap(v => v.components.map(c => c.slot))]),
+    [['ARMOR_SET', ['Torso']], ['SINGLE', ['Undersuit']]], 'an undersuit never becomes a set component')
 })
 
 test('negative: containers, unsupported suits, Glacis and Pioneer keep their review states', () => {

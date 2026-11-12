@@ -12,7 +12,10 @@ import type { FabricatorBlueprint, FabricatorItem } from './fabricator-types'
 //   F1.2): the blueprint tag structure `BP_CRAFT_<prefix>_<slotToken>_<SetNr>_<rest>`.
 //   The family is `<prefix>` + `<SetNr>`, the edition / variant is the complete
 //   structural remainder after the set number (multi-part suffixes stay whole),
-//   and the slot token must agree with `attachType`;
+//   and the slot token must agree with `attachType`. Only slots with a
+//   multi-part armor-set semantics take part (ARMOR_SET_SLOTS); an undersuit
+//   (`Char_Armor_Undersuit`) is a product of its own and never joins a set or
+//   another undersuit through the V2 key;
 // - other items (weapons and the rest): within one `attachType`, a blueprint
 //   tag that extends another blueprint tag by `_<suffix>` is a variant of it.
 //
@@ -40,6 +43,13 @@ export const ARMOR_SLOT_BY_ATTACH_TYPE: Readonly<Record<string, FabricatorArmorS
 })
 
 export const ARMOR_SLOT_ORDER: readonly FabricatorArmorSlot[] = ['Helmet', 'Torso', 'Arms', 'Legs', 'Backpack', 'Undersuit']
+
+/**
+ * Slots that are components of a multi-part armor set (Armor Family Key V2).
+ * `Undersuit` is excluded: a shared `<prefix>_<SetNr>` is no product-family
+ * evidence for undersuits (owner decision, F1.2).
+ */
+export const ARMOR_SET_SLOTS: ReadonlySet<FabricatorArmorSlot> = new Set(['Helmet', 'Torso', 'Arms', 'Legs', 'Backpack'])
 
 const ARMOR_SLOT_TOKENS: Readonly<Record<string, FabricatorArmorSlot>> = Object.freeze({
   helmet: 'Helmet', core: 'Torso', torso: 'Torso', arms: 'Arms', legs: 'Legs', backpack: 'Backpack', undersuit: 'Undersuit',
@@ -221,6 +231,11 @@ function armorFamilies(members: readonly Member[]): FabricatorFamily[] {
     if (!parsed.ok) {
       families.push(single({ item: member.item, blueprintGuids: [member.blueprint.sourceGuid] },
         'REVIEW_REQUIRED', [parsed.reason], null))
+      continue
+    }
+    if (!ARMOR_SET_SLOTS.has(slot)) {
+      // Valid tag, but the set resolver does not apply: the item stays its own resolved product.
+      families.push(single({ item: member.item, blueprintGuids: [member.blueprint.sourceGuid] }, 'RESOLVED', [], null))
       continue
     }
     const line = lines.get(parsed.lineKey) ?? []
