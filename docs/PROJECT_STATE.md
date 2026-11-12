@@ -4,8 +4,8 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **State verified through commit:** `a460201623eb94222645e550994fd4755ddab4d8`
-- **Updated by work package:** Governance – `VECTOR_SOURCE_AUTHORITY_V1` (documentation only), checkpoint rotation after the F3 merge
+- **State verified through commit:** `9aeab14d9107a5684f9b05dc7fa70f4c40f210ce`
+- **Updated by work package:** Governance – Claude agent structure (Fleet Commander) (documentation only), checkpoint rotation after the PR #48 merge
 - **Checkpoint date:** 2026-11-12
 
 ## How to read this file
@@ -34,10 +34,11 @@
 - Fabricator F2 — Workspace + Recipe + Crew Craftability: **DONE**. Squash-merged as #44 (`706267a`) after the owner merge gate: `/vector/fabricator` with families, short set / variant / component labels, the `Rüstungsset` overview (OD-FAB-UX-01), visible functional deviation, recipe and crew craftability; read-only, no database change, no Production mutation.
 - Fabricator F3 — MANUAL Quality per material, Inventory-Aware Preset & Product Stats: **DONE**. Squash-merged as #47 (`a460201`) after owner manual acceptance: individual quality per recipe material with a global bulk control, inventory-aware preset (`OQ-F3-1`, `D-F3-1`), `lib/quality/` primitives, per-item stats, armor temperatures reconciled with SCMDB, F2 duplicate-material fix; read-only, no Production mutation.
 - Fabricator F4 evidence phase: read-only audits F4-A, F4-A.1, F4-A.2, Star Citizen Wiki API probe and UEX 22-UUID sample audit **complete** (2026-11-12). UEX identity semantics confirmed (exact CIG UUID), UEX coverage `PARTIAL`; UEX ingame and marketplace strictly separate.
+- Governance – `VECTOR_SOURCE_AUTHORITY_V1` FROZEN: **DONE**. Merged as #48 (`9aeab14`); documentation only, no Production mutation.
 
 ## ACTIVE
 
-- **Governance – `VECTOR_SOURCE_AUTHORITY_V1`** on `docs/vector-source-authority-v1`: documentation of the owner-decided source authority contract (`docs/frozen/VECTOR_SOURCE_AUTHORITY_V1.md`, rule index entry, checkpoint rotation). Documentation only; no code, no F4-S generator, no UEX integration, no F4-B, no Production mutation.
+- **Governance – Claude agent structure (Fleet Commander)** on `chore/governance-claude-fleet-commander`: role holders updated (VECTOR Project Lead = Claude Fleet Commander, Primary Engineer = Claude Vector Terminal - GitHub / Claude Code, Independent Reviewer = GitHub Copilot optional and punctual) in `AGENTS.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/governance/PROJECT_LEAD_EVIDENCE.md`, plus checkpoint rotation. Documentation only; no code, no FROZEN change, no Production mutation.
 
 ## PAUSED
 
@@ -49,7 +50,7 @@
 
 ## NEXT
 
-1. Owner review of the `VECTOR_SOURCE_AUTHORITY_V1` pull request; merge only with explicit owner approval.
+1. Owner review of the `Claude agent structure (Fleet Commander)` governance pull request; merge only with explicit owner approval.
 2. Owner decision on the F4-S source / distribution gate (licence of scunpacked-data; persistence of the derived index: option A full index, A′ crafting outputs only, B not committed). F4-S stays STOPPED until then; F4-B (gameplay relevance / exclusion contract) and a UEX source foundation follow as separate work packages.
 3. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
 

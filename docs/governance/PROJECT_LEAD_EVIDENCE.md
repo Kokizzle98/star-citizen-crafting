@@ -2,7 +2,7 @@
 
 - **Status:** OPERATIONAL (non-normative)
 - **Version:** 1.0 (evidence format 1.0)
-- **Scope:** the commit-bound evidence pipeline from a local Git checkout to the private evidence folder of the VECTOR Project Lead (Microsoft 365 Copilot)
+- **Scope:** the commit-bound evidence pipeline from a local Git checkout to the private evidence folder of the VECTOR Project Lead (Claude Fleet Commander)
 - **Generator:** `scripts/export-project-lead-evidence.ps1`
 - **Tests:** `tests/project-lead-evidence.test.mjs`
 
@@ -16,7 +16,7 @@ GitHub / local Git checkout
 -> scripts/export-project-lead-evidence.ps1 (local generator, fail-closed)
 -> locally validated commit-bound snapshot
 -> <OutputRoot>\Evidence\CURRENT (private OneDrive, synchronized by the OneDrive client)
--> M365 Copilot / VECTOR Project Lead
+-> Claude Fleet Commander / VECTOR Project Lead
 ```
 
 ## 2. Source-of-truth boundary
@@ -122,7 +122,7 @@ Only with `-Archive` the validated CURRENT set is additionally copied to `Eviden
 
 The productive default (`-ExpectedBranch develop -BaselineRef origin/develop`) refuses to run from any other branch, so CURRENT evidence is never produced from unmerged work. During a work package, tests use isolated temporary repositories and temporary output roots. The first productive export of a merged change is an owner action after the merge: update local `develop` to `origin/develop`, confirm the working tree is clean, run the command from section 5.
 
-## 12. Project Lead bootstrap workflow (M365)
+## 12. Project Lead bootstrap workflow (Claude Fleet Commander)
 
 Inputs for a new VECTOR Project Lead conversation: the private operating contract (outside the repository), `VECTOR_EVIDENCE.md`, `PROJECT_STATE.md`, `GOVERNANCE_CONTEXT.md`.
 

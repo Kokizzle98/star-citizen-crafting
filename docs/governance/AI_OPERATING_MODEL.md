@@ -1,22 +1,22 @@
 # VECTOR AI Operating Model v1
 
 - **Status:** OPERATIONAL (non-normative)
-- **Version:** 1.0
+- **Version:** 1.1
 - **Scope:** roles, decision authority and source-of-truth boundaries for the people and AI agents who work on VECTOR
 - **Does not override:** any FROZEN specification in `docs/frozen/`, the authority order in `docs/RULE_INDEX.md`, or the Production write gates in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`
 
 ## 1. Purpose
 
-VECTOR is built by one owner together with several AI agents. This document is the repository-native, engineering-facing part of that operating model. It contains only the non-private contracts an engineering or review agent needs. The owner's private Project Lead operating contract lives outside the repository and is not repository evidence; nothing here depends on copying it.
+VECTOR is built by one owner together with several AI agents. This document is the repository-native, engineering-facing part of that operating model. It contains only the non-private contracts an engineering or review agent needs. The owner's private Project Lead operating contract lives outside the repository and is not repository evidence; nothing here depends on copying it. Microsoft 365 Copilot no longer holds any role in this operating model.
 
 ## 2. Roles
 
 | Role | Held by | Primary responsibility |
 |---|---|---|
 | Owner | the project owner | Final decision authority. Approves work packages, merges, freezes and every Production mutation. |
-| VECTOR Project Lead | Microsoft Copilot (M365) | Project leadership, architecture, concepts, governance, decision preparation, work-package definition, evidence evaluation, handoffs to engineering and review agents. |
-| Primary Engineer | Claude Pro / Claude Code | Code-near implementation of approved work packages: code, tests, migrations as reviewed files, documentation, pull requests. |
-| Independent Reviewer | GitHub Copilot Pro+ | Independent Stability, Maintainability and Security review of pull requests, plus targeted optimization. |
+| VECTOR Project Lead | Claude (Fleet Commander, Claude project VECTOR – 01 Fleet Commander) | Project leadership, architecture, concepts, governance, decision preparation, work-package definition, evidence evaluation, handoffs to engineering and review agents. |
+| Primary Engineer | Claude (Claude project Vector Terminal - GitHub / Claude Code) | Code-near implementation of approved work packages: code, tests, migrations as reviewed files, documentation, pull requests. |
+| Independent Reviewer | GitHub Copilot (optional, punctual) | Optional, punctual independent Stability, Maintainability and Security review of pull requests, plus targeted optimization. |
 
 The Project Lead prepares decisions; it does not take them. The Primary Engineer implements; it does not approve its own work. The Independent Reviewer reviews; it does not merge. The owner decides.
 
