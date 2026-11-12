@@ -11,25 +11,32 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Governance – Claude agent structure (Fleet Commander)` (documentation only). The VECTOR Project Lead role is now held by Claude (Fleet Commander), the Primary Engineer role by Claude (Vector Terminal - GitHub / Claude Code), and GitHub Copilot is an optional, punctual Independent Reviewer (owner decision 2026-11-12). `VECTOR_SOURCE_AUTHORITY_V1` is merged (PR #48 as `9aeab14`). `Fabricator Phase 1` F1 to F3 are **DONE**; F4-S stays STOPPED at the source / distribution gate. LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
-- Branch: `chore/governance-claude-fleet-commander`
+- Work package: `F4-S – Vehicle Loadout Source Foundation (Option B)`. Owner decision 2026-11-12 at the F4-S source / distribution gate: the derived scunpacked-data index is **not** committed; scunpacked-data has no licence file and its redistribution stays unresolved. Delivers an offline generator, schema and types with provenance, and a reader with the source / build guard (`EXACT` / `STALE` / `UNAVAILABLE`). `Fabricator Phase 1` F1 to F3 are **DONE**; F4-B and UEX are not started. LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
+- Branch: `feat/f4s-vehicle-loadout-source`
 - Base: `develop`
 - Checkpoint date: `2026-11-12`
-- Work-package base (historical): `9aeab14d9107a5684f9b05dc7fa70f4c40f210ce`
-- Active checkpoint anchor: `9aeab14d9107a5684f9b05dc7fa70f4c40f210ce`
+- Work-package base (historical): `95caf69171a9009994c6617f44d81bdad565bef7`
+- Active checkpoint anchor: `95caf69171a9009994c6617f44d81bdad565bef7`
 - Working-tree expectation: `CLEAN`
-- Active PR: the governance pull request from `chore/governance-claude-fleet-commander` against `develop`
+- Active PR: the F4-S pull request from `feat/f4s-vehicle-loadout-source` against `develop`
 - PR base: `develop`
 
-The active anchor is the verified `develop` head after PR #48 (`VECTOR_SOURCE_AUTHORITY_V1` merge). The allowed scope below authorizes **documentation only**: the role holders in the AI operating model, the Project Lead evidence description, one line in `AGENTS.md` and the two checkpoint documents. No code, test, data, migration, FROZEN or other document is authorized here. Production mutation: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #49 (Claude agent structure merge). The allowed scope below authorizes the offline loadout source foundation only: no classification or exclusion (F4-B), no UEX or Wiki API integration, no UI or Fabricator change, no database migration, no Supabase or Vercel action, no Production mutation. Neither scunpacked-data raw files nor the derived index may be committed. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
-- `AGENTS.md`
-- `docs/governance/AI_OPERATING_MODEL.md`
-- `docs/governance/PROJECT_LEAD_EVIDENCE.md`
-- `docs/handover/VECTOR_RESTART_HANDOVER.md`
+- `.gitignore`
+- `lib/loadout-source/loadout-source-types.ts`
+- `lib/loadout-source/loadout-source-build.ts`
+- `lib/loadout-source/loadout-source-generator.ts`
+- `lib/loadout-source/loadout-source-reader.ts`
+- `lib/loadout-source/loadout-source-read.ts`
+- `scripts/generate-loadout-source-index.mjs`
+- `tests/loadout-source.test.mjs`
+- `tests/loadout-source-fixture.mjs`
+- `docs/workflows/LOADOUT_SOURCE_INDEX.md`
 - `docs/PROJECT_STATE.md`
+- `docs/handover/VECTOR_RESTART_HANDOVER.md`
 
 Recovery control block:
 
@@ -69,6 +76,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#44` (Fabricator F2 – Workspace + Recipe + Crew Craftability): squash-merged into `develop` on 2026-11-12 as `706267a` after the owner merge gate.
 - PR `#47` (Fabricator F3 – MANUAL Quality per material, Inventory-Aware Preset & Product Stats): squash-merged into `develop` on 2026-11-12 as `a460201` after owner manual acceptance; read-only, no database change, no Production mutation.
 - PR `#48` (Governance – `VECTOR_SOURCE_AUTHORITY_V1` FROZEN, documentation only): merged into `develop` on 2026-11-12 as `9aeab14`.
+- PR `#49` (Governance – Claude agent structure, Fleet Commander as role holder; documentation only): merged into `develop` on 2026-11-12 as `95caf69`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -117,7 +125,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 - audits F4-A, F4-A.1, F4-A.2, Star Citizen Wiki API probe and UEX 22-UUID sample audit: **complete** (read-only); UEX identity semantics confirmed (exact CIG UUID), UEX coverage `PARTIAL`; UEX ingame and UEX marketplace strictly separate;
 - `VECTOR_SOURCE_AUTHORITY_V1`: decided and documented as FROZEN (`docs/frozen/VECTOR_SOURCE_AUTHORITY_V1.md`);
-- F4-S (vehicle loadout source foundation): **STOPPED** at the source / distribution gate (licence and redistribution of scunpacked-data unclear; persistence of a derived index undecided: options A / A′ / B from the F4-S precheck);
+- F4-S (vehicle loadout source foundation): gate decided by the owner on 2026-11-12 as **Option B** (derived index not committed; licence of scunpacked-data unresolved); implementation **in review** (offline generator, schema / provenance, reader with `EXACT` / `STALE` / `UNAVAILABLE`; `docs/workflows/LOADOUT_SOURCE_INDEX.md`);
 - F4-B (gameplay relevance / exclusion contract): **not started**;
 - UEX integration: **not started**;
 - no Supabase / Production mutation.
@@ -410,4 +418,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Owner review of the governance pull request `Claude agent structure (Fleet Commander)` (documentation only); merge only with explicit owner approval. The owner decides the F4-S source / distribution gate (licence of scunpacked-data, persistence option A / A′ / B) before F4-S implementation; F4-B and any UEX source foundation follow as separate work packages. No Production mutation. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Owner review of the F4-S pull request (Option B, documentation of the open licence question included); merge only with explicit owner approval. Afterwards F4-B (gameplay relevance / exclusion contract) and any UEX source foundation follow as separate work packages; the licence / redistribution decision for scunpacked-data stays open. No Production mutation. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
