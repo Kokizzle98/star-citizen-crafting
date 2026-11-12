@@ -1,3 +1,4 @@
+import { functionalFingerprint } from './fabricator-fingerprint'
 import { liveFilesFromManifest, prepareFabricatorLiveSource } from './fabricator-live-source'
 import { buildFabricatorProductHierarchy, type FabricatorProductHierarchy } from './fabricator-product-family'
 import type { FabricatorLiveSource } from './fabricator-types'
@@ -33,7 +34,10 @@ export function createFabricatorLiveSourceLoader(readText: ScmdbTextReader): () 
     const files = liveFilesFromManifest(manifest)
     const [blueprintDocument, itemDocument] = await Promise.all([read(files.blueprintFile), read(files.itemFile)])
     const source = prepareFabricatorLiveSource(manifest, blueprintDocument, itemDocument)
-    return { source, hierarchy: buildFabricatorProductHierarchy(source.blueprints, source.items) }
+    const hierarchy = buildFabricatorProductHierarchy(source.blueprints, source.items, {
+      fingerprint: (blueprint, item) => functionalFingerprint(source, blueprint, item),
+    })
+    return { source, hierarchy }
   }
 
   return () => {

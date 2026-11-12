@@ -41,13 +41,16 @@ export function loadLive() {
   livePromise ??= (async () => {
     const sourceModule = await loadFabricatorModule('fabricator-live-source')
     const familyModule = await loadFabricatorModule('fabricator-product-family')
+    const fingerprintModule = await loadFabricatorModule('fabricator-fingerprint')
     const manifest = await readJson('data/scmdb/latest.json')
     const files = sourceModule.liveFilesFromManifest(manifest)
     const [blueprintDocument, itemDocument] = await Promise.all([
       readJson(`data/scmdb/${files.blueprintFile}`), readJson(`data/scmdb/${files.itemFile}`),
     ])
     const source = sourceModule.prepareFabricatorLiveSource(manifest, blueprintDocument, itemDocument)
-    const hierarchy = familyModule.buildFabricatorProductHierarchy(source.blueprints, source.items)
+    const hierarchy = familyModule.buildFabricatorProductHierarchy(source.blueprints, source.items, {
+      fingerprint: (blueprint, item) => fingerprintModule.functionalFingerprint(source, blueprint, item),
+    })
     const byTag = new Map(source.blueprints.map(b => [b.sourceTag, b]))
     const byGuid = new Map(source.blueprints.map(b => [b.sourceGuid, b]))
     return { manifest, files, blueprintDocument, itemDocument, source, hierarchy, byTag, byGuid }

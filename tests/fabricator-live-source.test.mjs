@@ -22,6 +22,8 @@ test('the pinned LIVE mirror prepares with the verified counts', () => {
   assert.equal(source.blueprints.length, 1618)
   assert.equal(source.items.size, 1616)
   assert.equal(source.properties.size, 29)
+  assert.deepEqual([...source.pools.keys()].sort(), ['ammoIndex', 'damageResistanceIndex', 'fireModesIndex', 'magazineIndex', 'signaturesIndex'])
+  assert.deepEqual([...source.pools.values()].map(pool => pool.length), [7, 14, 90, 128, 57])
 })
 
 test('LIVE only: PTU files are never selected and there is no PTU fallback', () => {
@@ -49,6 +51,9 @@ test('both documents must carry exactly the manifest LIVE version', () => {
   const ambiguous = { ...live.blueprintDocument, items: [...live.blueprintDocument.items, 'Iron'] }
   assert.equal(code(() => sourceModule.prepareFabricatorLiveSource(live.manifest, ambiguous, live.itemDocument)),
     'FABRICATOR_SOURCE_VOCABULARY_AMBIGUOUS')
+  const badPool = { ...live.itemDocument, signaturesPools: {} }
+  assert.equal(code(() => sourceModule.prepareFabricatorLiveSource(live.manifest, live.blueprintDocument, badPool)),
+    'FABRICATOR_SOURCE_POOLS_INVALID')
   const duplicate = { ...live.itemDocument, items: [...live.itemDocument.items, live.itemDocument.items[0]] }
   assert.equal(code(() => sourceModule.prepareFabricatorLiveSource(live.manifest, live.blueprintDocument, duplicate)),
     'FABRICATOR_SOURCE_ITEMS_DUPLICATE_ENTITY_CLASS')
@@ -114,7 +119,7 @@ test('server read boundary: server-only, LIVE mirror plus guarded user-session r
   assert.doesNotMatch(reader, /\.(insert|update|upsert|delete|rpc)\(/)
   assert.doesNotMatch(reader, /supabase\/admin|service_role|SUPABASE_SECRET_KEY/)
   for (const name of ['fabricator-types', 'fabricator-recipe', 'fabricator-live-source', 'fabricator-dataset-guard',
-    'fabricator-product-family', 'fabricator-modifier-adapter', 'fabricator-baseline', 'fabricator-size', 'fabricator-units',
+    'fabricator-product-family', 'fabricator-modifier-adapter', 'fabricator-baseline', 'fabricator-size', 'fabricator-units', 'fabricator-fingerprint',
     'fabricator-live-source-cache']) {
     const text = await readText(`lib/fabricator/${name}.ts`)
     assert.doesNotMatch(text, /supabase|node:fs|server-only/, `${name} must stay pure`)

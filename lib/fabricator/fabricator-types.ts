@@ -123,4 +123,10 @@ export type FabricatorLiveSource = {
   items: Map<string, FabricatorItem>
   properties: Map<string, FabricatorPropertyDefinition>
   vocabulary: { resources: ReadonlySet<string>; items: ReadonlySet<string> }
+  /**
+   * Shared SCMDB item pools keyed by the item index field that points into
+   * them (`damageResistanceIndex` -> `damageResistancePools`, ...). Used to
+   * resolve pooled base stats for the functional fingerprint (F1.1).
+   */
+  pools: ReadonlyMap<string, readonly unknown[]>
 }

@@ -75,6 +75,17 @@ function readNameSet(input: unknown, code: string): Set<string> {
   return names
 }
 
+/** `<name>Pools` arrays of the item document, keyed by the item field `<name>Index`. */
+function readPools(itemDocument: Record<string, unknown>): Map<string, readonly unknown[]> {
+  const pools = new Map<string, readonly unknown[]>()
+  for (const [key, value] of Object.entries(itemDocument)) {
+    if (!key.endsWith('Pools')) continue
+    if (!Array.isArray(value)) fail('POOLS_INVALID')
+    pools.set(`${key.slice(0, -'Pools'.length)}Index`, Object.freeze([...value]))
+  }
+  return pools
+}
+
 function readItems(input: unknown): Map<string, FabricatorItem> {
   if (!Array.isArray(input)) fail('ITEMS_INVALID')
   const items = new Map<string, FabricatorItem>()
@@ -156,5 +167,6 @@ export function prepareFabricatorLiveSource(
     items,
     properties,
     vocabulary: { resources, items: itemNames },
+    pools: readPools(itemDocument),
   }
 }
