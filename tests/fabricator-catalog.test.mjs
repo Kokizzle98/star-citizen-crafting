@@ -21,7 +21,8 @@ test('families mirror the F1 hierarchy one to one, plus the unresolved blueprint
   assert.equal(catalog.families.length, live.hierarchy.families.length + 1)
   assert.deepEqual(catalog.families.slice(0, -1).map(f => f.key), live.hierarchy.families.map(f => f.familyKey))
   const kinds = catalog.families.reduce((m, f) => ({ ...m, [f.kind]: (m[f.kind] ?? 0) + 1 }), {})
-  assert.deepEqual(kinds, { ARMOR_SET: 104, SINGLE: 911, TAG_LINE: 38, UNRESOLVED_OUTPUT: 1 })
+  assert.deepEqual(kinds, { ARMOR_SET: 116, SINGLE: 539, TAG_LINE: 38, UNRESOLVED_OUTPUT: 1 })
+  assert.equal(catalog.families.length, 694)
   const referenced = catalog.families.flatMap(f => f.variants.flatMap(v => v.components.flatMap(c => c.blueprints)))
   assert.equal(referenced.length, 1618)
   assert.equal(new Set(referenced).size, 1618, 'every blueprint is reachable exactly once')
@@ -29,11 +30,12 @@ test('families mirror the F1 hierarchy one to one, plus the unresolved blueprint
 
 test('REVIEW_REQUIRED items stay visible as their own results', () => {
   const review = catalog.families.filter(f => f.status === 'REVIEW_REQUIRED')
-  assert.equal(review.length, 395)
-  const adp = familyByTag('BP_CRAFT_cds_legacy_armor_heavy_legs_01_01_05')
-  assert.equal(adp.kind, 'SINGLE')
-  assert.deepEqual(adp.reviewReasons, ['FAMILY_NAME_CONFLICT'])
-  assert.equal(adp.title, 'ADP Legs Green')
+  assert.equal(review.length, 23)
+  const reasons = review.flatMap(f => f.reviewReasons).reduce((m, r) => ({ ...m, [r]: (m[r] ?? 0) + 1 }), {})
+  assert.deepEqual(reasons, { ARMOR_TAG_UNSUPPORTED: 19, FAMILY_NAME_CONFLICT: 2, MULTIPLE_BLUEPRINTS: 1, BLUEPRINT_OUTPUT_UNRESOLVED: 1, PRODUCT_NAME_MISSING: 1 })
+  const suit = familyByTag('BP_CRAFT_cds_combat_superheavy_suit_01_01_01')
+  assert.equal(suit.kind, 'SINGLE')
+  assert.deepEqual(suit.reviewReasons, ['ARMOR_TAG_UNSUPPORTED'])
   const pioneer = familyByTag('BP_CRAFT_COOL_S04_CNOU_Pioneer')
   assert.equal(pioneer.kind, 'UNRESOLVED_OUTPUT')
   assert.deepEqual(pioneer.reviewReasons, ['BLUEPRINT_OUTPUT_UNRESOLVED', 'PRODUCT_NAME_MISSING'])
@@ -97,4 +99,47 @@ test('the client payload is compact and carries no raw SCMDB data', () => {
   for (const raw of ['"tiers"', '"modifiers"', '"modifierAtStart"', '"entityClass"', '"productEntityClass"', '"source"', '"tags"']) {
     assert.equal(json.includes(raw), false, raw)
   }
+})
+
+const labels = family => family.variants.map(v => v.label)
+const componentNames = (family, variantKey) => family.variants.find(v => v.variantKey === variantKey).components
+  .map(c => [c.slot, catalog.blueprints[c.blueprints[0]].productName, c.functional])
+
+test('display labels (after identity resolution): set, short variant label, component slot', () => {
+  const defiance = familyByTag('BP_CRAFT_slaver_armor_heavy_core_01_01_01')
+  assert.equal(defiance.title, 'Defiance')
+  assert.deepEqual(labels(defiance), ['Tactical', 'Sunchaser', 'Hailstorm', 'Charcoal', 'Firestarter', 'Scorched', 'Desert'])
+  const adp = familyByTag('BP_CRAFT_cds_legacy_armor_heavy_arms_01_01_05')
+  assert.equal(adp.title, 'ADP', 'the set title follows the name used by most slots, not the helmet')
+  assert.equal(adp.titleDetail, 'ADP Core')
+  assert.equal(adp.variants.length, 20)
+  assert.ok(labels(adp).includes('Aqua'))
+  assert.deepEqual(componentNames(adp, '17').map(c => c[0]), ['Helmet', 'Torso', 'Arms', 'Legs'])
+  assert.equal(adp.variants.find(v => v.variantKey === '17').label, 'Aqua')
+  const killshot = familyByTag('BP_CRAFT_none_rifle_multi_01')
+  assert.deepEqual(labels(killshot), ['Basis', 'Dominion Camo'])
+})
+
+test('display labels never invent a name: inconsistent source names yield null, duplicates keep the variant key', () => {
+  const multi = catalog.families.filter(f => f.variants.length > 1)
+  assert.equal(multi.reduce((n, f) => n + f.variants.length, 0), 367)
+  assert.equal(multi.flatMap(f => f.variants.filter(v => v.label === null)).length, 8)
+  for (const family of multi) assert.equal(new Set(labels(family).filter(Boolean)).size, labels(family).filter(Boolean).length, family.key)
+  const argus = familyByTag('BP_CRAFT_vgl_armor_light_arms_01_01_10')
+  assert.ok(labels(argus).includes('Black/Silver · 11') && labels(argus).includes('Black/Silver · 15'))
+  assert.equal(catalog.families.filter(f => f.variants.length === 1).every(f => f.variants[0].label === null), true)
+})
+
+test('functional classification reaches the client: TrueDef-Pro Arms/Legs White/Silver/Grey differ, the rest is equivalent', () => {
+  const argus = familyByTag('BP_CRAFT_vgl_armor_light_arms_01_01_10')
+  assert.equal(argus.title, 'TrueDef-Pro')
+  assert.equal(argus.variants.find(v => v.variantKey === '10').label, 'White/Silver/Grey')
+  assert.deepEqual(componentNames(argus, '10'), [
+    ['Helmet', 'Argus Helmet White/Silver/Grey', 'FUNCTIONALLY_EQUIVALENT'],
+    ['Torso', 'TrueDef-Pro Core White/Silver/Grey', 'FUNCTIONALLY_EQUIVALENT'],
+    ['Arms', 'TrueDef-Pro Arms White/Silver/Grey', 'FUNCTIONALLY_DIFFERENT'],
+    ['Legs', 'TrueDef-Pro Legs White/Silver/Grey', 'FUNCTIONALLY_DIFFERENT'],
+  ])
+  const all = catalog.families.flatMap(f => f.variants.flatMap(v => v.components.map(c => c.functional)))
+  assert.deepEqual(all.reduce((m, c) => ({ ...m, [c]: (m[c] ?? 0) + 1 }), {}), { FUNCTIONALLY_EQUIVALENT: 856, FUNCTIONALLY_DIFFERENT: 2, UNRESOLVED: 759 })
 })

@@ -1575,6 +1575,10 @@
   border-color: var(--error);
 }
 
+.fabricator-notice--warning {
+  border-color: var(--warning);
+}
+
 .fabricator-empty {
   display: grid;
   justify-items: center;

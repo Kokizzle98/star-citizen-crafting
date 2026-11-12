@@ -92,6 +92,15 @@ test('multi-blueprint: explicit choice, no default selection', () => {
   assert.match(workspace, /Es wird keiner automatisch gewählt\./)
 })
 
+test('functional deviation is stated in words, not colour; short labels are display only', () => {
+  assert.match(workspace, /component\?\.functional === 'FUNCTIONALLY_DIFFERENT' && \(\s*<p className="fabricator-notice fabricator-notice--warning" role="note">/)
+  assert.match(workspace, /Werte weichen von anderen Varianten ab\./)
+  assert.match(workspace, /abweichende Werte<\/span>/)
+  assert.match(workspace, /if \(v\.label\) return v\.label/)
+  assert.match(workspace, /<dt>Produkt<\/dt>/)
+  assert.match(css, /\.fabricator-notice--warning \{\s*border-color: var\(--warning\);/)
+})
+
 test('min quality and location semantics are explained in the UI', () => {
   assert.match(workspace, /unter Mindestqualität – zählt nicht/)
   assert.match(workspace, /„In der Crew vorhanden“ heißt nicht, dass alles an einem Ort liegt\./)

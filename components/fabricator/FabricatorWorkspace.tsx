@@ -260,10 +260,16 @@ function FabricatorDetail({ family, selection, onChange, catalog, recipeResults,
   const blueprintIndex = choices.length === 1 ? choices[0] : selection.blueprint
   const blueprint = blueprintIndex !== null && choices.includes(blueprintIndex) ? catalog.blueprints[blueprintIndex] : null
   const categoryLabel = fabricatorCategoryLabel(family.categoryKey)
+  // Short labels come from the catalog (derived after identity resolution); without one, the full product name is shown.
   const variantLabel = (v: FabricatorVariantView) => {
+    if (v.label) return v.label
     const first = v.components[0]
     return catalog.blueprints[first.blueprints[0]].productName ?? first.itemName ?? catalog.blueprints[first.blueprints[0]].tag
   }
+  const productName = component
+    ? (blueprint?.productName ?? catalog.blueprints[component.blueprints[0]].productName ?? component.itemName)
+    : null
+  const differs = (v: FabricatorVariantView) => v.components.some(c => c.functional === 'FUNCTIONALLY_DIFFERENT')
 
   function chooseVariant(next: FabricatorVariantView) {
     const keepSlot = selection.slot !== null && next.components.some(c => c.slot === selection.slot)
@@ -280,12 +286,18 @@ function FabricatorDetail({ family, selection, onChange, catalog, recipeResults,
           {family.titleDetail && <p className="fabricator-muted">Produktlinie von {family.titleDetail}</p>}
           <dl className="fabricator-hero__meta">
             {family.variants.length > 1 && <><dt>Variante</dt><dd>{variantLabel(variant)}</dd></>}
+            {productName && productName !== family.title && <><dt>Produkt</dt><dd>{productName}</dd></>}
             {family.kind === 'ARMOR_SET' && <><dt>Komponente</dt><dd>{selection.slot ? FABRICATOR_SLOT_LABELS[selection.slot] : '—'}</dd></>}
             <dt>Hersteller</dt><dd>{component?.manufacturer ?? family.manufacturer ?? <span className="fabricator-muted">Nicht angegeben</span>}</dd>
             <dt>Kategorie</dt><dd>{categoryLabel}{component?.subcategory ? ` · ${component.subcategory}` : ''}</dd>
             {component?.sizeLabel && <><dt>Größe</dt><dd>{component.sizeLabel}</dd></>}
             <dt>Blueprint</dt><dd className="fabricator-tag">{blueprint ? blueprint.tag : choices.length > 1 ? 'Bitte auswählen' : '—'}</dd>
           </dl>
+          {component?.functional === 'FUNCTIONALLY_DIFFERENT' && (
+            <p className="fabricator-notice fabricator-notice--warning" role="note">
+              <span aria-hidden="true">⚠</span> Werte weichen von anderen Varianten ab. Rezept, Bestand und Werte gelten genau für dieses Item.
+            </p>
+          )}
           {family.reviewReasons.length > 0 && (
             <ul className="fabricator-review" aria-label="Hinweise zur Datenprüfung">
               {family.reviewReasons.map(reason => <li key={reason}><span aria-hidden="true">⚠</span> {FABRICATOR_REVIEW_MESSAGES[reason] ?? reason}</li>)}
@@ -300,7 +312,8 @@ function FabricatorDetail({ family, selection, onChange, catalog, recipeResults,
           <div className="fabricator-choice__options">
             {family.variants.map(v => (
               <button key={v.variantKey} type="button" aria-pressed={v.variantKey === variant.variantKey} onClick={() => chooseVariant(v)}>
-                {variantLabel(v)}{v.isBase ? ' · Basis' : ''}
+                {variantLabel(v)}{v.isBase && v.label !== 'Basis' ? ' · Basis' : ''}
+                {differs(v) && <span className="fabricator-choice__hint"> · abweichende Werte</span>}
                 {family.kind === 'ARMOR_SET' && <span className="fabricator-choice__hint"> · {v.components.length} von {family.slots.length} Komponenten</span>}
               </button>
             ))}
@@ -316,9 +329,11 @@ function FabricatorDetail({ family, selection, onChange, catalog, recipeResults,
               const present = variant.components.some(c => c.slot === slot)
               return (
                 <button key={slot} type="button" aria-pressed={selection.slot === slot} disabled={!present}
-                  aria-label={present ? FABRICATOR_SLOT_LABELS[slot] : `${FABRICATOR_SLOT_LABELS[slot]} – nicht im Datensatz`}
+                  aria-label={present ? undefined : `${FABRICATOR_SLOT_LABELS[slot]} – nicht im Datensatz`}
                   onClick={() => onChange({ ...selection, slot, blueprint: null })}>
                   {FABRICATOR_SLOT_LABELS[slot]}{!present && <span className="fabricator-choice__hint"> · nicht im Datensatz</span>}
+                  {variant.components.some(c => c.slot === slot && c.functional === 'FUNCTIONALLY_DIFFERENT') &&
+                    <span className="fabricator-choice__hint"> · abweichende Werte</span>}
                 </button>
               )
             })}
