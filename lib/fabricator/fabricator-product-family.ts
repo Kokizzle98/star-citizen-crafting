@@ -8,9 +8,11 @@ import type { FabricatorBlueprint, FabricatorItem } from './fabricator-types'
 //
 // - item -> blueprint: exact `productEntityClass` == item `entityClass`;
 // - armor slot: the item's SCMDB `attachType` (never the name);
-// - armor set and variant: the blueprint tag structure
-//   `BP_CRAFT_<line>_<slotToken>_<set...>_<variant>`; the slot token must agree
-//   with `attachType`;
+// - armor set and variant (Armor Family Key V2, owner decision OD-FAB-GROUP-04,
+//   F1.2): the blueprint tag structure `BP_CRAFT_<prefix>_<slotToken>_<SetNr>_<rest>`.
+//   The family is `<prefix>` + `<SetNr>`, the edition / variant is the complete
+//   structural remainder after the set number (multi-part suffixes stay whole),
+//   and the slot token must agree with `attachType`;
 // - other items (weapons and the rest): within one `attachType`, a blueprint
 //   tag that extends another blueprint tag by `_<suffix>` is a variant of it.
 //
@@ -128,7 +130,13 @@ type ArmorParse =
   | { ok: true; lineKey: string; variantKey: string }
   | { ok: false; reason: 'ARMOR_TAG_UNSUPPORTED' | 'ARMOR_SLOT_TOKEN_CONFLICT' }
 
-/** Parses `<line>_<slotToken>_<set...>_<variant>`; the slot itself always comes from attachType. */
+const SET_NUMBER = /^\d+$/
+
+/**
+ * Armor Family Key V2: parses `<prefix>_<slotToken>_<SetNr>_<rest>`. The family
+ * line is `<prefix>_*_<SetNr>`, the variant is the complete `<rest>` (all of its
+ * segments, never only the last one). The slot itself always comes from attachType.
+ */
 export function parseArmorTag(sourceTag: string, slot: FabricatorArmorSlot): ArmorParse {
   if (!sourceTag.startsWith(TAG_PREFIX)) return { ok: false, reason: 'ARMOR_TAG_UNSUPPORTED' }
   const tokens = sourceTag.slice(TAG_PREFIX.length).split('_')
@@ -137,14 +145,14 @@ export function parseArmorTag(sourceTag: string, slot: FabricatorArmorSlot): Arm
   const index = slotIndexes[0]
   const before = tokens.slice(0, index)
   const after = tokens.slice(index + 1)
-  if (before.length === 0 || after.length < 2 || [...before, ...after].some(token => token.length === 0)) {
+  if (before.length === 0 || after.length < 2 || !SET_NUMBER.test(after[0]) || [...before, ...after].some(token => token.length === 0)) {
     return { ok: false, reason: 'ARMOR_TAG_UNSUPPORTED' }
   }
   if (ARMOR_SLOT_TOKENS[tokens[index].toLowerCase()] !== slot) return { ok: false, reason: 'ARMOR_SLOT_TOKEN_CONFLICT' }
   return {
     ok: true,
-    lineKey: [...before, '*', ...after.slice(0, -1)].join('_'),
-    variantKey: after[after.length - 1],
+    lineKey: [...before, '*', after[0]].join('_'),
+    variantKey: after.slice(1).join('_'),
   }
 }
 

@@ -63,47 +63,47 @@ test('classification rule: equal, strict-majority reference, no majority, too fe
   assert.deepEqual(fp.classifyFunctionalGroup(['a', null]), ['UNRESOLVED', 'UNRESOLVED'])
 })
 
-test('ADP: the formerly split variants form one set; every component is functionally equivalent', () => {
+test('ADP: the formerly split variants and editions form one set; every component is functionally equivalent', () => {
   const adp = familyOfTag(live, 'BP_CRAFT_cds_legacy_armor_heavy_arms_01_01_05')
   assert.equal(adp.kind, 'ARMOR_SET')
-  assert.equal(adp.variants.length, 20)
-  assert.deepEqual(tally(classes(adp)), { FUNCTIONALLY_EQUIVALENT: 80 })
+  assert.equal(adp.variants.length, 23)
+  assert.deepEqual(tally(classes(adp)), { FUNCTIONALLY_EQUIVALENT: 90 })
 })
 
 test('Argus / TrueDef-Pro: one set; exactly the two deviating items are FUNCTIONALLY_DIFFERENT and stay in the family', () => {
   const argus = familyOfTag(live, 'BP_CRAFT_vgl_armor_light_arms_01_01_10')
-  assert.equal(argus.familyKey, 'ARMOR:vgl_armor_light_*_01_01')
+  assert.equal(argus.familyKey, 'ARMOR:vgl_armor_light_*_01')
   assert.equal(argus.status, 'RESOLVED')
   assert.equal(argus.variants.length, 21)
   const different = argus.variants.flatMap(v => v.components.filter(c => c.functional === 'FUNCTIONALLY_DIFFERENT')
     .map(c => [v.variantKey, c.slot, live.byGuid.get(c.blueprintGuids[0]).productName]))
-  assert.deepEqual(different, [['10', 'Arms', 'TrueDef-Pro Arms White/Silver/Grey'], ['10', 'Legs', 'TrueDef-Pro Legs White/Silver/Grey']])
+  assert.deepEqual(different, [['01_10', 'Arms', 'TrueDef-Pro Arms White/Silver/Grey'], ['01_10', 'Legs', 'TrueDef-Pro Legs White/Silver/Grey']])
   assert.deepEqual(tally(classes(argus)), { FUNCTIONALLY_EQUIVALENT: 78, FUNCTIONALLY_DIFFERENT: 2 })
-  const white = argus.variants.find(v => v.variantKey === '10')
+  const white = argus.variants.find(v => v.variantKey === '01_10')
   const torso = white.components.find(c => c.slot === 'Torso')
   assert.equal(torso.functional, 'FUNCTIONALLY_EQUIVALENT', 'the rest of that variant is unaffected')
 })
 
-test('Defiance: unchanged grouping; Scorched Torso equivalent to the other torsos', () => {
+test('Defiance: set 01 incl. Modified; Scorched Torso equivalent to the other torsos', () => {
   const defiance = familyOfTag(live, 'BP_CRAFT_slaver_armor_heavy_core_01_01_14')
-  assert.equal(defiance.familyKey, 'ARMOR:slaver_armor_heavy_*_01_01')
-  assert.deepEqual(defiance.variants.map(v => v.variantKey), ['01', '03', '10', '11', '13', '14', '15'])
-  assert.deepEqual(defiance.variants.find(v => v.variantKey === '14').components.map(c => [c.slot, c.functional]),
+  assert.equal(defiance.familyKey, 'ARMOR:slaver_armor_heavy_*_01')
+  assert.deepEqual(defiance.variants.map(v => v.variantKey), ['01_01', '01_03', '01_10', '01_11', '01_13', '01_14', '01_15', '9tails_01'])
+  assert.deepEqual(defiance.variants.find(v => v.variantKey === '01_14').components.map(c => [c.slot, c.functional]),
     [['Torso', 'FUNCTIONALLY_EQUIVALENT']])
-  assert.deepEqual(tally(classes(defiance)), { FUNCTIONALLY_EQUIVALENT: 25 })
+  assert.deepEqual(tally(classes(defiance)), { FUNCTIONALLY_EQUIVALENT: 29 })
 })
 
 test('CBH-3 / PAB-1, G-2 / ORC-mkV (missing slots stay missing) and Fortifier / Citadel', () => {
   const light = familyOfTag(live, 'BP_CRAFT_cds_legacy_armor_light_arms_01_01_01')
   assert.deepEqual([light.kind, light.variants.length, tally(classes(light))], ['ARMOR_SET', 20, { FUNCTIONALLY_EQUIVALENT: 80 }])
   const medium = familyOfTag(live, 'BP_CRAFT_cds_legacy_armor_medium_arms_01_01_01')
-  assert.equal(medium.variants.length, 25)
+  assert.equal(medium.variants.length, 27)
   const slotsPerVariant = medium.variants.map(v => v.components.length)
-  assert.equal(slotsPerVariant.reduce((a, b) => a + b, 0), 96)
+  assert.equal(slotsPerVariant.reduce((a, b) => a + b, 0), 102)
   assert.ok(medium.variants.some(v => v.components.map(c => c.slot).join('/') === 'Torso'), 'incomplete variants keep only their real slots')
-  assert.deepEqual(tally(classes(medium)), { FUNCTIONALLY_EQUIVALENT: 96 })
+  assert.deepEqual(tally(classes(medium)), { FUNCTIONALLY_EQUIVALENT: 102 })
   const outlaw = familyOfTag(live, 'BP_CRAFT_outlaw_legacy_armor_heavy_arms_01_01_01')
-  assert.deepEqual([outlaw.kind, outlaw.variants.length, tally(classes(outlaw))], ['ARMOR_SET', 2, { FUNCTIONALLY_EQUIVALENT: 8 }])
+  assert.deepEqual([outlaw.kind, outlaw.variants.length, tally(classes(outlaw))], ['ARMOR_SET', 3, { FUNCTIONALLY_EQUIVALENT: 10 }])
 })
 
 test('negative: an identical fingerprint without a structural relation creates no family', () => {
@@ -129,26 +129,25 @@ test('negative: different product lines with the same recipe stay separate (ADP 
   assert.notEqual(familyOfTag(live, adp.sourceTag).familyKey, familyOfTag(live, mk4.sourceTag).familyKey)
 })
 
-test('negative: container line stays unresolved, suits stay review, _crus01 / _hd_sec / 9tails lines stay separate', () => {
+test('negative: container line stays unresolved, suits stay review; _crus01 / _hd_sec / 9tails join set 01 only through structure (F1.2)', () => {
   const containers = hierarchy.families.filter(f => (f.structuralKey ?? '').startsWith('Container:') && f.reviewReasons.includes('FAMILY_NAME_CONFLICT'))
   assert.equal(containers.length, 2)
   assert.deepEqual(familyOfTag(live, 'BP_CRAFT_cds_combat_superheavy_suit_01_01_01').reviewReasons, ['ARMOR_TAG_UNSUPPORTED'])
   const main = familyOfTag(live, 'BP_CRAFT_cds_legacy_armor_heavy_arms_01_01_01').familyKey
-  for (const tag of ['BP_CRAFT_cds_legacy_armor_heavy_arms_01_crus01_01', 'BP_CRAFT_cds_legacy_armor_heavy_arms_01_01_hd_sec']) {
-    const separate = familyOfTag(live, tag)
-    assert.notEqual(separate.familyKey, main, tag)
-    assert.equal(separate.variants.length, 1)
-    assert.ok(classes(separate).every(c => c === 'UNRESOLVED'), 'single-variant lines have nothing to compare')
+  for (const tag of ['BP_CRAFT_cds_legacy_armor_heavy_arms_01_crus01_01', 'BP_CRAFT_cds_legacy_armor_heavy_arms_01_01_hd_sec',
+    'BP_CRAFT_cds_legacy_armor_heavy_arms_01_9tails_01']) {
+    assert.equal(familyOfTag(live, tag).familyKey, main, tag)
+    assert.equal(fingerprintOf(tag), fingerprintOf('BP_CRAFT_cds_legacy_armor_heavy_arms_01_01_01'), 'FCF1 confirms, it did not group')
   }
-  assert.notEqual(familyOfTag(live, 'BP_CRAFT_slaver_armor_heavy_core_01_9tails_01').familyKey, 'ARMOR:slaver_armor_heavy_*_01_01')
+  assert.notEqual(familyOfTag(live, 'BP_CRAFT_cds_armor_heavy_arms_01_01_01').familyKey, main, 'ADP-mk4 stays its own model line')
 })
 
 test('measured totals of the refined resolution', () => {
   const kinds = tally(hierarchy.families.map(f => `${f.kind}/${f.status}`))
-  assert.deepEqual(kinds, { 'ARMOR_SET/RESOLVED': 116, 'SINGLE/RESOLVED': 517, 'SINGLE/REVIEW_REQUIRED': 22, 'TAG_LINE/RESOLVED': 38 })
-  assert.deepEqual(tally(hierarchy.families.flatMap(f => f.reviewReasons)), { ARMOR_TAG_UNSUPPORTED: 19, FAMILY_NAME_CONFLICT: 2, MULTIPLE_BLUEPRINTS: 1 })
+  assert.deepEqual(kinds, { 'ARMOR_SET/RESOLVED': 73, 'SINGLE/RESOLVED': 517, 'SINGLE/REVIEW_REQUIRED': 24, 'TAG_LINE/RESOLVED': 38 })
+  assert.deepEqual(tally(hierarchy.families.flatMap(f => f.reviewReasons)), { ARMOR_TAG_UNSUPPORTED: 19, FAMILY_NAME_CONFLICT: 4, MULTIPLE_BLUEPRINTS: 1 })
   const all = hierarchy.families.flatMap(classes)
-  assert.deepEqual(tally(all), { FUNCTIONALLY_EQUIVALENT: 856, FUNCTIONALLY_DIFFERENT: 2, UNRESOLVED: 758 })
+  assert.deepEqual(tally(all), { FUNCTIONALLY_EQUIVALENT: 973, FUNCTIONALLY_DIFFERENT: 6, UNRESOLVED: 637 })
   assert.ok(hierarchy.families.filter(f => f.kind === 'SINGLE').every(f => classes(f).every(c => c === 'UNRESOLVED')))
   assert.ok(hierarchy.families.filter(f => f.kind === 'TAG_LINE').every(f => classes(f).every(c => c === 'FUNCTIONALLY_EQUIVALENT')))
 })
