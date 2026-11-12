@@ -11,26 +11,37 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Fabricator Phase 1`; F1 is **DONE** (PR #43, merged as `f1e0dbf`); F1.1 is **DONE** (PR #45, merged as `cc083c9`); active pull request: **F1.2 – Armor Family Key V2** (foundation, no UI); F2 is an open pull request (#44) waiting for F1.2; F3 (Quality / Stats) is NEXT. The previous package `Blueprint Ownership / Tracking` is complete (PRs #36, #39, #40, #41, checkpoint #42); LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
-- Branch: `feat/fabricator-f1-2-armor-family-v2`
+- Work package: `Fabricator Phase 1`; F1 is **DONE** (PR #43, merged as `f1e0dbf`); F1.1 is **DONE** (PR #45, merged as `cc083c9`); F1.2 is **DONE** (PR #46, merged as `74d72dc`); active pull request: **F2 – Workspace + Recipe + Crew Craftability** (PR #44, rebuilt on the F1.2 foundation); F3 (Quality / Stats) is NEXT. The previous package `Blueprint Ownership / Tracking` is complete (PRs #36, #39, #40, #41, checkpoint #42); LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
+- Branch: `feat/fabricator-f2-workspace`
 - Base: `develop`
 - Checkpoint date: `2026-11-12`
 - Work-package base (historical): `84e7fc3d3c72f62dc9007ec41938b3260cf574f7`
-- Active checkpoint anchor: `cc083c9751389bb05445aaf6620c735cbd27b215`
+- Active checkpoint anchor: `74d72dc706ede38524cc577a22159449a69b753a`
 - Working-tree expectation: `CLEAN`
-- Active PR: the F1.2 pull request from `feat/fabricator-f1-2-armor-family-v2` against `develop`. PR #44 (F2, branch `feat/fabricator-f2-workspace`) stays open and unchanged while F1.2 is developed; after F1.2 is merged, F2 is updated onto the new `develop` with its own checkpoint revision. F3 starts later from `develop` on its own branch with its own checkpoint rotation and exact allowlist
+- Active PR: #44, the F2 pull request from `feat/fabricator-f2-workspace` against `develop` (rebuilt on `74d72dc`). F3 starts later from `develop` on its own branch with its own checkpoint rotation and exact allowlist
 - PR base: `develop`
 
-The work-package base is the `develop` head after PR #42; the active anchor is the verified `develop` head after PR #45 (F1.1 squash merge). The allowed scope below authorizes **F1.2 only**: the two checkpoint documents and exactly the F1.2 files in `lib/fabricator/` and `tests/`. No F2 UI path and no F3 path is authorized here. Production mutation in F1.2: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The work-package base is the `develop` head after PR #42; the active anchor is the verified `develop` head after PR #46 (F1.2 squash merge, tree identical to the reviewed head `e08e3bd`). The allowed scope below authorizes **F2 only**: the two checkpoint documents and exactly the F2 files (route, workspace components, navigation entries, styles, F2 domain modules and F2 tests). No F1 / F1.1 / F1.2 file and no F3 path is authorized here. Production mutation in F2: none. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
-- `lib/fabricator/fabricator-product-family.ts`
-- `tests/fabricator-armor-family-v2.test.mjs`
-- `tests/fabricator-fingerprint.test.mjs`
-- `tests/fabricator-product-family.test.mjs`
+- `app/globals.css`
+- `app/vector/fabricator/page.tsx`
+- `app/vector/page.tsx`
+- `components/fabricator/FabricatorVisual.tsx`
+- `components/fabricator/FabricatorWorkspace.tsx`
+- `components/layout/VectorSidebar.tsx`
+- `lib/fabricator/fabricator-catalog.ts`
+- `lib/fabricator/fabricator-craftability.ts`
+- `lib/fabricator/fabricator-labels.ts`
+- `lib/fabricator/fabricator-search.ts`
+- `lib/fabricator/fabricator-workspace-read.ts`
+- `tests/fabricator-catalog.test.mjs`
+- `tests/fabricator-craftability.test.mjs`
+- `tests/fabricator-search.test.mjs`
+- `tests/fabricator-ui.test.mjs`
 
 Recovery control block:
 
@@ -66,6 +77,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#42` (checkpoint after Blueprint PR 4, idle baseline): merged into `develop` on 2026-11-11 as `84e7fc3`.
 - PR `#43` (Fabricator F1 – Read & Domain Foundation): squash-merged into `develop` on 2026-11-11 as `f1e0dbf` after the owner / Project Lead merge gate; reviewed head and checkpoint control revision `14b50bd`.
 - PR `#45` (Fabricator F1.1 – Product Family / Functional Variant Refinement): squash-merged into `develop` on 2026-11-12 as `cc083c9` after the owner merge gate; reviewed head `a83803a`.
+- PR `#46` (Fabricator F1.2 – Armor Family Key V2): squash-merged into `develop` on 2026-11-12 as `74d72dc` after the owner merge gate; reviewed head `e08e3bd`, checkpoint control revision `dfb3eac`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -109,7 +121,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Fabricator Phase 1` is **active** (Fabricator F1.2 in progress). Owner-approved plan and decisions are recorded in the F1 pull request; this section is a pointer, not the decision record.
+`Fabricator Phase 1` is **active** (Fabricator F2 in progress). Owner-approved plan and decisions are recorded in the F1 pull request; this section is a pointer, not the decision record.
 
 Owner decisions (2026-11-11):
 
@@ -131,8 +143,8 @@ Sequential pull requests inside this package:
 
 - F1 (**DONE**, #43 as `f1e0dbf`): read and domain foundation in `lib/fabricator/` with tests (family/variant/slot resolution, item-to-blueprint, strict recipe, recipe-to-inventory vocabulary, modifier adapter to `VECTOR_CRAFT_CALC_V1`, baseline allowlist, size, LIVE mirror version guard); no UI, no database change, no Production mutation;
 - F1.1 (**DONE**, #45 as `cc083c9`): slot-scoped armor name veto, functional crafting fingerprint and the FUNCTIONALLY_EQUIVALENT / FUNCTIONALLY_DIFFERENT / UNRESOLVED classification; no UI, no database change, no Production mutation;
-- F1.2 (**ACTIVE**): Armor Family Key V2 (`OD-FAB-GROUP-04` to `08`); foundation only, no UI, no database change, no Production mutation;
-- F2 (open PR #44, waiting for F1.2): `/vector/fabricator` workspace, recipe materials and crew craftability through the existing `get_active_group_inventory()`; read-only, no inventory mutation;
+- F1.2 (**DONE**, #46 as `74d72dc`): Armor Family Key V2 (`OD-FAB-GROUP-04` to `08`; undersuits are no armor-set component); foundation only, no UI, no database change, no Production mutation;
+- F2 (**ACTIVE**, PR #44): `/vector/fabricator` workspace on the F1.2 foundation, short set / variant / component labels, `Rüstungsset` overview (`OD-FAB-UX-01`), visible functional deviation, recipe materials and crew craftability through the existing `get_active_group_inventory()`; read-only, no inventory mutation;
 - F3 (**NEXT**): global MANUAL quality slider Q0–1000 and resolved product stats (base, crafted, absolute and relative delta).
 
 Planned governance follow-up, not part of this package: `SCMDB_SOURCE_AUTHORITY_V1`.
@@ -394,4 +406,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Owner review of the Fabricator F1.2 pull request (Armor Family Key V2; foundation only, no UI, no database change, no Production mutation). Merge only with explicit owner approval. PR #44 (F2) stays unchanged until F1.2 is merged; then F2 is updated onto the new `develop` with its own checkpoint revision and the `Rüstungsset` overview (`OD-FAB-UX-01`). Do not start F3 before F2 is merged. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Owner smoke and review of the rebuilt Fabricator F2 pull request #44 on the F1.2 foundation (read-only, no Production mutation). Merge only with explicit owner approval. Do not start F3 before F2 is merged; F3 then starts from `develop` on its own branch whose first commit rotates this checkpoint with its own exact allowlist. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
