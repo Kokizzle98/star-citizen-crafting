@@ -4,3 +4,8 @@ node_modules/
 .env.local
 
 tsconfig.tsbuildinfo
+
+# F4-S vehicle loadout source (Option B): neither the scunpacked-data raw tree nor
+# the derived index is committed (licence / redistribution of scunpacked-data unresolved).
+/data/derived/
+/data/external/

@@ -4,8 +4,8 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **State verified through commit:** `9aeab14d9107a5684f9b05dc7fa70f4c40f210ce`
-- **Updated by work package:** Governance – Claude agent structure (Fleet Commander) (documentation only), checkpoint rotation after the PR #48 merge
+- **State verified through commit:** `95caf69171a9009994c6617f44d81bdad565bef7`
+- **Updated by work package:** F4-S – Vehicle Loadout Source Foundation (Option B), checkpoint rotation after the PR #49 merge
 - **Checkpoint date:** 2026-11-12
 
 ## How to read this file
@@ -35,10 +35,12 @@
 - Fabricator F3 — MANUAL Quality per material, Inventory-Aware Preset & Product Stats: **DONE**. Squash-merged as #47 (`a460201`) after owner manual acceptance: individual quality per recipe material with a global bulk control, inventory-aware preset (`OQ-F3-1`, `D-F3-1`), `lib/quality/` primitives, per-item stats, armor temperatures reconciled with SCMDB, F2 duplicate-material fix; read-only, no Production mutation.
 - Fabricator F4 evidence phase: read-only audits F4-A, F4-A.1, F4-A.2, Star Citizen Wiki API probe and UEX 22-UUID sample audit **complete** (2026-11-12). UEX identity semantics confirmed (exact CIG UUID), UEX coverage `PARTIAL`; UEX ingame and marketplace strictly separate.
 - Governance – `VECTOR_SOURCE_AUTHORITY_V1` FROZEN: **DONE**. Merged as #48 (`9aeab14`); documentation only, no Production mutation.
+- Governance – Claude agent structure (Fleet Commander): **DONE**. Merged as #49 (`95caf69`); Project Lead = Claude Fleet Commander, Primary Engineer = Claude Vector Terminal - GitHub / Claude Code, Independent Reviewer = GitHub Copilot (optional, punctual); documentation only, no Production mutation.
+- F4-S source / distribution gate: **decided, Option B** (owner, 2026-11-12). The derived scunpacked-data index is not committed. The licence and redistribution status of scunpacked-data stay unresolved.
 
 ## ACTIVE
 
-- **Governance – Claude agent structure (Fleet Commander)** on `chore/governance-claude-fleet-commander`: role holders updated (VECTOR Project Lead = Claude Fleet Commander, Primary Engineer = Claude Vector Terminal - GitHub / Claude Code, Independent Reviewer = GitHub Copilot optional and punctual) in `AGENTS.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/governance/PROJECT_LEAD_EVIDENCE.md`, plus checkpoint rotation. Documentation only; no code, no FROZEN change, no Production mutation.
+- **F4-S – Vehicle Loadout Source Foundation (Option B)** on `feat/f4s-vehicle-loadout-source`: offline generator that derives a component-UUID-centred loadout index (component -> vehicle(s) -> port(s) with hardpoint, sizes, compatible types, required tags, editable) from a local, commit-pinned scunpacked-data checkout; schema and types with provenance (source commit, game build, LIVE channel, generator version); reader with source / build guard and `EXACT` / `STALE` / `UNAVAILABLE` (a missing index is `UNAVAILABLE`, never a crash or a name fallback); `.gitignore` for the index and the raw checkout; synthetic test fixtures only; `docs/workflows/LOADOUT_SOURCE_INDEX.md`. No classification or exclusion (F4-B), no UEX or Wiki API, no UI, no migration, no Production mutation.
 
 ## PAUSED
 
@@ -50,13 +52,13 @@
 
 ## NEXT
 
-1. Owner review of the `Claude agent structure (Fleet Commander)` governance pull request; merge only with explicit owner approval.
-2. Owner decision on the F4-S source / distribution gate (licence of scunpacked-data; persistence of the derived index: option A full index, A′ crafting outputs only, B not committed). F4-S stays STOPPED until then; F4-B (gameplay relevance / exclusion contract) and a UEX source foundation follow as separate work packages.
+1. Owner review of the F4-S pull request; merge only with explicit owner approval.
+2. F4-B (gameplay relevance / exclusion contract) and a UEX source foundation as separate work packages. The licence / redistribution decision for scunpacked-data stays open and is tracked below.
 3. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
 
 ## OPEN DECISIONS
 
-- F4-S source / distribution gate (see NEXT). No other owner decision is pending for the current work package.
+- Licence and redistribution of scunpacked-data (no licence file): unresolved. Option B keeps the index local and uncommitted until this is decided; a later move to option A or A′ needs its own owner decision. No other owner decision is pending for the current work package.
 - Later UX work package (not started): compact lot / location display in the Fabricator, grouping by player and location, progressive disclosure, and a clear distinction between "available in the crew" and "available at one place".
 - `SCMDB_SOURCE_AUTHORITY_V1` is absorbed by the FROZEN `VECTOR_SOURCE_AUTHORITY_V1`; `PROVIDER_AUTHORITY_V1` (user-state providers) stays PLANNED.
 - Known items that will need a decision later, none started: a later UX / design pass (blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, the narrow app shell / sidebar on small screens); the known crew `active_group` inconsistency (`getCrewContext()` falls back to the first crew while the crew RPCs report `ACTIVE_GROUP_REQUIRED`), deliberately unchanged; the `Crew Security Hardening` work package (LOW to MEDIUM findings, due before the first user outside the current test group); archiving or removing the legacy audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders (separate Cleanup Gate); Rule Index remediation items R1, R2, R4 and R5; the later WP-AOM-01 gates (Security Finding Register, Backup Gate, Cleanup Gate), which stay separate future work.
