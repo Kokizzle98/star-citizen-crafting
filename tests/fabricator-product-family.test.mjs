@@ -72,17 +72,30 @@ test('armor slot always equals the source attachType', () => {
   }
 })
 
-test('conflicting structural lines (ADP / Balor and others) are vetoed into ungrouped REVIEW_REQUIRED members', () => {
+test('slot-scoped name veto (F1.1): a set whose helmet is marketed under its own name stays one structural set', () => {
   const adp = familyOfTag(live, 'BP_CRAFT_cds_legacy_armor_heavy_legs_01_01_05')
-  assert.equal(adp.kind, 'SINGLE')
-  assert.equal(adp.status, 'REVIEW_REQUIRED')
-  assert.deepEqual(adp.reviewReasons, ['FAMILY_NAME_CONFLICT'])
-  assert.equal(adp.structuralKey, 'ARMOR:cds_legacy_armor_heavy_*_01_01')
-  const vetoed = new Set(hierarchy.families.filter(f => f.reviewReasons.includes('FAMILY_NAME_CONFLICT')).map(f => f.structuralKey))
-  assert.equal([...vetoed].filter(key => key.startsWith('ARMOR:')).length, 12)
+  assert.equal(adp.familyKey, 'ARMOR:cds_legacy_armor_heavy_*_01_01')
+  assert.equal(adp.kind, 'ARMOR_SET')
+  assert.equal(adp.status, 'RESOLVED')
+  assert.equal(adp.variants.length, 20)
+  assert.ok(adp.variants.every(v => v.components.map(c => c.slot).join('/') === 'Helmet/Torso/Arms/Legs'))
+  const green = adp.variants.find(v => v.variantKey === '05')
+  assert.deepEqual(productNames(live, { variants: [green] })[0],
+    ['Balor HCH Helmet Green', 'ADP Core Green', 'ADP Arms Green', 'ADP Legs Green'])
+  // Only the container line keeps a name conflict; no armor line is vetoed any more.
+  const conflicts = hierarchy.families.filter(f => f.reviewReasons.includes('FAMILY_NAME_CONFLICT'))
+  assert.equal(conflicts.length, 2)
+  assert.ok(conflicts.every(f => f.structuralKey.startsWith('Container:')))
+})
+
+test('names stay a pure veto: every resolved family is name-consistent per slot (armor) or per line', () => {
   for (const familyRow of hierarchy.families.filter(f => f.status === 'RESOLVED' && f.kind !== 'SINGLE')) {
-    const tokens = productNames(live, familyRow).flat().map(name => name.split(/\s+/)[0])
-    assert.equal(new Set(tokens).size, 1, `${familyRow.familyKey} must be name-consistent`)
+    const groups = new Map()
+    for (const variant of familyRow.variants) for (const c of variant.components) {
+      const key = familyRow.kind === 'ARMOR_SET' ? c.slot : ''
+      groups.set(key, [...(groups.get(key) ?? []), live.byGuid.get(c.blueprintGuids[0]).productName.split(/\s+/)[0]])
+    }
+    for (const [slot, tokens] of groups) assert.equal(new Set(tokens).size, 1, `${familyRow.familyKey} ${slot}`)
   }
 })
 
@@ -154,6 +167,23 @@ test('names veto but never create: structural line with a missing or different n
     [2, 'Char_Armor_Legs', 'BP_CRAFT_foo_armor_legs_01_01_01', null],
   ])
   assert.ok(missing.families.every(f => f.reviewReasons[0] === 'FAMILY_NAME_MISSING'))
+})
+
+test('armor veto is slot-scoped: different names across slots pass, different names inside one slot veto', () => {
+  const acrossSlots = build([
+    [1, 'Char_Armor_Helmet', 'BP_CRAFT_foo_armor_helmet_01_01_01', 'Bar Helmet'],
+    [2, 'Char_Armor_Legs', 'BP_CRAFT_foo_armor_legs_01_01_01', 'Foo Legs'],
+    [3, 'Char_Armor_Helmet', 'BP_CRAFT_foo_armor_helmet_01_01_02', 'Bar Helmet Red'],
+    [4, 'Char_Armor_Legs', 'BP_CRAFT_foo_armor_legs_01_01_02', 'Foo Legs Red'],
+  ])
+  assert.deepEqual(acrossSlots.families.map(f => [f.kind, f.status, f.variants.length]), [['ARMOR_SET', 'RESOLVED', 2]])
+  const insideSlot = build([
+    [1, 'Char_Armor_Legs', 'BP_CRAFT_foo_armor_legs_01_01_01', 'Foo Legs'],
+    [2, 'Char_Armor_Legs', 'BP_CRAFT_foo_armor_legs_01_01_02', 'Baz Legs Red'],
+    [3, 'Char_Armor_Helmet', 'BP_CRAFT_foo_armor_helmet_01_01_01', 'Foo Helmet'],
+  ])
+  assert.equal(insideSlot.families.length, 3)
+  assert.ok(insideSlot.families.every(f => f.kind === 'SINGLE' && f.reviewReasons[0] === 'FAMILY_NAME_CONFLICT'))
 })
 
 test('armor: slot token must agree with attachType; duplicate variant slots are not merged', () => {
