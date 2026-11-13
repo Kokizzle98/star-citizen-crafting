@@ -1,5 +1,5 @@
 import { isQuality } from '@/lib/quality/quality-weighting'
-import { QUALITY_TIERS, QUALITY_TIER_DISCLAIMER, tierFor, tierRangeLabel } from '@/lib/quality/tiers'
+import { QUALITY_TIERS, QUALITY_TIER_DISCLAIMER, tierFor, tierRangeLabel, type QualityTier } from '@/lib/quality/tiers'
 
 // Quality tier chip: the tier colour always appears together with the tier
 // name as text, so colour alone never carries meaning (INVENTORY_UX_V1_1 5.1).
@@ -18,6 +18,15 @@ export function QualityChip({ quality }: { quality: unknown }) {
   )
 }
 
+/** Chip of a tier itself (no quality number): the tier name is always shown as text. */
+export function QualityTierChip({ tier }: { tier: QualityTier }) {
+  return (
+    <span className="quality-chip" style={{ color: tier.color, borderColor: tier.color }}>
+      <span className="quality-chip__tier">{tier.label}</span>
+    </span>
+  )
+}
+
 /** Legend with every tier and its range. */
 export function QualityLegend() {
   return (
@@ -26,9 +35,7 @@ export function QualityLegend() {
       <ul>
         {QUALITY_TIERS.map(tier => (
           <li key={tier.id}>
-            <span className="quality-chip" style={{ color: tier.color, borderColor: tier.color }}>
-              <span className="quality-chip__tier">{tier.label}</span>
-            </span>{' '}
+            <QualityTierChip tier={tier} />{' '}
             <span className="quality-legend__range">Q{tierRangeLabel(tier)}</span>
           </li>
         ))}

@@ -1960,3 +1960,50 @@ h1, h2, h3,
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* UX-4: crew overview (Crew Inventory only, display only) */
+.inventory-crew-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(18rem, 100%), 1fr));
+  gap: .75rem;
+  margin: 1rem 0;
+}
+
+.inventory-crew-overview__panel {
+  border: 1px solid var(--line);
+  border-radius: .55rem;
+  background: var(--panel);
+  padding: .75rem 1rem;
+}
+
+.inventory-crew-overview__panel h2 {
+  font-size: 1rem;
+  margin: 0 0 .4rem;
+}
+
+.inventory-crew-overview__note,
+.inventory-crew-overview__empty {
+  color: var(--muted);
+  font-size: .85rem;
+  margin: 0 0 .5rem;
+}
+
+.inventory-crew-overview__tiers,
+.inventory-crew-overview__players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.inventory-crew-overview__tiers li,
+.inventory-crew-overview__players li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .25rem .75rem;
+  padding: .25rem 0;
+}
+
+.inventory-crew-overview__tiers li strong { margin-left: auto; }
+.inventory-crew-overview__players li span:first-child { font-weight: 700; margin-right: auto; }
+.inventory-crew-overview__players li span:not(:first-child) { color: var(--muted); }
