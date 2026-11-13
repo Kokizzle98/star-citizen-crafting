@@ -4,6 +4,10 @@ VECTOR is a community-driven, hobby project for Star Citizen players focused on 
 
 The project is intentionally free to use and designed to grow with the community. Monetization is not the primary goal and will only be considered later, if at all, once the project proves useful and sustainable.
 
+## Unofficial fan project
+
+VECTOR is an unofficial Star Citizen fan project. It is not affiliated with, endorsed by or sponsored by Cloud Imperium Games or Roberts Space Industries. Star Citizen®, Roberts Space Industries® and Cloud Imperium® are registered trademarks of Cloud Imperium Rights LLC. This project does not use official logos or artwork. Game data comes from community sources and may be incomplete or outdated.
+
 ## Vision
 
 VECTOR exists to make Star Citizen planning more structured, transparent, and useful for players. The goal is to provide a practical tool that helps players better understand:
