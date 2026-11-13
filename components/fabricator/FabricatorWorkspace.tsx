@@ -1,5 +1,6 @@
 'use client'
 
+import { QualityChip } from '@/components/quality/QualityChip'
 import { Fragment, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import {
   blueprintBaselines,
@@ -488,7 +489,7 @@ function RecipeSection({ blueprintIndex, catalog, result, crewAvailable }: {
                     <td>{craft ? (craft.missing > 0n ? formatFabricatorQuantity(craft.missing, unit) : '—') : '—'}</td>
                     <td>
                       {craft?.quality != null
-                        ? <>Q{craft.quality}<span className="fabricator-material__quality">bestmöglich, mengengewichtet</span></>
+                        ? <><QualityChip quality={craft.quality} /><span className="fabricator-material__quality">bestmöglich, mengengewichtet</span></>
                         : <span className="fabricator-muted">—</span>}
                     </td>
                     <td>
@@ -530,7 +531,7 @@ function LotList({ craft, unit }: { craft: FabricatorSlotCraftability; unit: 'SC
       {craft.lots.map(use => (
         <li key={use.lot.id} className={use.usable ? 'fabricator-lot' : 'fabricator-lot fabricator-lot--excluded'}>
           <span aria-hidden="true">{use.usable ? '✓' : '✕'}</span>{' '}
-          {use.lot.playerName} · {use.quantity !== null ? formatFabricatorQuantity(use.quantity, unit) : '—'} · Q{use.lot.quality} · {use.lot.locationName}
+          {use.lot.playerName} · {use.quantity !== null ? formatFabricatorQuantity(use.quantity, unit) : '—'} · <QualityChip quality={use.lot.quality} /> · {use.lot.locationName}
           {use.reason && <span className="fabricator-lot__reason"> · {LOT_REASON[use.reason]}</span>}
           {craft.selection.filter(part => part.ref === use.lot.id).map(part => (
             <span key={part.ref} className="fabricator-lot__reason"> · für das Preset verwendet: {formatFabricatorQuantity(part.quantity, unit)}</span>

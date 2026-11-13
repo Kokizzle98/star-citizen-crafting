@@ -1,5 +1,6 @@
 'use client'
 
+import { QualityChip, QualityLegend } from '@/components/quality/QualityChip'
 import { useMemo, useState, type KeyboardEvent } from 'react'
 import type { FabricatorBaselineView, FabricatorPropertyView, FabricatorRecipeView } from '@/lib/fabricator/fabricator-catalog'
 import type { FabricatorRecipeCraftability } from '@/lib/fabricator/fabricator-craftability'
@@ -120,12 +121,13 @@ export function FabricatorQuality({ recipe, baselines, properties, preset, craft
   return (
     <section className="fabricator-quality" aria-labelledby="fabricator-quality-title">
       <h3 id="fabricator-quality-title">Qualität &amp; Produktwerte</h3>
+      <QualityLegend />
 
       <dl className="fabricator-quality__summary">
         <dt>Verfügbares gemeinsames Preset</dt>
         <dd>
           {presetQuality !== null
-            ? <strong>Q{presetQuality}</strong>
+            ? <QualityChip quality={presetQuality} />
             : <span className="fabricator-muted">{FABRICATOR_PRESET_MESSAGES[preset.status === 'NONE' ? preset.reason : 'UNRESOLVED']}</span>}
         </dd>
         <dt>Aktuelle Materialqualitäten (Simulation)</dt>
@@ -163,7 +165,7 @@ export function FabricatorQuality({ recipe, baselines, properties, preset, craft
                 <p>
                   <strong>{slot.material.name}</strong> <span className="fabricator-muted">· {slot.name}</span>
                   <span className="fabricator-material__quality">
-                    {own !== null ? `Verfügbar: Q${own} (bestmöglich, mengengewichtet)` : 'Verfügbar: kein ausreichender nutzbarer Bestand'}
+                    {own !== null ? <>Verfügbar: <QualityChip quality={own} /> (bestmöglich, mengengewichtet)</> : 'Verfügbar: kein ausreichender nutzbarer Bestand'}
                     {slot.material.minQuality > 0 ? ` · Mindestqualität Q${slot.material.minQuality}` : ''}
                   </span>
                 </p>
