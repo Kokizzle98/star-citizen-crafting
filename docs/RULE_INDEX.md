@@ -1,7 +1,7 @@
 # VECTOR Rule Index
 
 **Status:** PROPOSED  
-**Version:** 1.0  
+**Version:** 1.1  
 **Purpose:** Canonical registry and navigation index for VECTOR rules, specifications, architecture decisions, proposals and retired references.
 
 ## 1. Purpose
@@ -84,6 +84,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; complete remaining cross-spec alignment before freeze |
 | `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile its preview/staging validation (§18) with FROZEN `DB_ENVIRONMENT_GOVERNANCE_V1.md`, which defers a separate staging environment (`DB-ENV-09`); bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
+| `INVENTORY_UX_V1_1.md` | Inventory UX amendment: quality tiers, two inventory pages, level model, global key set | `PROPOSED` | Additive successor to FROZEN `INVENTORY_UX_V1.md` v1.0; needs owner approval before promotion; v1.0 stays binding until then |
 
 ## 7. PLANNED normative specifications
 
