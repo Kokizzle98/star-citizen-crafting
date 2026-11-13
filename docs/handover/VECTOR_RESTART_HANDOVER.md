@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v3 (counted up from v2; checkpoint rotation after PR #55, base commit `79f7b30e9b05204d43676f6d0dd59cffdb285980`)
+- Document version: v4 (counted up from v3; checkpoint rotation after PR #62, base commit `8b98db74c22ca907a3c9e5089a8ce64450ba55c4`)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -13,24 +13,31 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Public-repo boundary clarification and checkpoint rotation after PR #55`. Documentation only: makes the boundary between private runtime evidence and permitted repository artefacts explicit (reviewed migrations, technical configuration and migration postchecks stay allowed) and records PR #53 to #55.
-- Branch: `docs/public-boundary-and-checkpoint-after-55`
+- Work package: `UX series (UX-3a to UX-6)`, started by the checkpoint rotation after PR #62. UX-1 (quality tiers, #61) and UX-2 (shell and branding, #62) are done. Each UX work package is its own pull request and its own session; binding specification is `docs/frozen/INVENTORY_UX_V1_1.md`.
+- Branch: `develop` (each UX work package works on its own feature branch)
 - Base: `develop`
 - Checkpoint date: `2026-11-13`
-- Work-package base (historical): `79f7b30e9b05204d43676f6d0dd59cffdb285980`
-- Active checkpoint anchor: `79f7b30e9b05204d43676f6d0dd59cffdb285980`
+- Work-package base (historical): `8b98db74c22ca907a3c9e5089a8ce64450ba55c4`
+- Active checkpoint anchor: `8b98db74c22ca907a3c9e5089a8ce64450ba55c4`
 - Working-tree expectation: `CLEAN`
-- Active PR: the boundary clarification and checkpoint rotation pull request from `docs/public-boundary-and-checkpoint-after-55` against `develop`
+- Active PR: none at rotation time; each UX work package opens its own pull request against `develop`
 - PR base: `develop`
 
-The active anchor is the verified `develop` head after PR #55. The allowed scope below authorizes this documentation rotation only: no code, no migration, no Supabase or Vercel action, no Production mutation. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #62. The allowed scope below authorizes the documentation rotation and the planned UX series paths only: no migration, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
-- `AGENTS.md`
-- `docs/governance/AI_OPERATING_MODEL.md`
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
+- `app/vector/inventory/`
+- `app/vector/page.tsx`
+- `app/globals.css`
+- `components/inventory/`
+- `components/layout/`
+- `components/quality/`
+- `lib/inventory/`
+- `lib/quality/`
+- `tests/`
 
 Recovery control block:
 
@@ -76,6 +83,12 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#53` (checkpoint rotation after PR #52; project identifier removed from the active docs): merged into `develop` on 2026-11-13 as `b28abe7`.
 - PR `#54` (public-repo rule, review before merge, runtime read access; `AI_OPERATING_MODEL` v1.2): merged into `develop` on 2026-11-13 as `2e20cf0`.
 - PR `#55` (`README.md` unofficial fan project notice): merged into `develop` on 2026-11-13 as `79f7b30`.
+- PR `#56` (public-repo boundary clarification, checkpoint rotation after PR #55): merged into `develop` on 2026-11-13 as `6586108`.
+- PR `#57` (security hardening H1, reviewed migration `database/migrations/security/001_security_hardening_h1.sql`): merged into `develop` as `a8a4f3b`; applied once to Production under an explicit owner GO, postchecks PASS (recorded on PR #57).
+- PR `#58` (no email address in the UI): merged into `develop` on 2026-11-13 as `d569e1e`.
+- PR `#59` (Inventory UX v1.1 proposal) and PR `#60` (promotion to FROZEN, `INVENTORY_UX_V1.md` superseded): merged into `develop` on 2026-11-13 as `d7cbfcb` and `9808946`.
+- PR `#61` (UX-1 central quality tiers): merged into `develop` on 2026-11-13 as `84ce2ef`.
+- PR `#62` (UX-2 design foundations and shell): merged into `develop` on 2026-11-13 as `8b98db7`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -120,7 +133,9 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Fabricator Phase 1`: F1 to F3 are **DONE**; F4 (gameplay relevance) is in the evidence phase. Current state (2026-11-12):
+`UX series` (owner priority, 2026-11-13): design mock-ups approved by the owner; specification `INVENTORY_UX_V1_1.md` FROZEN. Order, one work package per session: UX-1 **DONE**, UX-2 **DONE**, UX-3a (split into `Mein Inventory` and `Crew Inventory`, Crew page read-only) next, UX-3b, UX-4, UX-5, UX-6. No database change is part of this series.
+
+Previous active package `Fabricator Phase 1`: F1 to F3 are **DONE**; F4 (gameplay relevance) is in the evidence phase. Current state (2026-11-12):
 
 - audits F4-A, F4-A.1, F4-A.2, Star Citizen Wiki API probe and UEX 22-UUID sample audit: **complete** (read-only); UEX identity semantics confirmed (exact CIG UUID), UEX coverage `PARTIAL`; UEX ingame and UEX marketplace strictly separate;
 - `VECTOR_SOURCE_AUTHORITY_V1`: decided and documented as FROZEN (`docs/frozen/VECTOR_SOURCE_AUTHORITY_V1.md`);
@@ -417,4 +432,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Review of the boundary clarification and checkpoint rotation pull request; merge only with explicit owner approval. Afterwards the owner chooses the next work package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation); the licence / redistribution decision for scunpacked-data stays open. No Production mutation. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Start UX-3a as its own session and pull request against `develop`: split the Inventory page into `Mein Inventory` (own lots, Quick Add, edit and delete) and `Crew Inventory` (all crew lots, read-only, own lots link to Mein Inventory), per `docs/frozen/INVENTORY_UX_V1_1.md`. No Production mutation. Afterwards UX-3b to UX-6; then the owner chooses the next package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation). The licence / redistribution decision for scunpacked-data stays open. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.

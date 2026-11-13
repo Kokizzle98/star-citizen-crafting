@@ -4,9 +4,9 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v3 (counted up from v2; checkpoint rotation after PR #55)
-- **State verified through commit:** `79f7b30e9b05204d43676f6d0dd59cffdb285980`
-- **Updated by work package:** Public-repo boundary clarification and checkpoint rotation after PR #55 (develop `79f7b30`)
+- **Document version:** v4 (counted up from v3; checkpoint rotation after PR #62)
+- **State verified through commit:** `8b98db74c22ca907a3c9e5089a8ce64450ba55c4`
+- **Updated by work package:** Checkpoint rotation after PR #62 (develop `8b98db7`): UX series started, Inventory UX v1.1 FROZEN
 - **Checkpoint date:** 2026-11-13
 
 ## How to read this file
@@ -40,11 +40,16 @@
 - F4-S source / distribution gate: **decided, Option B** (owner, 2026-11-12). The derived scunpacked-data index is not committed. The licence and redistribution status of scunpacked-data stay unresolved.
 - F4-S – Vehicle Loadout Source Foundation (Option B): **DONE**. Merged as #50 (`210cb07`); offline generator, schema / types and reader with source / build guard; the derived index and raw source data are not committed.
 - PR #51 (`6c487f2`) added read-only database runtime documentation; PR #52 (`36018f2`) removed it again because the repository is public and such security-relevant evidence does not belong in it (`AI_OPERATING_MODEL` section 5). Security-relevant runtime evidence is kept privately by the owner, not in the repository.
-- Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`. Documentation only, no Production mutation.
+- Security hardening H1: **DONE**. Merged as #57 (`a8a4f3b`); reviewed migration `database/migrations/security/001_security_hardening_h1.sql` applied once to Supabase Production under an explicit owner GO; postchecks PASS (evidence on PR #57).
+- No email address in the UI: **DONE**. #58 (`d569e1e`); the account label falls back to a neutral text, regression test `tests/no-email-display.test.mjs`.
+- Inventory UX v1.1: **DONE**. #59 (`d7cbfcb`) proposal, #60 (`9808946`) promotion to FROZEN as full-document successor; `INVENTORY_UX_V1.md` registered `SUPERSEDED`. Documentation only.
+- UX-1 central quality tiers: **DONE**. #61 (`84ce2ef`): `lib/quality/tiers.ts`, `QualityChip`, legend. No data model change.
+- UX-2 design foundations and shell: **DONE**. #62 (`8b98db7`): fonts, brand line, navigation 01 to 06 (`components/layout/navigation.ts`), fan-project notice. No data model change.
+- Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`; #56 (`6586108`) public-repo boundary clarification and checkpoint rotation. Documentation only, no Production mutation.
 
 ## ACTIVE
 
-- None.
+- UX series (owner priority: a usable, good-looking app for the owner and the first outside tester). Design mock-ups approved by the owner on 2026-11-13. Order, one work package per session: UX-1 (quality tiers) **DONE**, UX-2 (shell and branding) **DONE**, UX-3a (Mein Inventory / Crew Inventory split, Crew page read-only) next, UX-3b (material rows, depth indicator, KPI strip, Mein Inventory polish), UX-4 (Crew Inventory overview polish), UX-5 (global key set), UX-6 (icons, dashboard polish). Binding specification: `docs/frozen/INVENTORY_UX_V1_1.md`.
 
 ## PAUSED
 
@@ -56,8 +61,8 @@
 
 ## NEXT
 
-1. Next work package to be chosen by the owner (candidates: F4-B and a UEX source foundation, each as its own package, only after an explicit owner decision).
-2. F4-B (gameplay relevance / exclusion contract) and a UEX source foundation stay separate work packages. The licence / redistribution decision for scunpacked-data stays open and is tracked below.
+1. UX-3a: split the Inventory page into `Mein Inventory` (own lots, Quick Add, edit and delete) and `Crew Inventory` (all crew lots, read-only), per `INVENTORY_UX_V1_1.md`.
+2. After the UX series the owner chooses the next package (candidates: F4-B and a UEX source foundation, each as its own package, only after an explicit owner decision). F4-B (gameplay relevance / exclusion contract) and a UEX source foundation stay separate work packages. The licence / redistribution decision for scunpacked-data stays open and is tracked below.
 3. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
 
 ## OPEN DECISIONS
@@ -73,7 +78,7 @@
 
 ## RELEVANT CONTRACTS
 
-- FROZEN specifications in `docs/frozen/`, registered in `docs/RULE_INDEX.md` section 5. Most relevant right now: `VECTOR_SOURCE_AUTHORITY_V1.md` (external source identity and authority), `DB_ENVIRONMENT_GOVERNANCE_V1.md` (Production read and write gates), `VECTOR_VERSIONING_V1_1.md` (LIVE/PTU isolation), `VECTOR_GOVERNANCE_V1.md` (global governance).
+- FROZEN specifications in `docs/frozen/`, registered in `docs/RULE_INDEX.md` section 5. Most relevant right now: `INVENTORY_UX_V1_1.md` (inventory UX, quality tiers, key set), `VECTOR_SOURCE_AUTHORITY_V1.md` (external source identity and authority), `DB_ENVIRONMENT_GOVERNANCE_V1.md` (Production read and write gates), `VECTOR_VERSIONING_V1_1.md` (LIVE/PTU isolation), `VECTOR_GOVERNANCE_V1.md` (global governance).
 - Operating contracts: `AGENTS.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`.
 - Recovery: `docs/handover/VECTOR_RESTART_HANDOVER.md` (control block, drift procedure, Blueprint decisions) and `SCMDB_LOCATION_HANDOVER.md` (frozen location contracts).
 - Evidence: `docs/governance/PROJECT_LEAD_EVIDENCE.md` (generator, CURRENT and ARCHIVE contract, Project Lead bootstrap).
