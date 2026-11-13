@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFile, readdir } from 'node:fs/promises'
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import test from 'node:test'
 import ts from 'typescript'
@@ -99,6 +99,39 @@ test('quality chips always render the tier name next to the colour', async () =>
   const chips = src.match(/className="quality-chip"[^>]*>[\s\S]*?<\/span>\s*<\/span>/g) ?? []
   assert.equal(chips.length, 2)
   for (const chip of chips) assert.match(chip, /quality-chip__tier/)
+})
+
+test('QualityChip renders a neutral hint for invalid values and never throws', async () => {
+  const { renderToStaticMarkup } = await import('react-dom/server')
+  const React = (await import('react')).default
+  // Transpile the real modules next to node_modules so their imports resolve.
+  const dir = new URL('../node_modules/.cache/quality-chip-test/', import.meta.url)
+  await mkdir(dir, { recursive: true })
+  const emit = async (from, to, jsx) => {
+    let js = ts.transpileModule(await readFile(new URL(from, root), 'utf8'), {
+      compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022, jsx: jsx ? ts.JsxEmit.React : undefined },
+    }).outputText
+    js = js.replace(/from ['"]@\/lib\/quality\/(tiers|quality-weighting)['"]/g, "from './$1.mjs'")
+    await writeFile(new URL(to, dir), js)
+  }
+  await emit('lib/quality/tiers.ts', 'tiers.mjs')
+  await emit('lib/quality/quality-weighting.ts', 'quality-weighting.mjs')
+  await emit('components/quality/QualityChip.tsx', 'chip.mjs', true)
+  globalThis.React = React
+  const { QualityChip } = await import(new URL('chip.mjs', dir).href)
+  const render = quality => renderToStaticMarkup(React.createElement(QualityChip, { quality }))
+
+  for (const bad of [Number.NaN, 1.5, -1, 1001, null, undefined, '500']) {
+    const html = render(bad)
+    assert.match(html, /Qualität unbekannt/, String(bad))
+    assert.doesNotMatch(html, /Q-?\d|NaN|style=/, `no number or tier colour for ${String(bad)}`)
+  }
+  for (const [good, name] of [[0, 'Scrap'], [500, 'Standard'], [1000, 'Perfect']]) {
+    const html = render(good)
+    assert.match(html, new RegExp(`Q${good}`))
+    assert.match(html, new RegExp(name))
+    assert.match(html, /style="color:#/)
+  }
 })
 
 test('displaying code uses QualityChip instead of plain Q values', async () => {

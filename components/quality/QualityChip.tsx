@@ -1,8 +1,14 @@
+import { isQuality } from '@/lib/quality/quality-weighting'
 import { QUALITY_TIERS, QUALITY_TIER_DISCLAIMER, tierFor, tierRangeLabel } from '@/lib/quality/tiers'
 
 // Quality tier chip: the tier colour always appears together with the tier
 // name as text, so colour alone never carries meaning (INVENTORY_UX_V1_1 5.1).
-export function QualityChip({ quality }: { quality: number }) {
+// An invalid value (not an integer 0 to 1000) never crashes the view and is
+// never shown as a number: a neutral, untinted hint is rendered instead.
+export function QualityChip({ quality }: { quality: unknown }) {
+  if (!isQuality(quality)) {
+    return <span className="quality-chip quality-chip--unknown">Qualität unbekannt</span>
+  }
   const tier = tierFor(quality)
   return (
     <span className="quality-chip" style={{ color: tier.color, borderColor: tier.color }}>
