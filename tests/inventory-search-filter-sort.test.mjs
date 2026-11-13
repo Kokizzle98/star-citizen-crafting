@@ -137,7 +137,7 @@ test('Inventory UI exposes accessible search filter sort controls and result fee
 
 test('Inventory UI filters before grouping in both views', () => {
   assert.match(view, /materials\(visibleRows\)/)
-  assert.match(view, /locations\(visibleRows\)/)
+  assert.match(view, /locations\(materialRows\)/) // UX-3b: Material -> Ort -> Lots, locations group inside the filtered material rows
   assert.match(view, /filterInventoryRows\(rows/)
   assert.match(view, /sortInventoryRows\(filterInventoryRows/)
 })

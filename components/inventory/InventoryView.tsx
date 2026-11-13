@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { submitInventoryLotDelete } from '@/app/vector/inventory/actions'
 import { useUnitPreference } from '@/components/layout/UnitPreference'
+import { InventoryKpiStrip } from '@/components/inventory/InventoryKpiStrip'
 import { QualityChip, QualityLegend } from '@/components/quality/QualityChip'
 import { EditInventoryLotForm } from '@/components/inventory/EditInventoryLotForm'
 import { inventoryEditInitialValue } from '@/lib/inventory/inventory-edit-display'
@@ -17,6 +18,7 @@ import {
   sortInventoryRows,
   type InventorySort,
 } from '@/lib/inventory/inventory-search-filter-sort'
+import { depthLabel, materialAverageQuality, materialKindOf, qualityRange } from '@/lib/inventory/inventory-summary'
 import type { MaterialUnits } from '@/lib/inventory/material-units'
 
 function groupBy(rows: InventoryRow[], key: (row: InventoryRow) => string) {
@@ -30,17 +32,34 @@ function groupBy(rows: InventoryRow[], key: (row: InventoryRow) => string) {
   return [...groups.values()].sort((a, b) => key(a[0]).localeCompare(key(b[0]), 'de'))
 }
 
-function materialKind(units: MaterialUnits, name: string) {
-  return Object.hasOwn(units, name) ? units[name] : undefined
-}
+const materialKind = materialKindOf
 
+/** Summary of the rows of ONE material (material row, or location row inside a material). */
 function Summary({ rows, units, mode }: { rows: InventoryRow[]; units: MaterialUnits; mode: UnitMode }) {
-  const qualities = rows.map((row) => row.quality)
+  const kind = materialKind(units, rows[0].material)
+  const average = materialAverageQuality(rows, kind)
+  const range = qualityRange(rows)
   return <span className="inventory-summary">
-    <strong>{formatQuantity(rows, materialKind(units, rows[0].material), mode)}</strong>
-    <span><QualityChip quality={Math.min(...qualities)} /> – <QualityChip quality={Math.max(...qualities)} /></span>
+    <strong>{formatQuantity(rows, kind, mode)}</strong>
+    <span><abbr title="Durchschnittsqualität, nach Menge gewichtet">Ø</abbr> {average === null ? '–' : <QualityChip quality={average} />}</span>
+    {range && <span><QualityChip quality={range.min} /> – <QualityChip quality={range.max} /></span>}
     <span>{rows.length} {rows.length === 1 ? 'Lot' : 'Lots'}</span>
   </span>
+}
+
+/** A collapsible group whose open state lives in the view (needed for the depth indicator and the anchor jump). */
+function Group({ id, open, onOpenChange, title, summary, children }: {
+  id: string
+  open: ReadonlySet<string>
+  onOpenChange: (id: string, open: boolean) => void
+  title: string
+  summary: React.ReactNode
+  children: React.ReactNode
+}) {
+  return <details className="inventory-group" open={open.has(id)} onToggle={(event) => onOpenChange(id, event.currentTarget.open)}>
+    <summary><span>{title}</span>{summary}</summary>
+    {children}
+  </details>
 }
 
 type Editing = {
@@ -53,6 +72,8 @@ type Editing = {
   deleteCancelRef: RefObject<HTMLButtonElement>
   editTriggerRefs: MutableRefObject<Map<string, HTMLButtonElement>>
   deleteTriggerRefs: MutableRefObject<Map<string, HTMLButtonElement>>
+  /** Lot to highlight briefly after an anchor jump. */
+  highlightLotId: string | null
   pending: boolean
   setPending: (pending: boolean) => void
   start: (id: string) => void
@@ -71,7 +92,7 @@ function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: Mat
         const initial = inventoryEditInitialValue(row, materialKind(units, row.material))
         const canEdit = editing.currentUserId !== null && row.owner_user_id === editing.currentUserId && initial && editing.locations
         const canDelete = editing.currentUserId !== null && row.owner_user_id === editing.currentUserId
-        return <tr key={row.inventory_id} id={`lot-${row.inventory_id}`}>
+        return <tr key={row.inventory_id} id={`lot-${row.inventory_id}`} className={editing.highlightLotId === row.inventory_id ? 'inventory-lot--highlight' : undefined}>
           {editing.editingLotId === row.inventory_id && canEdit && editing.locations
             ? <td colSpan={6}><EditInventoryLotForm key={row.inventory_id} row={row} initial={initial} locations={editing.locations}
                 pending={editing.pending} setPending={editing.setPending} onCancel={editing.cancel} onSuccess={editing.success} /></td>
@@ -126,6 +147,8 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
   const [editingLotId, setEditingLotId] = useState<string | null>(null)
   const [deletingLotId, setDeletingLotId] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
+  const [openGroups, setOpenGroups] = useState<ReadonlySet<string>>(new Set())
+  const [highlightLotId, setHighlightLotId] = useState<string | null>(null)
   const [success, setSuccess] = useState<'LOT_UPDATED' | 'LOT_MERGED' | 'LOT_DELETED' | null>(null)
   const [error, setError] = useState<InventoryErrorCode | null>(null)
   const deletePending = useRef(false)
@@ -172,7 +195,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     }
   }
   const editing: Editing = {
-    currentUserId, crewViewerUserId, locations: locationOptions, editingLotId, deletingLotId, deleteCancelRef, editTriggerRefs, deleteTriggerRefs, pending, setPending,
+    currentUserId, crewViewerUserId, locations: locationOptions, highlightLotId, editingLotId, deletingLotId, deleteCancelRef, editTriggerRefs, deleteTriggerRefs, pending, setPending,
     start: (id) => { setSuccess(null); setError(null); setDeletingLotId(null); setEditingLotId(id) },
     cancel: () => { restoreEditFocusId.current = editingLotId; setEditingLotId(null) },
     success: (code) => { setEditingLotId(null); setSuccess(code); router.refresh() },
@@ -180,6 +203,36 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     cancelDelete: () => { restoreDeleteFocusId.current = deletingLotId; setDeletingLotId(null); setError(null) },
     confirmDelete,
   }
+  const setGroupOpen = (id: string, open: boolean) => setOpenGroups((previous) => {
+    if (previous.has(id) === open) return previous
+    const next = new Set(previous)
+    if (open) next.add(id)
+    else next.delete(id)
+    return next
+  })
+  // Anchor jump (/vector/inventory#lot-<id>): open the groups that contain the
+  // lot in both views, then scroll to it and highlight it briefly. A hash for
+  // an unknown lot does nothing.
+  const anchorHandled = useRef(false)
+  const [anchorLotId, setAnchorLotId] = useState<string | null>(null)
+  useEffect(() => {
+    if (anchorHandled.current) return
+    anchorHandled.current = true
+    const match = /^#lot-([1-9]\d*)$/.exec(window.location.hash)
+    const row = match ? rows.find((candidate) => candidate.inventory_id === match[1]) : undefined
+    if (!row) return
+    setOpenGroups(new Set([
+      `G:m:${row.material}`,
+      `L:m:${row.material}`,
+      `L:l:${row.material}|${row.location_id}`,
+    ]))
+    setAnchorLotId(row.inventory_id)
+  }, [rows])
+  useEffect(() => {
+    if (anchorLotId === null) return
+    document.getElementById(`lot-${anchorLotId}`)?.scrollIntoView({ block: 'center' })
+    setHighlightLotId(anchorLotId) // the highlight fades out by CSS animation, no timer
+  }, [anchorLotId])
   const { mode } = useUnitPreference()
   const materials = (entries: InventoryRow[]) => groupBy(entries, (row) => row.material)
   const locations = (entries: InventoryRow[]) => groupBy(entries, (row) => row.location_id)
@@ -197,6 +250,11 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     qualityMin: parsedQualityMin,
     qualityMax: parsedQualityMax,
   }), sort)
+  const materialGroups = materials(visibleRows)
+  const materialOpen = materialGroups.some((group) => openGroups.has(`${view === 'GLOBAL' ? 'G' : 'L'}:m:${group[0].material}`))
+  const locationOpen = view === 'LOCATION' && materialGroups.some((group) =>
+    openGroups.has(`L:m:${group[0].material}`) &&
+    locations(group).some((locationRows) => openGroups.has(`L:l:${group[0].material}|${locationRows[0].location_id}`)))
 
   return <section className="inventory-view" aria-label={label}>
     <div role="status">{success ? INVENTORY_SUCCESS_MESSAGES[success] : null}</div>
@@ -206,6 +264,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
       <button type="button" disabled={pending} aria-pressed={view === 'LOCATION'} onClick={() => { setEditingLotId(null); setDeletingLotId(null); setError(null); setView('LOCATION') }}>LOCATION</button>
     </div>
     {!metadataAvailable && <p role="status">LIVE Materialdaten nicht verfügbar; Einheiten sind unbekannt.</p>}
+    <InventoryKpiStrip rows={visibleRows} units={units} crew={crewViewerUserId !== undefined} />
     <div className="inventory-filter-controls" aria-label="Inventory durchsuchen, filtern und sortieren">
       <div className="inventory-filter-controls__field inventory-filter-controls__search">
         <label htmlFor="inventory-search">Suche</label>
@@ -315,24 +374,25 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
       ? <p className="inventory-filter-empty">Keine Lots entsprechen den aktuellen Filtern.</p>
       : null}
 
+    {visibleRows.length > 0 && <p className="inventory-depth" role="status">{depthLabel(view, materialOpen, locationOpen)}</p>}
+
     {view === 'GLOBAL'
-      ? materials(visibleRows).map((materialRows) => <details className="inventory-group" key={materialRows[0].material}>
-          <summary><span>{materialRows[0].material}</span><Summary rows={materialRows} units={units} mode={mode} /></summary>
+      ? materialGroups.map((materialRows) => <Group key={materialRows[0].material} id={`G:m:${materialRows[0].material}`}
+          open={openGroups} onOpenChange={setGroupOpen} title={materialRows[0].material}
+          summary={<Summary rows={materialRows} units={units} mode={mode} />}>
+          <Lots rows={materialRows} units={units} mode={mode} editing={editing} />
+        </Group>)
+      : materialGroups.map((materialRows) => <Group key={materialRows[0].material} id={`L:m:${materialRows[0].material}`}
+          open={openGroups} onOpenChange={setGroupOpen} title={materialRows[0].material}
+          summary={<Summary rows={materialRows} units={units} mode={mode} />}>
           <div className="inventory-group__children">
-            {locations(materialRows).map((locationRows) => <details className="inventory-group" key={locationRows[0].location_id}>
-              <summary><span>{locationRows[0].location_name}</span><Summary rows={locationRows} units={units} mode={mode} /></summary>
+            {locations(materialRows).map((locationRows) => <Group key={locationRows[0].location_id}
+              id={`L:l:${materialRows[0].material}|${locationRows[0].location_id}`}
+              open={openGroups} onOpenChange={setGroupOpen} title={locationRows[0].location_name}
+              summary={<Summary rows={locationRows} units={units} mode={mode} />}>
               <Lots rows={locationRows} units={units} mode={mode} editing={editing} />
-            </details>)}
+            </Group>)}
           </div>
-        </details>)
-      : locations(visibleRows).map((locationRows) => <details className="inventory-group" key={locationRows[0].location_id}>
-          <summary><span>{locationRows[0].location_name}</span><span>{locationRows.length} {locationRows.length === 1 ? 'Lot' : 'Lots'}</span></summary>
-          <div className="inventory-group__children">
-            {materials(locationRows).map((materialRows) => <details className="inventory-group" key={materialRows[0].material}>
-              <summary><span>{materialRows[0].material}</span><Summary rows={materialRows} units={units} mode={mode} /></summary>
-              <Lots rows={materialRows} units={units} mode={mode} editing={editing} />
-            </details>)}
-          </div>
-        </details>)}
+        </Group>)}
   </section>
 }
