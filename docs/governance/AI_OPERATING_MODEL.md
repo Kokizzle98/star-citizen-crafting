@@ -1,7 +1,7 @@
 # VECTOR AI Operating Model v1
 
 - **Status:** OPERATIONAL (non-normative)
-- **Version:** 1.2 (counted up from 1.1; base commit `b28abe7d1547c70aa75e6d59dc57a2adf9499088`)
+- **Version:** 1.3 (counted up from 1.2; base commit `79f7b30e9b05204d43676f6d0dd59cffdb285980`)
 - **Scope:** roles, decision authority and source-of-truth boundaries for the people and AI agents who work on VECTOR
 - **Does not override:** any FROZEN specification in `docs/frozen/`, the authority order in `docs/RULE_INDEX.md`, or the Production write gates in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`
 
@@ -43,7 +43,7 @@ The compact current project state is `docs/PROJECT_STATE.md`. The recovery contr
 
 ## 5. What this document must never contain
 
-This repository is public and stays public. Security-relevant material (policies, grants, function bodies, configuration, evidence) belongs in the owner's private archive, never here.
+This repository is public and stays public. Allowed here: reviewed migration files (including policies, grants and functions as versioned files), technical configuration without secrets, and the read-only postcheck results inside the pull request of a migration (`DB-ENV-05`, `DB-ENV-08`). Not allowed here: extracts or snapshots of the live database, project or account identifiers, credentials, private paths, and findings about unfixed vulnerabilities. Those belong in the owner's private archive.
 
 Private OneDrive paths, personal information, account identifiers, credentials, tokens, secrets, database dumps, or private Security Evidence. The same exclusions apply to every evidence file generated from the repository.
 
