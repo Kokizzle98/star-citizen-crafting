@@ -1,16 +1,8 @@
-﻿'use client'
+'use client'
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-
-const primaryNavigation = [
-  { href: '/vector', icon: '⌂', label: 'Dashboard' },
-]
-
-const futureNavigation = [
-  { icon: '△', label: 'Fleet' },
-  { icon: '↔', label: 'Trading' },
-]
+import { BRAND, NAVIGATION } from '@/components/layout/navigation'
 
 export function VectorSidebar({
   collapsed,
@@ -27,9 +19,9 @@ export function VectorSidebar({
       aria-label="VECTOR Navigation"
     >
       <div className="vector-sidebar__brand">
-        <Link href="/vector" aria-label="VECTOR Dashboard">
-          <strong>VECTOR</strong>
-          <span>GROUP SYSTEM</span>
+        <Link href="/vector" aria-label={`${BRAND.name} Dashboard`}>
+          <strong>{BRAND.name}</strong>
+          <span>{BRAND.tagline}</span>
         </Link>
 
         <button
@@ -44,7 +36,36 @@ export function VectorSidebar({
       </div>
 
       <nav className="vector-sidebar__nav" aria-label="Module">
-        {primaryNavigation.map((item) => {
+        {NAVIGATION.map((item) => {
+          const content = (
+            <>
+              <span className="vector-sidebar__number" aria-hidden="true">
+                {item.number}
+              </span>
+              <span className="vector-sidebar__icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <span className="vector-sidebar__label">
+                {item.label}
+              </span>
+              {item.soon && (
+                <span className="vector-sidebar__soon">BALD</span>
+              )}
+            </>
+          )
+
+          if (item.soon || item.href === null) {
+            return (
+              <span
+                className="vector-sidebar__future"
+                key={item.label}
+                aria-disabled="true"
+              >
+                {content}
+              </span>
+            )
+          }
+
           const active = pathname === item.href
 
           return (
@@ -54,59 +75,10 @@ export function VectorSidebar({
               aria-label={item.label}
               aria-current={active ? 'page' : undefined}
             >
-              <span className="vector-sidebar__icon" aria-hidden="true">
-                {item.icon}
-              </span>
-              <span className="vector-sidebar__label">
-                {item.label}
-              </span>
+              {content}
             </Link>
           )
         })}
-
-        <div className="vector-sidebar__divider" />
-
-        <Link
-          href="/vector/inventory"
-          aria-label="Inventory"
-          aria-current={pathname === '/vector/inventory' ? 'page' : undefined}
-        >
-          <span className="vector-sidebar__icon" aria-hidden="true">▤</span>
-          <span className="vector-sidebar__label">Inventory</span>
-        </Link>
-
-        <Link
-          href="/vector/blueprints"
-          aria-label="Blueprints"
-          aria-current={pathname === '/vector/blueprints' ? 'page' : undefined}
-        >
-          <span className="vector-sidebar__icon" aria-hidden="true">▱</span>
-          <span className="vector-sidebar__label">Blueprints</span>
-        </Link>
-
-        <Link
-          href="/vector/fabricator"
-          aria-label="Fabricator"
-          aria-current={pathname === '/vector/fabricator' ? 'page' : undefined}
-        >
-          <span className="vector-sidebar__icon" aria-hidden="true">◇</span>
-          <span className="vector-sidebar__label">Fabricator</span>
-        </Link>
-
-        {futureNavigation.map((item) => (
-          <span
-            className="vector-sidebar__future"
-            key={item.label}
-            aria-disabled="true"
-          >
-            <span className="vector-sidebar__icon" aria-hidden="true">
-              {item.icon}
-            </span>
-            <span className="vector-sidebar__label">
-              {item.label}
-            </span>
-          </span>
-        ))}
       </nav>
 
       <div className="vector-sidebar__footer">
