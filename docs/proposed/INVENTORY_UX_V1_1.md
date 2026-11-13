@@ -22,21 +22,20 @@ The amendment is additive. Where this document is silent, v1.0 applies. If a sta
 ### 3.1 Two inventory pages (extends v1.0 sections 2, 3 and 17)
 
 - **Mein Inventory** is the management page. It contains Quick Add ("Lot hinzufügen"), inline edit and delete for the user's own lots.
-- **Crew Inventory** is the overview page. It has no Quick Add. Foreign lots are labelled "Nur ansehen" and never expose an enabled edit or delete state.
+- **Crew Inventory** is the overview page. It has no Quick Add. All lots on this page are read-only, including the current user's own lots: no edit, no delete, no inline editor. Foreign lots are labelled "Nur ansehen". Own lots instead offer a link "In Mein Inventory bearbeiten" that opens the same lot on Mein Inventory.
 - Both pages derive from the same lots. The Crew view is derived from the ownership of each lot; nothing is stored twice.
 - Authorization stays in the backend. The label "Nur ansehen" is a presentation aid, not a security boundary (v1.0 section 16).
 
 ### 3.2 Level model (extends v1.0 sections 8 and 9)
 
-The inventory pages use a three-level drill-down:
+The level count depends on the view (v1.0 section 8). Lot detail (history, source) is an inline panel inside a lot row, never a separate level.
 
-| Level | Content |
-|---|---|
-| 1 | Materials, collapsed by default (v1.0 section 9) |
-| 2 | Lots of one material, after explicit expand |
-| 3 | Detail of one lot (history, source, location) where needed |
+| View | Level 1 | Level 2 | Level 3 |
+|---|---|---|---|
+| GLOBAL | Materials, collapsed by default (v1.0 section 9) | Lots of one material, after explicit expand | none |
+| LOCATION | Materials, collapsed by default | Locations of one material | Lots at that location |
 
-A visible depth indicator ("Ebene n von 3") shows the current level. GLOBAL and LOCATION (v1.0 section 8) remain a presentation toggle on top of this model. Individual lots appear only after explicitly expanding the material row; this does not change v1.0 section 9.
+A visible depth indicator shows the current level and the total of the active view ("Ebene n von 2" in GLOBAL, "Ebene n von 3" in LOCATION). GLOBAL and LOCATION remain a presentation toggle that does not change ownership or the underlying lots. This section does not change the hierarchies of v1.0 section 8; it only assigns level numbers to them.
 
 ### 3.3 Quality tiers (extends v1.0 section 5)
 
@@ -56,7 +55,7 @@ Binding rules:
 - Tier boundaries live in one central configuration. No screen hard-codes a boundary or a colour.
 - Colour encodes the tier only, and is always accompanied by the tier name as text. Colour alone never carries meaning.
 - A legend shows all tiers and ranges.
-- Aggregates still use the quantity-weighted average and the minimum to maximum range (v1.0 section 5). The tier of an aggregate is derived from its weighted average and is shown together with the numeric value.
+- Aggregates still use the quantity-weighted average and the minimum to maximum range (v1.0 section 5). The weighted average is rounded to the nearest integer (halves round up) before the tier is assigned. The rounded integer is the value shown, so label and number always agree. Minimum and maximum are integers already.
 - The tier names and boundaries are a presentation decision of VECTOR. They must not be presented as official Star Citizen terminology.
 
 ### 3.4 Global key set (extends v1.0 section 13)
@@ -71,7 +70,7 @@ The v1.0 rules (Tab, Shift+Tab, Enter, Space, Esc, visible cyan focus, no positi
 | Q / E | Switch view (for example Mein / Crew, GLOBAL / LOCATION) |
 | T | Focus search |
 | R | Reset filters |
-| 1 to 6 | Jump to area |
+| 1 to 6 | Jump to area by position in the main navigation: 1 Dashboard, 2 Inventory, 3 Blueprints, 4 Fabricator, 5 Fleet, 6 Trading |
 
 Binding rules:
 
@@ -79,6 +78,7 @@ Binding rules:
 - `Esc` first cancels an active inline edit or closes a transient element (v1.0 sections 12 and 13). Only when nothing of that kind is active does `Esc` act as "back one level".
 - Every function reachable by these keys remains reachable by Tab, Enter and Space.
 - `Enter` must not move interaction to header or top-level controls (v1.0 section 13).
+- Navigation entries marked as not yet available ("BALD") ignore their number key until the area exists. The mapping follows the navigation order; changing that order requires an amendment of this document.
 
 ### 3.5 Delete confirmation (clarifies v1.0 section 12)
 
@@ -95,10 +95,10 @@ Deleting a lot uses an in-row, application-owned confirmation that names the lot
 
 An implementation conforms to Inventory UX v1.1 when all criteria of v1.0 section 18 hold and in addition:
 
-1. Mein Inventory has Quick Add and own-lot edit and delete. Crew Inventory has none.
-2. Foreign lots show no enabled edit state; the backend rejects changes regardless of the UI.
-3. Materials are collapsed by default; lots show only after expanding.
-4. Tier boundaries and colours come from one central configuration, and every tier colour is paired with its text label.
+1. Mein Inventory has Quick Add and own-lot edit and delete. Crew Inventory has none of these for any lot, own or foreign.
+2. No lot on Crew Inventory shows an enabled edit state; the backend rejects changes to foreign lots regardless of the UI.
+3. Materials are collapsed by default; lots show only after expanding. The depth indicator matches the active view (2 levels in GLOBAL, 3 in LOCATION).
+4. Tier boundaries and colours come from one central configuration, every tier colour is paired with its text label, and aggregate tiers use the rounded weighted average.
 5. Letter and number keys do nothing while typing in an input or during inline edit.
 6. `Esc` order follows section 3.4.
 7. Every key-driven function also works by Tab, Enter and Space.
