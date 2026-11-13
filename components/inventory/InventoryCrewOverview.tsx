@@ -23,15 +23,14 @@ export function InventoryCrewOverview({ rows, units }: { rows: InventoryRow[]; u
       <p className="inventory-crew-overview__note">
         Materialien (SCU) nach ihrer Durchschnittsqualität. Stückmaterialien und Materialien mit unbekannter Einheit zählen hier nicht mit{notCounted > 0 ? ` (${hints.join(', ')})` : ''}.
       </p>
-      {distribution.counted === 0
-        ? <p className="inventory-crew-overview__empty">Keine SCU-Materialien mit Durchschnitt.</p>
-        : <ul className="inventory-crew-overview__tiers">
-            {distribution.tiers.map(({ tier, materials }) => <li key={tier.id}>
-              <QualityTierChip tier={tier} />
-              <span className="quality-legend__range">Q{tierRangeLabel(tier)}</span>
-              <strong>{materials} {materials === 1 ? 'Material' : 'Materialien'}</strong>
-            </li>)}
-          </ul>}
+      {distribution.counted === 0 && <p className="inventory-crew-overview__empty">Keine SCU-Materialien mit Durchschnitt.</p>}
+      <ul className="inventory-crew-overview__tiers">
+        {distribution.tiers.map(({ tier, materials }) => <li key={tier.id}>
+          <QualityTierChip tier={tier} />
+          <span className="quality-legend__range">Q{tierRangeLabel(tier)}</span>
+          <strong>{materials} {materials === 1 ? 'Material' : 'Materialien'}</strong>
+        </li>)}
+      </ul>
     </section>
     <section className="inventory-crew-overview__panel" aria-labelledby="crew-players-heading">
       <h2 id="crew-players-heading">Spieler</h2>

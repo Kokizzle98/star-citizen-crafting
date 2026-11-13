@@ -118,3 +118,20 @@ test('Crew page still has no write controls', async () => {
   assert.doesNotMatch(crew, /AddInventoryLotForm|inventory-write|inventory-update-write|inventory-delete-write/)
   assert.match(crew, /currentUserId=\{null\}/)
 })
+
+test('empty state still lists all six tiers with 0 and adds the hint, the list is not replaced', () => {
+  // the tier list is rendered unconditionally; the hint is an addition when nothing is countable
+  assert.doesNotMatch(component, /counted === 0\s*\?/, 'no ternary that swaps the list for the hint')
+  assert.match(component, /distribution\.counted === 0 && <p className="inventory-crew-overview__empty">Keine SCU-Materialien mit Durchschnitt\.<\/p>/)
+  assert.match(component, /<ul className="inventory-crew-overview__tiers">\s*\{distribution\.tiers\.map/)
+  // data side: only pieces / unknown -> nothing counted, still six tiers, all 0
+  const distribution = overview.qualityDistribution([piece(1, 'Pistol', 2, 100), row(2, 'Mystery', 1_000_000, 100)], units)
+  assert.equal(distribution.counted, 0)
+  assert.equal(distribution.tiers.length, 6)
+  assert.ok(distribution.tiers.every(entry => entry.materials === 0))
+})
+
+test('crew overview grid never forces a minimum wider than the container', async () => {
+  const css = await readText('app/globals.css')
+  assert.match(css, /\.inventory-crew-overview \{[^}]*minmax\(min\(18rem, 100%\), 1fr\)/)
+})
