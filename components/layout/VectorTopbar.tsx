@@ -52,7 +52,6 @@ export async function VectorTopbar() {
 
   const nickname =
     profile?.nickname ??
-    user.email ??
     'VECTOR Account'
 
   return (
