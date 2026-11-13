@@ -4,9 +4,10 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **State verified through commit:** `95caf69171a9009994c6617f44d81bdad565bef7`
-- **Updated by work package:** F4-S – Vehicle Loadout Source Foundation (Option B), checkpoint rotation after the PR #49 merge
-- **Checkpoint date:** 2026-11-12
+- **Document version:** v2 (first numbered version; counted from checkpoint rotation after PR #52)
+- **State verified through commit:** `36018f260399d09b99e53573ab765aedb34df172`
+- **Updated by work package:** Checkpoint rotation after PR #52 (develop `36018f2`)
+- **Checkpoint date:** 2026-11-13
 
 ## How to read this file
 
@@ -37,10 +38,12 @@
 - Governance – `VECTOR_SOURCE_AUTHORITY_V1` FROZEN: **DONE**. Merged as #48 (`9aeab14`); documentation only, no Production mutation.
 - Governance – Claude agent structure (Fleet Commander): **DONE**. Merged as #49 (`95caf69`); Project Lead = Claude Fleet Commander, Primary Engineer = Claude Vector Terminal - GitHub / Claude Code, Independent Reviewer = GitHub Copilot (optional, punctual); documentation only, no Production mutation.
 - F4-S source / distribution gate: **decided, Option B** (owner, 2026-11-12). The derived scunpacked-data index is not committed. The licence and redistribution status of scunpacked-data stay unresolved.
+- F4-S – Vehicle Loadout Source Foundation (Option B): **DONE**. Merged as #50 (`210cb07`); offline generator, schema / types and reader with source / build guard; the derived index and raw source data are not committed.
+- PR #51 (`6c487f2`) added read-only database runtime documentation; PR #52 (`36018f2`) removed it again because the repository is public and such security-relevant evidence does not belong in it (`AI_OPERATING_MODEL` section 5). Security-relevant runtime evidence is kept privately by the owner, not in the repository.
 
 ## ACTIVE
 
-- **F4-S – Vehicle Loadout Source Foundation (Option B)** on `feat/f4s-vehicle-loadout-source`: offline generator that derives a component-UUID-centred loadout index (component -> vehicle(s) -> port(s) with hardpoint, sizes, compatible types, required tags, editable) from a local, commit-pinned scunpacked-data checkout; schema and types with provenance (source commit, game build, LIVE channel, generator version); reader with source / build guard and `EXACT` / `STALE` / `UNAVAILABLE` (a missing index is `UNAVAILABLE`, never a crash or a name fallback); `.gitignore` for the index and the raw checkout; synthetic test fixtures only; `docs/workflows/LOADOUT_SOURCE_INDEX.md`. No classification or exclusion (F4-B), no UEX or Wiki API, no UI, no migration, no Production mutation.
+- None.
 
 ## PAUSED
 
@@ -52,8 +55,8 @@
 
 ## NEXT
 
-1. Owner review of the F4-S pull request; merge only with explicit owner approval.
-2. F4-B (gameplay relevance / exclusion contract) and a UEX source foundation as separate work packages. The licence / redistribution decision for scunpacked-data stays open and is tracked below.
+1. Next work package to be chosen by the owner (candidates: F4-B and a UEX source foundation, each as its own package, only after an explicit owner decision).
+2. F4-B (gameplay relevance / exclusion contract) and a UEX source foundation stay separate work packages. The licence / redistribution decision for scunpacked-data stays open and is tracked below.
 3. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
 
 ## OPEN DECISIONS
@@ -73,4 +76,5 @@
 - Operating contracts: `AGENTS.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`.
 - Recovery: `docs/handover/VECTOR_RESTART_HANDOVER.md` (control block, drift procedure, Blueprint decisions) and `SCMDB_LOCATION_HANDOVER.md` (frozen location contracts).
 - Evidence: `docs/governance/PROJECT_LEAD_EVIDENCE.md` (generator, CURRENT and ARCHIVE contract, Project Lead bootstrap).
-- Supabase: exactly one environment, Production, project `qpbgtzjtwgkwlgpbataq` on branch `main`; it currently holds test data and is still Production. Read-only access is allowed; every mutation needs an explicit owner GO.
+- Security-relevant runtime evidence (database dumps, policy / grant listings, project identifiers) is held privately by the owner and is not stored in this repository.
+- Supabase: exactly one environment, Production, project: see the owner's private project archive, branch `main`; it currently holds test data and is still Production. Read-only access is allowed; every mutation needs an explicit owner GO.

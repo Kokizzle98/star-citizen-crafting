@@ -2,6 +2,8 @@
 
 This document is operational and non-normative.
 
+- Document version: v2 (first numbered version; checkpoint rotation after PR #52, base commit `36018f260399d09b99e53573ab765aedb34df172`)
+
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
 - Chat history must not be the sole source for a project decision.
@@ -11,30 +13,20 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `F4-S – Vehicle Loadout Source Foundation (Option B)`. Owner decision 2026-11-12 at the F4-S source / distribution gate: the derived scunpacked-data index is **not** committed; scunpacked-data has no licence file and its redistribution stays unresolved. Delivers an offline generator, schema and types with provenance, and a reader with the source / build guard (`EXACT` / `STALE` / `UNAVAILABLE`). `Fabricator Phase 1` F1 to F3 are **DONE**; F4-B and UEX are not started. LIVE Blueprint dataset `4.10.2-live.12913470` (`d5a91245-a5d4-4836-9265-d30cd32527c9`) is `ACTIVE` in Production
-- Branch: `feat/f4s-vehicle-loadout-source`
+- Work package: `Checkpoint rotation after PR #52`. Documentation only: records PR #50 (F4-S), PR #51 and its removal in PR #52 (public repository), and keeps security-relevant runtime evidence out of the repository (held privately by the owner).
+- Branch: `docs/checkpoint-rotation-after-52`
 - Base: `develop`
-- Checkpoint date: `2026-11-12`
-- Work-package base (historical): `95caf69171a9009994c6617f44d81bdad565bef7`
-- Active checkpoint anchor: `95caf69171a9009994c6617f44d81bdad565bef7`
+- Checkpoint date: `2026-11-13`
+- Work-package base (historical): `36018f260399d09b99e53573ab765aedb34df172`
+- Active checkpoint anchor: `36018f260399d09b99e53573ab765aedb34df172`
 - Working-tree expectation: `CLEAN`
-- Active PR: the F4-S pull request from `feat/f4s-vehicle-loadout-source` against `develop`
+- Active PR: the checkpoint rotation pull request from `docs/checkpoint-rotation-after-52` against `develop`
 - PR base: `develop`
 
-The active anchor is the verified `develop` head after PR #49 (Claude agent structure merge). The allowed scope below authorizes the offline loadout source foundation only: no classification or exclusion (F4-B), no UEX or Wiki API integration, no UI or Fabricator change, no database migration, no Supabase or Vercel action, no Production mutation. Neither scunpacked-data raw files nor the derived index may be committed. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #52. The allowed scope below authorizes this documentation rotation only: no code, no migration, no Supabase or Vercel action, no Production mutation. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
-- `.gitignore`
-- `lib/loadout-source/loadout-source-types.ts`
-- `lib/loadout-source/loadout-source-build.ts`
-- `lib/loadout-source/loadout-source-generator.ts`
-- `lib/loadout-source/loadout-source-reader.ts`
-- `lib/loadout-source/loadout-source-read.ts`
-- `scripts/generate-loadout-source-index.mjs`
-- `tests/loadout-source.test.mjs`
-- `tests/loadout-source-fixture.mjs`
-- `docs/workflows/LOADOUT_SOURCE_INDEX.md`
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
 
@@ -77,6 +69,8 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#47` (Fabricator F3 – MANUAL Quality per material, Inventory-Aware Preset & Product Stats): squash-merged into `develop` on 2026-11-12 as `a460201` after owner manual acceptance; read-only, no database change, no Production mutation.
 - PR `#48` (Governance – `VECTOR_SOURCE_AUTHORITY_V1` FROZEN, documentation only): merged into `develop` on 2026-11-12 as `9aeab14`.
 - PR `#49` (Governance – Claude agent structure, Fleet Commander as role holder; documentation only): merged into `develop` on 2026-11-12 as `95caf69`.
+- PR `#50` (F4-S – Vehicle Loadout Source Foundation, Option B): merged into `develop` on 2026-11-12 as `210cb07`; derived index and raw source data not committed.
+- PR `#51` (read-only database runtime documentation): merged as `6c487f2`; **removed again by PR `#52`** (`36018f2`, 2026-11-13) because the repository is public and such evidence is not allowed in it (`AI_OPERATING_MODEL` section 5). No content is restated here. Security-relevant runtime evidence is kept privately by the owner, not in the repository.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -87,7 +81,7 @@ These are compact status pointers only. The repository documents themselves must
 - `VECTOR_VERSIONING_V1` = `SUPERSEDED` (file intentionally unchanged for traceability; see `docs/RULE_INDEX.md`)
 - `VECTOR_VERSIONING_V1_1` = `FROZEN`
 - `VECTOR_SOURCE_AUTHORITY_V1` = `FROZEN` (owner decision 2026-11-12; exact CIG UUID is the only cross-source identity, variants are separate items without unlock inheritance, SCMDB stays crafting authority, scunpacked-data is the designated structural source for F4-S, the Star Citizen Wiki API is a verification source, UEX ingame and UEX marketplace are strictly separate observation domains, `NO_EVIDENCE != NEGATIVE_EVIDENCE`, no single source signal excludes; Production-authoritative after merge into `main`)
-- `DB_ENVIRONMENT_GOVERNANCE_V1` = `FROZEN` (owner decision 2026-11-11; `DB-ENV-01` to `DB-ENV-09`; `qpbgtzjtwgkwlgpbataq` / `main` is Supabase Production holding test data, never "staging"; Production-authoritative after merge into `main`)
+- `DB_ENVIRONMENT_GOVERNANCE_V1` = `FROZEN` (owner decision 2026-11-11; `DB-ENV-01` to `DB-ENV-09`; see the owner's private project archive / `main` is Supabase Production holding test data, never "staging"; Production-authoritative after merge into `main`)
 - `DATA_CONTEXT_MODEL_V1` = `PROPOSED`
 - R2 = `IN_PROGRESS`
 - R3 = `RESOLVED`
@@ -125,7 +119,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 - audits F4-A, F4-A.1, F4-A.2, Star Citizen Wiki API probe and UEX 22-UUID sample audit: **complete** (read-only); UEX identity semantics confirmed (exact CIG UUID), UEX coverage `PARTIAL`; UEX ingame and UEX marketplace strictly separate;
 - `VECTOR_SOURCE_AUTHORITY_V1`: decided and documented as FROZEN (`docs/frozen/VECTOR_SOURCE_AUTHORITY_V1.md`);
-- F4-S (vehicle loadout source foundation): gate decided by the owner on 2026-11-12 as **Option B** (derived index not committed; licence of scunpacked-data unresolved); implementation **in review** (offline generator, schema / provenance, reader with `EXACT` / `STALE` / `UNAVAILABLE`; `docs/workflows/LOADOUT_SOURCE_INDEX.md`);
+- F4-S (vehicle loadout source foundation): gate decided by the owner on 2026-11-12 as **Option B** (derived index not committed; licence of scunpacked-data unresolved); implementation **DONE** (PR #50, `210cb07`) (offline generator, schema / provenance, reader with `EXACT` / `STALE` / `UNAVAILABLE`; `docs/workflows/LOADOUT_SOURCE_INDEX.md`);
 - F4-B (gameplay relevance / exclusion contract): **not started**;
 - UEX integration: **not started**;
 - no Supabase / Production mutation.
@@ -194,7 +188,7 @@ Owner-approved reward source-occurrence model for PR 2:
 - `duplicateSourceRows` stays explicitly measurable: stored on the dataset row, recomputed in SQL by the sync and rejected on mismatch, and asserted by a contract test;
 - no reward-row identity is claimed across different dataset revisions; a random UUID alone is not an acceptable identity.
 
-Supabase environment: resolved by the owner on 2026-11-11. `qpbgtzjtwgkwlgpbataq` / branch `main` is the VECTOR Supabase **Production** environment, currently holding test data without retention value. It must not be called staging. The binding rules are `DB-ENV-01` to `DB-ENV-09` in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`.
+Supabase environment: resolved by the owner on 2026-11-11. see the owner's private project archive / branch `main` is the VECTOR Supabase **Production** environment, currently holding test data without retention value. It must not be called staging. The binding rules are `DB-ENV-01` to `DB-ENV-09` in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`.
 
 Read-only prechecks A to D for PR 2 (run on 2026-11-11 against Production under `DB-ENV-03`; select statements on `pg_catalog`, `pg_indexes` and `pg_policies` only, no mutation):
 
@@ -418,4 +412,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Owner review of the F4-S pull request (Option B, documentation of the open licence question included); merge only with explicit owner approval. Afterwards F4-B (gameplay relevance / exclusion contract) and any UEX source foundation follow as separate work packages; the licence / redistribution decision for scunpacked-data stays open. No Production mutation. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Review of the checkpoint rotation pull request; merge only with explicit owner approval. Afterwards the owner chooses the next work package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation); the licence / redistribution decision for scunpacked-data stays open. No Production mutation. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
