@@ -4,9 +4,9 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v4 (counted up from v3; checkpoint rotation after PR #62)
-- **State verified through commit:** `8b98db74c22ca907a3c9e5089a8ce64450ba55c4`
-- **Updated by work package:** Checkpoint rotation after PR #62 (develop `8b98db7`): UX series started, Inventory UX v1.1 FROZEN
+- **Document version:** v5 (counted up from v4; checkpoint rotation after PR #64)
+- **State verified through commit:** `6f10bf1c28918e6383df86c1bc3214c3e1bf4bda`
+- **Updated by work package:** Checkpoint rotation after PR #64 (develop `6f10bf1`): UX-3a done, UX-3b next
 - **Checkpoint date:** 2026-11-13
 
 ## How to read this file
@@ -45,11 +45,12 @@
 - Inventory UX v1.1: **DONE**. #59 (`d7cbfcb`) proposal, #60 (`9808946`) promotion to FROZEN as full-document successor; `INVENTORY_UX_V1.md` registered `SUPERSEDED`. Documentation only.
 - UX-1 central quality tiers: **DONE**. #61 (`84ce2ef`): `lib/quality/tiers.ts`, `QualityChip`, legend. No data model change.
 - UX-2 design foundations and shell: **DONE**. #62 (`8b98db7`): fonts, brand line, navigation 01 to 06 (`components/layout/navigation.ts`), fan-project notice. No data model change.
+- UX-3a Mein Inventory / Crew Inventory split: **DONE**. #64 (`6f10bf1`): `Mein Inventory` and `Crew Inventory` are separate pages, the Crew page is read-only, and Quick Add renders only with a known user (Copilot review fix). No data model change.
 - Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`; #56 (`6586108`) public-repo boundary clarification and checkpoint rotation. Documentation only, no Production mutation.
 
 ## ACTIVE
 
-- UX series (owner priority: a usable, good-looking app for the owner and the first outside tester). Design mock-ups approved by the owner on 2026-11-13. Order, one work package per session: UX-1 (quality tiers) **DONE**, UX-2 (shell and branding) **DONE**, UX-3a (Mein Inventory / Crew Inventory split, Crew page read-only) next, UX-3b (material rows, depth indicator, KPI strip, Mein Inventory polish), UX-4 (Crew Inventory overview polish), UX-5 (global key set), UX-6 (icons, dashboard polish). Binding specification: `docs/frozen/INVENTORY_UX_V1_1.md`.
+- UX series (owner priority: a usable, good-looking app for the owner and the first outside tester). Design mock-ups approved by the owner on 2026-11-13. Order, one work package per session: UX-1 (quality tiers) **DONE**, UX-2 (shell and branding) **DONE**, UX-3a (Mein Inventory / Crew Inventory split, Crew page read-only) **DONE**, UX-3b (material rows with average and range, depth indicator, KPI strip) next, UX-4 (Crew Inventory overview polish), UX-5 (global key set), UX-6 (icons, dashboard polish). Binding specification: `docs/frozen/INVENTORY_UX_V1_1.md`.
 
 ## PAUSED
 
@@ -61,7 +62,7 @@
 
 ## NEXT
 
-1. UX-3a: split the Inventory page into `Mein Inventory` (own lots, Quick Add, edit and delete) and `Crew Inventory` (all crew lots, read-only), per `INVENTORY_UX_V1_1.md`.
+1. UX-3b: material rows with average and range (Ø and Spanne), depth indicator `Ebene n von 2` in GLOBAL, KPI strip. Known item: the anchor jump of `In Mein Inventory bearbeiten` does not expand the collapsed group.
 2. After the UX series the owner chooses the next package (candidates: F4-B and a UEX source foundation, each as its own package, only after an explicit owner decision). F4-B (gameplay relevance / exclusion contract) and a UEX source foundation stay separate work packages. The licence / redistribution decision for scunpacked-data stays open and is tracked below.
 3. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
 

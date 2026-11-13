@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v4 (counted up from v3; checkpoint rotation after PR #62, base commit `8b98db74c22ca907a3c9e5089a8ce64450ba55c4`)
+- Document version: v5 (counted up from v4; checkpoint rotation after PR #64, base commit `6f10bf1c28918e6383df86c1bc3214c3e1bf4bda`)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -13,17 +13,17 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `UX series (UX-3a to UX-6)`, started by the checkpoint rotation after PR #62. UX-1 (quality tiers, #61) and UX-2 (shell and branding, #62) are done. Each UX work package is its own pull request and its own session; binding specification is `docs/frozen/INVENTORY_UX_V1_1.md`.
+- Work package: `UX series (UX-3b to UX-6)`. UX-1 (quality tiers, #61), UX-2 (shell and branding, #62) and UX-3a (Mein Inventory / Crew Inventory split, #64) are done. Each UX work package is its own pull request and its own session; binding specification is `docs/frozen/INVENTORY_UX_V1_1.md`.
 - Branch: `develop` (each UX work package works on its own feature branch)
 - Base: `develop`
 - Checkpoint date: `2026-11-13`
-- Work-package base (historical): `8b98db74c22ca907a3c9e5089a8ce64450ba55c4`
-- Active checkpoint anchor: `8b98db74c22ca907a3c9e5089a8ce64450ba55c4`
+- Work-package base (historical): `6f10bf1c28918e6383df86c1bc3214c3e1bf4bda`
+- Active checkpoint anchor: `6f10bf1c28918e6383df86c1bc3214c3e1bf4bda`
 - Working-tree expectation: `CLEAN`
 - Active PR: none at rotation time; each UX work package opens its own pull request against `develop`
 - PR base: `develop`
 
-The active anchor is the verified `develop` head after PR #62. The allowed scope below authorizes the documentation rotation and the planned UX series paths only: no migration, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #64. The allowed scope below authorizes the documentation rotation and the planned UX series paths only: no migration, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
@@ -89,6 +89,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#59` (Inventory UX v1.1 proposal) and PR `#60` (promotion to FROZEN, `INVENTORY_UX_V1.md` superseded): merged into `develop` on 2026-11-13 as `d7cbfcb` and `9808946`.
 - PR `#61` (UX-1 central quality tiers): merged into `develop` on 2026-11-13 as `84ce2ef`.
 - PR `#62` (UX-2 design foundations and shell): merged into `develop` on 2026-11-13 as `8b98db7`.
+- PR `#64` (UX-3a Mein Inventory / Crew Inventory split): merged into `develop` on 2026-11-13 as `6f10bf1`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -133,7 +134,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`UX series` (owner priority, 2026-11-13): design mock-ups approved by the owner; specification `INVENTORY_UX_V1_1.md` FROZEN. Order, one work package per session: UX-1 **DONE**, UX-2 **DONE**, UX-3a (split into `Mein Inventory` and `Crew Inventory`, Crew page read-only) next, UX-3b, UX-4, UX-5, UX-6. No database change is part of this series.
+`UX series` (owner priority, 2026-11-13): design mock-ups approved by the owner; specification `INVENTORY_UX_V1_1.md` FROZEN. Order, one work package per session: UX-1 **DONE**, UX-2 **DONE**, UX-3a **DONE**, UX-3b (material rows with average and range, depth indicator, KPI strip) next, UX-4, UX-5, UX-6. No database change is part of this series.
 
 Previous active package `Fabricator Phase 1`: F1 to F3 are **DONE**; F4 (gameplay relevance) is in the evidence phase. Current state (2026-11-12):
 
@@ -432,4 +433,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Start UX-3a as its own session and pull request against `develop`: split the Inventory page into `Mein Inventory` (own lots, Quick Add, edit and delete) and `Crew Inventory` (all crew lots, read-only, own lots link to Mein Inventory), per `docs/frozen/INVENTORY_UX_V1_1.md`. No Production mutation. Afterwards UX-3b to UX-6; then the owner chooses the next package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation). The licence / redistribution decision for scunpacked-data stays open. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Start UX-3b as its own session and pull request against `develop`: material rows with average and range, depth indicator `Ebene n von 2` in GLOBAL, KPI strip; known item: the anchor jump of `In Mein Inventory bearbeiten` does not expand the collapsed group. Binding specification: `docs/frozen/INVENTORY_UX_V1_1.md`. No Production mutation. Afterwards UX-4 to UX-6; then the owner chooses the next package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation). The licence / redistribution decision for scunpacked-data stays open. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
