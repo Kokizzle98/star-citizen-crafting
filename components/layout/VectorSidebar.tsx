@@ -66,7 +66,10 @@ export function VectorSidebar({
             )
           }
 
-          const active = pathname === item.href
+          // Dashboard matches exactly; every other area is active on its sub-routes too.
+          const active = item.href === '/vector'
+            ? pathname === item.href
+            : pathname === item.href || pathname.startsWith(`${item.href}/`)
 
           return (
             <Link

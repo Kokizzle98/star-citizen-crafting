@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type MutableRefObject, type RefObject } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { submitInventoryLotDelete } from '@/app/vector/inventory/actions'
 import { useUnitPreference } from '@/components/layout/UnitPreference'
@@ -44,6 +45,8 @@ function Summary({ rows, units, mode }: { rows: InventoryRow[]; units: MaterialU
 
 type Editing = {
   currentUserId: string | null
+  /** Crew page only (read-only): id of the viewer for the "own lot" link. `undefined` = not the crew page. */
+  crewViewerUserId: string | null | undefined
   locations: InventoryLocationOption[] | null
   editingLotId: string | null
   deletingLotId: string | null
@@ -68,7 +71,7 @@ function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: Mat
         const initial = inventoryEditInitialValue(row, materialKind(units, row.material))
         const canEdit = editing.currentUserId !== null && row.owner_user_id === editing.currentUserId && initial && editing.locations
         const canDelete = editing.currentUserId !== null && row.owner_user_id === editing.currentUserId
-        return <tr key={row.inventory_id}>
+        return <tr key={row.inventory_id} id={`lot-${row.inventory_id}`}>
           {editing.editingLotId === row.inventory_id && canEdit && editing.locations
             ? <td colSpan={6}><EditInventoryLotForm key={row.inventory_id} row={row} initial={initial} locations={editing.locations}
                 pending={editing.pending} setPending={editing.setPending} onCancel={editing.cancel} onSuccess={editing.success} /></td>
@@ -91,6 +94,9 @@ function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: Mat
                       if (element) editing.deleteTriggerRefs.current.set(row.inventory_id, element)
                       else editing.deleteTriggerRefs.current.delete(row.inventory_id)
                     }} disabled={editing.pending} onClick={() => editing.startDelete(row.inventory_id)}>Löschen</button>}
+                    {editing.crewViewerUserId !== undefined && (row.owner_user_id === editing.crewViewerUserId
+                      ? <Link href={`/vector/inventory#lot-${row.inventory_id}`}>In Mein Inventory bearbeiten</Link>
+                      : <span>Nur ansehen</span>)}
                   </>}</td>
             </>}
         </tr>
@@ -99,12 +105,16 @@ function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: Mat
   </div>
 }
 
-export function InventoryView({ rows, units, metadataAvailable, currentUserId, locations: locationOptions }: {
+export function InventoryView({ rows, units, metadataAvailable, currentUserId, locations: locationOptions, label, crewViewerUserId }: {
   rows: InventoryRow[]
   units: MaterialUnits
   metadataAvailable: boolean
   currentUserId: string | null
   locations: InventoryLocationOption[] | null
+  /** Accessible name of the page section ("Mein Inventory" / "Crew Inventory"). */
+  label: string
+  /** Crew page only: read-only mode. Pass `currentUserId={null}`; this id only marks own lots with a link. */
+  crewViewerUserId?: string | null
 }) {
   const [view, setView] = useState<'GLOBAL' | 'LOCATION'>('GLOBAL')
   const [query, setQuery] = useState('')
@@ -162,7 +172,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     }
   }
   const editing: Editing = {
-    currentUserId, locations: locationOptions, editingLotId, deletingLotId, deleteCancelRef, editTriggerRefs, deleteTriggerRefs, pending, setPending,
+    currentUserId, crewViewerUserId, locations: locationOptions, editingLotId, deletingLotId, deleteCancelRef, editTriggerRefs, deleteTriggerRefs, pending, setPending,
     start: (id) => { setSuccess(null); setError(null); setDeletingLotId(null); setEditingLotId(id) },
     cancel: () => { restoreEditFocusId.current = editingLotId; setEditingLotId(null) },
     success: (code) => { setEditingLotId(null); setSuccess(code); router.refresh() },
@@ -188,7 +198,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     qualityMax: parsedQualityMax,
   }), sort)
 
-  return <section className="inventory-view" aria-label="Crew Inventory">
+  return <section className="inventory-view" aria-label={label}>
     <div role="status">{success ? INVENTORY_SUCCESS_MESSAGES[success] : null}</div>
     {error && <div role="alert">{INVENTORY_ERROR_MESSAGES[error]}</div>}
     <div className="inventory-view__controls" role="group" aria-label="Inventory Ansicht">
