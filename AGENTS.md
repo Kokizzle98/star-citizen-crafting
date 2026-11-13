@@ -41,7 +41,7 @@ Run typecheck and tests before proposing a change. Pull requests are expected to
 - Work on a dedicated feature branch and open a pull request against `develop`. Never push directly to `develop` or `main`.
 - Do not change FROZEN specifications, historical migrations or SCMDB location behavior as a side effect of other work.
 - Never commit secrets. `.env.local` stays local; `CITIZEN_ID_ENABLED=false` is the default.
-- This repository is **public** and stays public. Never commit anything security-relevant: policies, grants, function bodies, database dumps, project or account identifiers, private paths, credentials. The owner keeps such evidence privately (`docs/governance/AI_OPERATING_MODEL.md` section 5). When in doubt, ask first.
+- This repository is **public** and stays public. Reviewed migration files in `database/migrations/`, technical configuration without secrets and the postcheck results inside a migration pull request (`DB-ENV-05`, `DB-ENV-08`) belong here. Never commit extracts or snapshots of the live database (policy, grant or function listings, dumps), project or account identifiers, private paths, credentials, or findings about unfixed vulnerabilities. The owner keeps such evidence privately (`docs/governance/AI_OPERATING_MODEL.md` section 5). When in doubt, ask first.
 - Every pull request goes to the Project Lead for review before the owner merges. The owner decides and merges; nobody else does.
 - Do not guess missing or uncertain data (locations, identities, resolver values). Keep it visible as an explicit review state.
 - LIVE and PTU datasets are strictly isolated. No cross-channel fallback.

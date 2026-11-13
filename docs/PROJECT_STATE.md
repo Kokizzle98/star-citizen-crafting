@@ -4,9 +4,9 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v2 (first numbered version; counted from checkpoint rotation after PR #52)
-- **State verified through commit:** `36018f260399d09b99e53573ab765aedb34df172`
-- **Updated by work package:** Checkpoint rotation after PR #52 (develop `36018f2`)
+- **Document version:** v3 (counted up from v2; checkpoint rotation after PR #55)
+- **State verified through commit:** `79f7b30e9b05204d43676f6d0dd59cffdb285980`
+- **Updated by work package:** Public-repo boundary clarification and checkpoint rotation after PR #55 (develop `79f7b30`)
 - **Checkpoint date:** 2026-11-13
 
 ## How to read this file
@@ -40,6 +40,7 @@
 - F4-S source / distribution gate: **decided, Option B** (owner, 2026-11-12). The derived scunpacked-data index is not committed. The licence and redistribution status of scunpacked-data stay unresolved.
 - F4-S – Vehicle Loadout Source Foundation (Option B): **DONE**. Merged as #50 (`210cb07`); offline generator, schema / types and reader with source / build guard; the derived index and raw source data are not committed.
 - PR #51 (`6c487f2`) added read-only database runtime documentation; PR #52 (`36018f2`) removed it again because the repository is public and such security-relevant evidence does not belong in it (`AI_OPERATING_MODEL` section 5). Security-relevant runtime evidence is kept privately by the owner, not in the repository.
+- Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`. Documentation only, no Production mutation.
 
 ## ACTIVE
 

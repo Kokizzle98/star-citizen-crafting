@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v2 (first numbered version; checkpoint rotation after PR #52, base commit `36018f260399d09b99e53573ab765aedb34df172`)
+- Document version: v3 (counted up from v2; checkpoint rotation after PR #55, base commit `79f7b30e9b05204d43676f6d0dd59cffdb285980`)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -13,20 +13,22 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Checkpoint rotation after PR #52`. Documentation only: records PR #50 (F4-S), PR #51 and its removal in PR #52 (public repository), and keeps security-relevant runtime evidence out of the repository (held privately by the owner).
-- Branch: `docs/checkpoint-rotation-after-52`
+- Work package: `Public-repo boundary clarification and checkpoint rotation after PR #55`. Documentation only: makes the boundary between private runtime evidence and permitted repository artefacts explicit (reviewed migrations, technical configuration and migration postchecks stay allowed) and records PR #53 to #55.
+- Branch: `docs/public-boundary-and-checkpoint-after-55`
 - Base: `develop`
 - Checkpoint date: `2026-11-13`
-- Work-package base (historical): `36018f260399d09b99e53573ab765aedb34df172`
-- Active checkpoint anchor: `36018f260399d09b99e53573ab765aedb34df172`
+- Work-package base (historical): `79f7b30e9b05204d43676f6d0dd59cffdb285980`
+- Active checkpoint anchor: `79f7b30e9b05204d43676f6d0dd59cffdb285980`
 - Working-tree expectation: `CLEAN`
-- Active PR: the checkpoint rotation pull request from `docs/checkpoint-rotation-after-52` against `develop`
+- Active PR: the boundary clarification and checkpoint rotation pull request from `docs/public-boundary-and-checkpoint-after-55` against `develop`
 - PR base: `develop`
 
-The active anchor is the verified `develop` head after PR #52. The allowed scope below authorizes this documentation rotation only: no code, no migration, no Supabase or Vercel action, no Production mutation. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #55. The allowed scope below authorizes this documentation rotation only: no code, no migration, no Supabase or Vercel action, no Production mutation. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
+- `AGENTS.md`
+- `docs/governance/AI_OPERATING_MODEL.md`
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
 
@@ -71,6 +73,9 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#49` (Governance – Claude agent structure, Fleet Commander as role holder; documentation only): merged into `develop` on 2026-11-12 as `95caf69`.
 - PR `#50` (F4-S – Vehicle Loadout Source Foundation, Option B): merged into `develop` on 2026-11-12 as `210cb07`; derived index and raw source data not committed.
 - PR `#51` (read-only database runtime documentation): merged as `6c487f2`; **removed again by PR `#52`** (`36018f2`, 2026-11-13) because the repository is public and such evidence is not allowed in it (`AI_OPERATING_MODEL` section 5). No content is restated here. Security-relevant runtime evidence is kept privately by the owner, not in the repository.
+- PR `#53` (checkpoint rotation after PR #52; project identifier removed from the active docs): merged into `develop` on 2026-11-13 as `b28abe7`.
+- PR `#54` (public-repo rule, review before merge, runtime read access; `AI_OPERATING_MODEL` v1.2): merged into `develop` on 2026-11-13 as `2e20cf0`.
+- PR `#55` (`README.md` unofficial fan project notice): merged into `develop` on 2026-11-13 as `79f7b30`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -412,4 +417,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Review of the checkpoint rotation pull request; merge only with explicit owner approval. Afterwards the owner chooses the next work package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation); the licence / redistribution decision for scunpacked-data stays open. No Production mutation. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Review of the boundary clarification and checkpoint rotation pull request; merge only with explicit owner approval. Afterwards the owner chooses the next work package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation); the licence / redistribution decision for scunpacked-data stays open. No Production mutation. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
