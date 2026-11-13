@@ -10,7 +10,7 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8')
 const [page, view, sidebar, dashboard, css, messages] = await Promise.all([
   read('app/vector/blueprints/page.tsx'),
   read('components/blueprints/BlueprintCatalogView.tsx'),
-  read('components/layout/VectorSidebar.tsx'),
+  Promise.all([read('components/layout/VectorSidebar.tsx'), read('components/layout/navigation.ts')]).then(parts => parts.join('\n')),
   read('app/vector/page.tsx'),
   read('app/globals.css'),
   read('lib/blueprints/blueprint-messages.ts'),
@@ -106,10 +106,10 @@ test('table is a labelled, keyboard-scrollable region with column headers', () =
 })
 
 test('sidebar links to the route and the dashboard offers an entry', () => {
-  assert.match(sidebar, /href="\/vector\/blueprints"/)
-  assert.match(sidebar, /aria-current=\{pathname === '\/vector\/blueprints' \? 'page' : undefined\}/)
-  assert.doesNotMatch(sidebar, /label: 'Blueprints'/)
-  assert.match(sidebar, /href="\/vector\/inventory"/)
+  // UX-2: routes live in components/layout/navigation.ts, rendered by the sidebar.
+  assert.match(sidebar, /label: 'Blueprints'[^}]*href: '\/vector\/blueprints', soon: false/)
+  assert.match(sidebar, /aria-current=\{active \? 'page' : undefined\}/)
+  assert.match(sidebar, /label: 'Inventory'[^}]*href: '\/vector\/inventory'/)
   assert.match(dashboard, /<Link\s+href="\/vector\/blueprints"\s+className="vector-module-card vector-module-card--link"/)
   assert.match(dashboard, /VERFÜGBAR[\s\S]*?<h2>Blueprints<\/h2>/)
 })

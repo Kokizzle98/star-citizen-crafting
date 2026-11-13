@@ -12,7 +12,7 @@ const [page, boundary, workspace, visual, sidebar, dashboard, css, labels] = awa
   read('lib/fabricator/fabricator-workspace-read.ts'),
   read('components/fabricator/FabricatorWorkspace.tsx'),
   read('components/fabricator/FabricatorVisual.tsx'),
-  read('components/layout/VectorSidebar.tsx'),
+  Promise.all([read('components/layout/VectorSidebar.tsx'), read('components/layout/navigation.ts')]).then(parts => parts.join('\n')),
   read('app/vector/page.tsx'),
   read('app/globals.css'),
   read('lib/fabricator/fabricator-labels.ts'),
@@ -121,9 +121,9 @@ test('responsive: two panes on desktop, stacked below 1100px', () => {
 })
 
 test('navigation: sidebar link with aria-current and an available dashboard card', () => {
-  assert.match(sidebar, /href="\/vector\/fabricator"/)
-  assert.match(sidebar, /aria-current=\{pathname === '\/vector\/fabricator' \? 'page' : undefined\}/)
-  assert.doesNotMatch(sidebar, /label: 'Fabricator'/)
+  // UX-2: routes live in components/layout/navigation.ts, rendered by the sidebar.
+  assert.match(sidebar, /label: 'Fabricator'[^}]*href: '\/vector\/fabricator', soon: false/)
+  assert.match(sidebar, /aria-current=\{active \? 'page' : undefined\}/)
   assert.match(dashboard, /<Link\s+href="\/vector\/fabricator"\s+className="vector-module-card vector-module-card--link"/)
   assert.match(dashboard, /VERFÜGBAR[\s\S]*?<h2>Fabricator<\/h2>/)
 })

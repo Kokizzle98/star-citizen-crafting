@@ -1785,3 +1785,101 @@
 .quality-legend ul { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: .4rem 0; padding: 0; list-style: none; }
 .quality-legend__note { margin: 0; }
 .quality-chip--unknown { color: var(--muted); border-color: var(--line); font-weight: normal; }
+
+/* ==========================================================================
+   UX-2: terminal branding, fonts, navigation, footer, focus
+   Fonts come from next/font (variables set on <html> in app/layout.tsx).
+   ========================================================================== */
+
+:root {
+  --font-display-stack: var(--font-display), 'Segoe UI', system-ui, sans-serif;
+  --font-mono-stack: var(--font-mono), Consolas, ui-monospace, monospace;
+  --footer-height: 2.5rem;
+}
+
+h1, h2, h3,
+.vector-sidebar,
+.vector-topbar label,
+.vector-topbar__control-text > span:first-child {
+  font-family: var(--font-display-stack);
+}
+
+.quality-chip__value,
+.vector-sidebar__number {
+  font-family: var(--font-mono-stack);
+}
+
+.vector-shell { min-height: calc(100vh - var(--footer-height)); }
+.vector-shell__workspace { min-height: calc(100vh - var(--footer-height)); }
+.vector-sidebar { min-height: calc(100vh - var(--footer-height)); }
+
+.vector-sidebar__brand strong {
+  font-weight: 700;
+  font-size: 1.5rem;
+  letter-spacing: .28em;
+}
+
+.vector-sidebar__brand span {
+  font-size: .56rem;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+.vector-sidebar__nav > a,
+.vector-sidebar__future {
+  grid-template-columns: 1.6rem 34px 1fr auto;
+  min-height: 44px;
+  font-weight: 500;
+}
+
+.vector-sidebar__number {
+  color: var(--muted);
+  font-size: .7rem;
+}
+
+.vector-sidebar__nav > a[aria-current='page'] .vector-sidebar__number { color: var(--cyan); }
+
+.vector-sidebar__nav > a[aria-current='page'] {
+  box-shadow: inset 3px 0 0 var(--cyan);
+}
+
+.vector-sidebar__soon {
+  padding: 0 .4rem;
+  border: 1px solid #456572;
+  border-radius: .25rem;
+  color: #8fb0bd;
+  font-size: .58rem;
+  letter-spacing: .12em;
+}
+
+.vector-sidebar__future { color: #8fb0bd; }
+
+.vector-shell[data-sidebar-collapsed='true'] .vector-sidebar__number,
+.vector-shell[data-sidebar-collapsed='true'] .vector-sidebar__soon {
+  display: none;
+}
+
+.vector-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--footer-height);
+  padding: .4rem 1rem;
+  border-top: 1px solid rgba(24, 73, 91, .72);
+  color: var(--muted);
+  font-size: .72rem;
+  text-align: center;
+}
+
+/* Visible cyan focus ring on every interactive element of the shell. */
+.vector-shell a:focus-visible,
+.vector-shell button:focus-visible,
+.vector-shell select:focus-visible,
+.vector-shell input:focus-visible,
+.vector-shell summary:focus-visible,
+.vector-shell [tabindex]:focus-visible,
+.skip-link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
