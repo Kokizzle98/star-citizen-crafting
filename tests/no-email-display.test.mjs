@@ -15,12 +15,63 @@ async function files(dir) {
   return out
 }
 
+// Ways to read the signed-in user's email. A plain form field named "email"
+// (login / registration input) is intentionally NOT matched.
+const USER = String.raw`(?:\b\w*[Uu]ser|\bsession\??\.user)`
+const FORBIDDEN = [
+  // user.email, user?.email, session.user.email, session?.user?.email
+  new RegExp(String.raw`${USER}\??\.email\b`),
+  // user['email'], user?.['email'], session.user["email"]
+  new RegExp(String.raw`${USER}\??\.?\[\s*['"\x60]email['"\x60]\s*\]`),
+  // const { email } = user / session.user
+  new RegExp(String.raw`\{[^{}]*\bemail\b[^{}]*\}\s*=\s*${USER}\b`),
+  // const { user: { email } } = session
+  /\buser\s*:\s*\{[^{}]*\bemail\b/,
+  // user_metadata may carry the email as well
+  /user_metadata/,
+]
+const isForbidden = src => FORBIDDEN.some(re => re.test(src))
+
+test('detector flags every way to read the user email', () => {
+  for (const bad of [
+    'user.email',
+    'user?.email',
+    'session.user.email',
+    'session?.user?.email',
+    "user['email']",
+    'user["email"]',
+    "session.user?.['email']",
+    'const { email } = user',
+    'const { id, email } = session.user',
+    'const { user: { email } } = session',
+    'user.user_metadata.email',
+    'authUser.email ?? x',
+  ]) {
+    assert.ok(isForbidden(bad), `should be forbidden: ${bad}`)
+  }
+})
+
+test('detector allows login-form email fields', () => {
+  for (const ok of [
+    "const [email, setEmail] = useState('')",
+    'email: email.trim(),',
+    '<input type="email" name="email" autoComplete="email" />',
+    "normalized.includes('email not confirmed')",
+    'const { data: { user } } = await supabase.auth.getUser()',
+    'if (!user) redirect("/login")',
+    'const { email } = formData',
+  ]) {
+    assert.ok(!isForbidden(ok), `should be allowed: ${ok}`)
+  }
+})
+
 test('UI never reads or shows the signed-in user email', async () => {
   const all = [...(await files('app')), ...(await files('components')), ...(await files('lib'))]
   for (const f of all) {
     const src = await readFile(new URL(f, root), 'utf8')
-    assert.doesNotMatch(src, /\buser\??\.email\b/, `${f} reads user.email`)
-    assert.doesNotMatch(src, /user_metadata/, `${f} reads user_metadata`)
+    for (const re of FORBIDDEN) {
+      assert.doesNotMatch(src, re, `${f} matches ${re}`)
+    }
   }
 })
 
