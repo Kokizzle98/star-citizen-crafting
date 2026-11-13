@@ -33,7 +33,7 @@ export default async function InventoryPage() {
 
       <InventorySwitch active="own" />
 
-      {result.status === 'success' && metadata?.available && locations?.ok &&
+      {result.status === 'success' && currentUserId !== null && metadata?.available && locations?.ok &&
         <AddInventoryLotForm units={metadata.units} locations={locations.locations} fallbackLocationId={locations.fallbackLocationId} />}
       {result.status === 'success' && (!metadata?.available || !locations?.ok) &&
         <p role="status">Materialien oder Locations konnten nicht geladen werden. Lot hinzufügen ist nicht verfügbar.</p>}

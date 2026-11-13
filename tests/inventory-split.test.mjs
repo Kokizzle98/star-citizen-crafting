@@ -17,6 +17,7 @@ test('Mein Inventory filters to the signed-in user and keeps the write controls'
   const src = code(own)
   assert.match(src, /row\.owner_user_id === currentUserId/)
   assert.match(src, /<AddInventoryLotForm/)
+  assert.match(src, /currentUserId !== null && metadata\?\.available && locations\?\.ok &&\s*<AddInventoryLotForm/, 'form only renders with a signed-in user')
   assert.match(src, /currentUserId=\{currentUserId\}/)
   assert.match(src, /<h1>Mein Inventory<\/h1>/)
   assert.match(src, /label="Mein Inventory"/)
