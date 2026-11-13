@@ -1883,3 +1883,23 @@ h1, h2, h3,
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+
+/* UX-3a: switch between Mein Inventory and Crew Inventory */
+.inventory-switch { display: flex; gap: .5rem; margin: 0 0 1rem; }
+.inventory-switch a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid var(--line);
+  border-radius: .4rem;
+  color: var(--text);
+  font-family: var(--font-display-stack);
+  text-decoration: none;
+}
+.inventory-switch a[aria-current='page'] {
+  border-color: var(--cyan);
+  background: rgba(25, 216, 237, .12);
+  color: var(--cyan);
+  box-shadow: inset 0 -2px 0 var(--cyan);
+}
