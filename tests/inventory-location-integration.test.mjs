@@ -131,6 +131,6 @@ test('client preserves and filters returned archived assignments by UUID and nam
   assert.match(view, /groupBy\(entries, \(row\) => row\.location_id\)/)
   assert.match(view, /rows\.map\(\(row\) => \[row\.location_id, row\.location_name\]/)
   assert.match(view, /materials\(visibleRows\)/)
-  assert.match(view, /locations\(visibleRows\)/)
+  assert.match(view, /locations\(materialRows\)/) // UX-3b: Material -> Ort -> Lots, locations group inside the filtered material rows
   assert.doesNotMatch(readPath, /is_archived|\.update\(|\.insert\(|\.delete\(/)
 })

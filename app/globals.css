@@ -1903,3 +1903,60 @@ h1, h2, h3,
   color: var(--cyan);
   box-shadow: inset 0 -2px 0 var(--cyan);
 }
+
+/* UX-3b: key figure strip, depth indicator, anchor highlight */
+.inventory-kpi-strip dl {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .75rem;
+  margin: 1rem 0;
+}
+
+.inventory-kpi-strip dl > div {
+  border: 1px solid var(--line);
+  border-radius: .55rem;
+  background: var(--panel);
+  padding: .75rem 1rem;
+}
+
+.inventory-kpi-strip dt,
+.inventory-kpi-strip__sub {
+  color: var(--muted);
+  font-size: .85rem;
+  margin: 0;
+}
+
+.inventory-kpi-strip__value {
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 700;
+  margin: .2rem 0;
+  overflow-wrap: anywhere;
+}
+
+.inventory-depth {
+  color: var(--muted);
+  margin: .5rem 0;
+}
+
+.inventory-lot--highlight {
+  outline: 2px solid var(--text);
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .inventory-lot--highlight {
+    animation: inventory-lot-flash 2.5s ease-out forwards;
+  }
+}
+
+@keyframes inventory-lot-flash {
+  from { outline-color: var(--text); }
+  to { outline-color: transparent; }
+}
+
+@media (max-width: 900px) {
+  .inventory-kpi-strip dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
