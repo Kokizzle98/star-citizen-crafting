@@ -1,7 +1,7 @@
 # VECTOR AI Operating Model v1
 
 - **Status:** OPERATIONAL (non-normative)
-- **Version:** 1.1
+- **Version:** 1.2 (counted up from 1.1; base commit `b28abe7d1547c70aa75e6d59dc57a2adf9499088`)
 - **Scope:** roles, decision authority and source-of-truth boundaries for the people and AI agents who work on VECTOR
 - **Does not override:** any FROZEN specification in `docs/frozen/`, the authority order in `docs/RULE_INDEX.md`, or the Production write gates in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`
 
@@ -38,8 +38,12 @@ The compact current project state is `docs/PROJECT_STATE.md`. The recovery contr
 - **Smallest sufficient effort.** Use the smallest model, context and review effort that answers the question; escalate only for architecture, data-model or security decisions (`docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`).
 - **No guessing.** Missing or uncertain data stays visible as an explicit review state. LIVE and PTU datasets stay isolated.
 - **Plain language.** Explain changes so that a system administrator who is not a developer can follow them.
+- **Review before merge.** Every pull request is handed to the Project Lead (pull request link) before it is merged. The Project Lead checks diff, scope, the exclusions in section 5 and the checkpoint line, and recommends; the owner decides and merges. The Project Lead may prepare documentation-only pull requests from `docs/` branches; code, database and deployment changes stay with the Primary Engineer.
+- **Runtime read access.** The Project Lead may read runtime structure (tables, columns, constraints, policies, grants, function definitions, advisors) but never personal data rows, and never mutates Supabase or Vercel. Findings that are security-relevant are recorded privately by the owner, not in this repository.
 
 ## 5. What this document must never contain
+
+This repository is public and stays public. Security-relevant material (policies, grants, function bodies, configuration, evidence) belongs in the owner's private archive, never here.
 
 Private OneDrive paths, personal information, account identifiers, credentials, tokens, secrets, database dumps, or private Security Evidence. The same exclusions apply to every evidence file generated from the repository.
 

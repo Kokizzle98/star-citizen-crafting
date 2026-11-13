@@ -41,6 +41,8 @@ Run typecheck and tests before proposing a change. Pull requests are expected to
 - Work on a dedicated feature branch and open a pull request against `develop`. Never push directly to `develop` or `main`.
 - Do not change FROZEN specifications, historical migrations or SCMDB location behavior as a side effect of other work.
 - Never commit secrets. `.env.local` stays local; `CITIZEN_ID_ENABLED=false` is the default.
+- This repository is **public** and stays public. Never commit anything security-relevant: policies, grants, function bodies, database dumps, project or account identifiers, private paths, credentials. The owner keeps such evidence privately (`docs/governance/AI_OPERATING_MODEL.md` section 5). When in doubt, ask first.
+- Every pull request goes to the Project Lead for review before the owner merges. The owner decides and merges; nobody else does.
 - Do not guess missing or uncertain data (locations, identities, resolver values). Keep it visible as an explicit review state.
 - LIVE and PTU datasets are strictly isolated. No cross-channel fallback.
 - Database changes go through reviewed migrations in `database/migrations/`. The only Supabase environment is Production (it currently holds test data, which does not make it staging); there is no staging database. Read-only access is allowed, every Production mutation needs a separate explicit owner GO, and migrations follow the gates in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`.
