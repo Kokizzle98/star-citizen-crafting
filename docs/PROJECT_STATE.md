@@ -5,7 +5,7 @@
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
 - **Document version:** v4 (counted up from v3; checkpoint rotation after PR #62)
-- **State verified through commit:** `8b98db7`<FULL>
+- **State verified through commit:** `8b98db74c22ca907a3c9e5089a8ce64450ba55c4`
 - **Updated by work package:** Checkpoint rotation after PR #62 (develop `8b98db7`): UX series started, Inventory UX v1.1 FROZEN
 - **Checkpoint date:** 2026-11-13
 
