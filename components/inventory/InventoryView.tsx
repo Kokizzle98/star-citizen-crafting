@@ -6,12 +6,14 @@ import { useRouter } from 'next/navigation'
 import { submitInventoryLotDelete } from '@/app/vector/inventory/actions'
 import { useUnitPreference } from '@/components/layout/UnitPreference'
 import { InventoryKpiStrip } from '@/components/inventory/InventoryKpiStrip'
+import { InventoryCrewOverview } from '@/components/inventory/InventoryCrewOverview'
 import { QualityChip, QualityLegend } from '@/components/quality/QualityChip'
 import { EditInventoryLotForm } from '@/components/inventory/EditInventoryLotForm'
 import { inventoryEditInitialValue } from '@/lib/inventory/inventory-edit-display'
 import { INVENTORY_ERROR_MESSAGES, INVENTORY_SUCCESS_MESSAGES, type InventoryErrorCode } from '@/lib/inventory/inventory-error-messages'
 import type { InventoryLocationOption } from '@/lib/inventory/inventory-form-options'
 import { formatQuantity, type UnitMode } from '@/lib/inventory/inventory-display'
+import { materialPlayerCount, playerCountLabel } from '@/lib/inventory/inventory-crew-overview'
 import type { InventoryRow } from '@/lib/inventory/inventory-result'
 import {
   filterInventoryRows,
@@ -35,7 +37,7 @@ function groupBy(rows: InventoryRow[], key: (row: InventoryRow) => string) {
 const materialKind = materialKindOf
 
 /** Summary of the rows of ONE material (material row, or location row inside a material). */
-function Summary({ rows, units, mode }: { rows: InventoryRow[]; units: MaterialUnits; mode: UnitMode }) {
+function Summary({ rows, units, mode, showPlayers = false }: { rows: InventoryRow[]; units: MaterialUnits; mode: UnitMode; showPlayers?: boolean }) {
   const kind = materialKind(units, rows[0].material)
   const average = materialAverageQuality(rows, kind)
   const range = qualityRange(rows)
@@ -43,6 +45,7 @@ function Summary({ rows, units, mode }: { rows: InventoryRow[]; units: MaterialU
     <strong>{formatQuantity(rows, kind, mode)}</strong>
     <span><abbr title="Durchschnittsqualität, nach Menge gewichtet">Ø</abbr> {average === null ? '–' : <QualityChip quality={average} />}</span>
     {range && <span><QualityChip quality={range.min} /> – <QualityChip quality={range.max} /></span>}
+    {showPlayers && <span>{playerCountLabel(materialPlayerCount(rows))}</span>}
     <span>{rows.length} {rows.length === 1 ? 'Lot' : 'Lots'}</span>
   </span>
 }
@@ -265,6 +268,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     </div>
     {!metadataAvailable && <p role="status">LIVE Materialdaten nicht verfügbar; Einheiten sind unbekannt.</p>}
     <InventoryKpiStrip rows={visibleRows} units={units} crew={crewViewerUserId !== undefined} />
+    {crewViewerUserId !== undefined && <InventoryCrewOverview rows={visibleRows} units={units} />}
     <div className="inventory-filter-controls" aria-label="Inventory durchsuchen, filtern und sortieren">
       <div className="inventory-filter-controls__field inventory-filter-controls__search">
         <label htmlFor="inventory-search">Suche</label>
@@ -379,12 +383,12 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     {view === 'GLOBAL'
       ? materialGroups.map((materialRows) => <Group key={materialRows[0].material} id={`G:m:${materialRows[0].material}`}
           open={openGroups} onOpenChange={setGroupOpen} title={materialRows[0].material}
-          summary={<Summary rows={materialRows} units={units} mode={mode} />}>
+          summary={<Summary rows={materialRows} units={units} mode={mode} showPlayers={crewViewerUserId !== undefined} />}>
           <Lots rows={materialRows} units={units} mode={mode} editing={editing} />
         </Group>)
       : materialGroups.map((materialRows) => <Group key={materialRows[0].material} id={`L:m:${materialRows[0].material}`}
           open={openGroups} onOpenChange={setGroupOpen} title={materialRows[0].material}
-          summary={<Summary rows={materialRows} units={units} mode={mode} />}>
+          summary={<Summary rows={materialRows} units={units} mode={mode} showPlayers={crewViewerUserId !== undefined} />}>
           <div className="inventory-group__children">
             {locations(materialRows).map((locationRows) => <Group key={locationRows[0].location_id}
               id={`L:l:${materialRows[0].material}|${locationRows[0].location_id}`}
