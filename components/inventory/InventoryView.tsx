@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type MutableRefObject, type RefObject } fr
 import { useRouter } from 'next/navigation'
 import { submitInventoryLotDelete } from '@/app/vector/inventory/actions'
 import { useUnitPreference } from '@/components/layout/UnitPreference'
+import { QualityChip, QualityLegend } from '@/components/quality/QualityChip'
 import { EditInventoryLotForm } from '@/components/inventory/EditInventoryLotForm'
 import { inventoryEditInitialValue } from '@/lib/inventory/inventory-edit-display'
 import { INVENTORY_ERROR_MESSAGES, INVENTORY_SUCCESS_MESSAGES, type InventoryErrorCode } from '@/lib/inventory/inventory-error-messages'
@@ -36,7 +37,7 @@ function Summary({ rows, units, mode }: { rows: InventoryRow[]; units: MaterialU
   const qualities = rows.map((row) => row.quality)
   return <span className="inventory-summary">
     <strong>{formatQuantity(rows, materialKind(units, rows[0].material), mode)}</strong>
-    <span>Q{Math.min(...qualities)}–Q{Math.max(...qualities)}</span>
+    <span><QualityChip quality={Math.min(...qualities)} /> – <QualityChip quality={Math.max(...qualities)} /></span>
     <span>{rows.length} {rows.length === 1 ? 'Lot' : 'Lots'}</span>
   </span>
 }
@@ -74,7 +75,7 @@ function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: Mat
             : <>
               <td>#{row.inventory_id}</td><td>{row.player_name}</td>
               <td>{materialKind(units, row.material) ? formatQuantity([row], materialKind(units, row.material), mode) : `${row.amount} (Einheit unbekannt)`}</td>
-              <td>Q{row.quality}</td><td>{row.location_name}</td>
+              <td><QualityChip quality={row.quality} /></td><td>{row.location_name}</td>
               <td>{editing.deletingLotId === row.inventory_id && canDelete
                 ? <div role="group" aria-labelledby={`delete-question-${row.inventory_id}`}>
                     <p id={`delete-question-${row.inventory_id}`}>Lot #{row.inventory_id} ({row.material}) löschen?</p>
@@ -298,6 +299,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     <p className="inventory-filter-result" role="status">
       {visibleRows.length} von {rows.length} {rows.length === 1 ? 'Lot' : 'Lots'}
     </p>
+    <QualityLegend />
 
     {visibleRows.length === 0
       ? <p className="inventory-filter-empty">Keine Lots entsprechen den aktuellen Filtern.</p>

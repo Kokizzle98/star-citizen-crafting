@@ -75,6 +75,23 @@ export function summarizeQuality<T>(parts: readonly QualityPart<T>[]): QualitySu
   }
 }
 
+/**
+ * Quantity-weighted quality rounded to the nearest integer, halves up
+ * (INVENTORY_UX_V1_1 section 5.1, display of aggregates). Exact bigint
+ * arithmetic; reuses the same validation as `summarizeQuality`. The
+ * Fabricator rounds DOWN (D-F3-1) and is not affected by this function.
+ */
+export function weightedQualityHalfUp<T>(parts: readonly QualityPart<T>[]): number | null {
+  let quantity = 0n
+  let weighted = 0n
+  for (const part of parts) {
+    assertPart(part)
+    quantity += part.quantity
+    weighted += part.quantity * BigInt(part.quality)
+  }
+  return quantity === 0n ? null : Number((2n * weighted + quantity) / (2n * quantity))
+}
+
 export type QualitySelection<T = string> = {
   status: 'COVERED' | 'INSUFFICIENT' | 'NONE'
   required: bigint
