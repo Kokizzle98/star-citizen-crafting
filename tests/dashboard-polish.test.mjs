@@ -33,8 +33,8 @@ test('project status block is labelled and uses German labels', () => {
   assert.match(css, /\.vector-dashboard__status strong \{[^}]*overflow-wrap: anywhere;/)
 })
 
-test('new user: one clear sentence with a next step as a link', () => {
-  assert.match(page, /Neu hier\? Wähle oben deine Crew und lege in\{' '\}\s*<Link href="\/vector\/inventory">Mein Inventory<\/Link> dein erstes Lot an\./)
+test('new user: the precondition (Crew membership) first, then crew choice and first lot as a link', () => {
+  assert.match(page, /Neu hier\? Du brauchst zuerst eine Crew-Mitgliedschaft: Lass dich von deiner Crew einladen\.\s*Wähle dann oben deine Crew und lege in\{' '\}\s*<Link href="\/vector\/inventory">Mein Inventory<\/Link> dein erstes Lot an\./)
   assert.match(css, /\.vector-dashboard__hint a \{\s*color: var\(--cyan\);/)
 })
 

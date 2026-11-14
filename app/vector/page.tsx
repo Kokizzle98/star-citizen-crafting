@@ -94,7 +94,8 @@ export default async function VectorPage() {
       </section>
 
       <p className="vector-dashboard__hint">
-        Neu hier? Wähle oben deine Crew und lege in{' '}
+        Neu hier? Du brauchst zuerst eine Crew-Mitgliedschaft: Lass dich von deiner Crew einladen.
+        Wähle dann oben deine Crew und lege in{' '}
         <Link href="/vector/inventory">Mein Inventory</Link> dein erstes Lot an.
       </p>
 
