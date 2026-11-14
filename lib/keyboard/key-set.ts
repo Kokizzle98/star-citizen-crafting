@@ -9,6 +9,7 @@ export type KeyAction =
   | { type: 'select-next' }
   | { type: 'open' }
   | { type: 'back' }
+  | { type: 'edit' }
   | { type: 'view-prev' }
   | { type: 'view-next' }
   | { type: 'focus-search' }
@@ -46,6 +47,7 @@ const LETTER_ACTIONS: Readonly<Record<string, KeyAction>> = {
   d: { type: 'open' },
   f: { type: 'open' },
   a: { type: 'back' },
+  b: { type: 'edit' },
   q: { type: 'view-prev' },
   e: { type: 'view-next' },
   t: { type: 'focus-search' },

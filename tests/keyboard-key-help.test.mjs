@@ -96,3 +96,47 @@ test('wiring: bar has aria-label, button has visible text and no key, dialog han
   const keySet = await readText('lib/keyboard/key-set.ts')
   assert.doesNotMatch(keySet, /key-help/)
 })
+
+// ---- UX-5c: key B (INVENTORY_UX_V1_2 sections 13.1, 13.2, 18 no. 20, 24) ----
+
+test('key B means "edit" and is in the help table', () => {
+  assert.equal(keys.keyAction('b')?.type, 'edit')
+  assert.equal(keys.keyAction('B')?.type, 'edit')
+  const entry = help.KEY_HELP.find((e) => e.id === 'edit')
+  assert.deepEqual([entry.label, entry.keys, entry.action, entry.context], ['B', ['b'], 'edit', 'inventory'])
+  assert.equal(entry.text, 'Gewähltes eigenes Lot bearbeiten')
+  assert.equal(entry.short, 'bearbeiten')
+})
+
+test('key B is blocked like every letter: fields, inline editor, Strg/Alt/Meta, drawer', () => {
+  const idle = { inlineEditorActive: false, accountDrawerOpen: false, target: null }
+  assert.equal(keys.resolveKey({ key: 'b' }, idle)?.type, 'edit')
+  assert.equal(keys.resolveKey({ key: 'b' }, { ...idle, inlineEditorActive: true }), null)
+  assert.equal(keys.resolveKey({ key: 'b' }, { ...idle, accountDrawerOpen: true }), null)
+  assert.equal(keys.resolveKey({ key: 'b' }, { ...idle, target: { tagName: 'INPUT', type: 'text' } }), null)
+  assert.equal(keys.resolveKey({ key: 'b' }, { ...idle, target: { tagName: 'SELECT' } }), null)
+  for (const modifier of ['ctrlKey', 'altKey', 'metaKey']) assert.equal(keys.resolveKey({ key: 'b', [modifier]: true }, idle), null, modifier)
+})
+
+test('hint bar shows "B bearbeiten" only on Mein Inventory with an own lot selected', () => {
+  const own = { page: 'own', inlineEditorActive: false, deleteConfirmOpen: false }
+  assert.ok(!ids(own).includes('edit'))
+  assert.ok(!ids({ ...own, ownLotSelected: false }).includes('edit'))
+  assert.deepEqual(ids({ ...own, ownLotSelected: true }), ['select', 'open', 'back', 'edit', 'view', 'search', 'reset'])
+  assert.ok(!ids({ ...own, page: 'crew', ownLotSelected: true }).includes('edit'))
+  assert.deepEqual(ids({ ...own, inlineEditorActive: true, ownLotSelected: true }), ['esc-edit'])
+  assert.deepEqual(ids({ ...own, deleteConfirmOpen: true, ownLotSelected: true }), ['esc-delete'])
+})
+
+test('wiring: B calls the same start function as the button; no key deletes; no key for GLOBAL / LOCATION', async () => {
+  const view = await readText('components/inventory/InventoryView.tsx')
+  assert.match(view, /editing\.start\(id\)/)
+  assert.match(view, /onClick=\{\(\) => editing\.start\(row\.inventory_id\)\}/)
+  assert.match(view, /row\.owner_user_id !== currentUserId/)
+  assert.match(view, /ownLotSelected=\{editableLotId\(selectedKey\) !== null\}/)
+  const hook = await readText('components/inventory/useInventoryKeys.ts')
+  assert.match(hook, /case 'edit':/)
+  assert.doesNotMatch(hook, /startDelete|confirmDelete|setEditingLotId|submitInventory/)
+  assert.ok(!help.KEY_HELP.some((e) => /delete|global|location/i.test(e.action) || /GLOBAL|LOCATION/.test(e.text)))
+  for (const key of 'xyzgjklmnopuvhi') assert.ok(!keys.keyAction(key), `unexpected key ${key}`)
+})

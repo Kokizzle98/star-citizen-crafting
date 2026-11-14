@@ -13,7 +13,8 @@ import {
 /**
  * Inventory part of the global key set (INVENTORY_UX_V1_1 section 13.1):
  * W / S select, D / F go one level deeper, A and Esc go one level back,
- * T focuses the search, R resets the filters. Q / E live in InventorySwitch,
+ * B asks the view to edit the selected lot (the view decides whether that
+ * lot may be edited), T focuses the search, R resets the filters. Q / E live in InventorySwitch,
  * 1 to 6 in VectorShell.
  *
  * The keys only move a visible selection and open or close the same groups a
@@ -29,6 +30,7 @@ export function useInventoryKeys({
   cancelTransient,
   blocked,
   resetFilters,
+  onEdit,
 }: {
   /** Entries of the list below the given path of entered groups; `null` if that group does not exist. */
   childKeys: (path: readonly string[]) => string[] | null
@@ -42,6 +44,8 @@ export function useInventoryKeys({
   /** A request is running: keys do nothing. */
   blocked: boolean
   resetFilters: () => void
+  /** Key B on the selected entry; true if an editor was opened. The view checks ownership and editability. */
+  onEdit: (selectedKey: string) => boolean
 }): { selectedKey: string | null } {
   const [enteredPath, setEnteredPath] = useState<string[]>([])
   const [selected, setSelected] = useState<string | null>(null)
@@ -93,6 +97,8 @@ export function useInventoryKeys({
       }
       case 'back':
         return goBack()
+      case 'edit':
+        return selectedKey !== null && onEdit(selectedKey)
       case 'focus-search': {
         const field = document.getElementById('inventory-search')
         if (!field) return false
