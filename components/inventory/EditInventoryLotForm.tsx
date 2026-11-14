@@ -54,7 +54,7 @@ export function EditInventoryLotForm({ row, initial, locations, pending, setPend
     }
   }
 
-  return <form onSubmit={submit} noValidate onKeyDown={(event) => {
+  return <form onSubmit={submit} noValidate data-inline-editor="active" onKeyDown={(event) => {
     if (event.key === 'Escape' && !pending) { event.stopPropagation(); onCancel() }
   }}>
     <p>{row.material}</p>
