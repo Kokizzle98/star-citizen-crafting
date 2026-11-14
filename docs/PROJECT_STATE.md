@@ -4,10 +4,10 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v6 (counted up from v5; checkpoint rotation after PR #66)
-- **State verified through commit:** `3f29025addb837901d35bc988a9ff10750d1e38d`
-- **Updated by work package:** Checkpoint rotation after PR #66 (develop `3f29025`): UX-3b done, UX-4 next
-- **Checkpoint date:** 2026-11-13
+- **Document version:** v7 (counted up from v6; checkpoint rotation after PR #72)
+- **State verified through commit:** `914bbe0d113179c2b5d27db18b36500723821a8a`
+- **Updated by work package:** Checkpoint rotation after PR #72 (develop `914bbe0`): UX-4, UX-5, UX-5b and Inventory UX v1.2 done, UX-6 next
+- **Checkpoint date:** 2026-11-14
 
 ## How to read this file
 
@@ -46,12 +46,16 @@
 - UX-1 central quality tiers: **DONE**. #61 (`84ce2ef`): `lib/quality/tiers.ts`, `QualityChip`, legend. No data model change.
 - UX-2 design foundations and shell: **DONE**. #62 (`8b98db7`): fonts, brand line, navigation 01 to 06 (`components/layout/navigation.ts`), fan-project notice. No data model change.
 - UX-3a Mein Inventory / Crew Inventory split: **DONE**. #64 (`6f10bf1`): `Mein Inventory` and `Crew Inventory` are separate pages, the Crew page is read-only, and Quick Add renders only with a known user (Copilot review fix). No data model change.
-- UX-3b material rows, depth indicator, KPI strip: **DONE**. #66 (`3f29025`): level model per `INVENTORY_UX_V1_1.md` (GLOBAL Material → Lots, LOCATION Material → Ort → Lots), material row with quantity, Ø (quantity-weighted, rounded half up) and Spanne, depth indicator `Ebene n von 2` / `Ebene n von 3`, KPI strip, and the anchor jump of `In Mein Inventory bearbeiten` now opens the group. Display only, no data model change. Assumptions from #66: level n = deepest expanded level (all collapsed = level 1); the KPI strip computes over the filtered rows.
+- UX-3b material rows, depth indicator, KPI strip: **DONE**. #66 (`3f29025`): level model per `INVENTORY_UX_V1_1.md` (historical: that version is now superseded by `INVENTORY_UX_V1_2.md`; GLOBAL Material → Lots, LOCATION Material → Ort → Lots), material row with quantity, Ø (quantity-weighted, rounded half up) and Spanne, depth indicator `Ebene n von 2` / `Ebene n von 3`, KPI strip, and the anchor jump of `In Mein Inventory bearbeiten` now opens the group. Display only, no data model change. Assumptions from #66: level n = deepest expanded level (all collapsed = level 1); the KPI strip computes over the filtered rows.
+- UX-4 Crew Inventory overview: **DONE**. #68 (`463d91d`): variant A without a player level: "n Spieler" in the material row, panel "Qualitätsverteilung", panel "Spieler". Display only, no data model change.
+- UX-5 global key set: **DONE**. #69 (`77ee94a`): keys per section 13.1 (W/S, D/F, A, Q/E, T, R, 1 to 4; 5 and 6 "BALD"), Esc order. `lib/keyboard/key-set.ts`, `components/layout/useKeySet.ts`. No new write path.
+- UX-5b key help: **DONE**. #70 (`c483aa9`): hint bar per state and "Tastenhilfe" overview, table in `lib/keyboard/key-help.ts`, tested against the key logic. Display only.
+- Inventory UX v1.2: **DONE**. #71 (`6e3ba14`) proposal, #72 (`914bbe0`) promotion to FROZEN as full-document successor; `INVENTORY_UX_V1_1.md` registered `SUPERSEDED` (`docs/RULE_INDEX.md` v1.3). Documentation only.
 - Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`; #56 (`6586108`) public-repo boundary clarification and checkpoint rotation. Documentation only, no Production mutation.
 
 ## ACTIVE
 
-- UX series (owner priority: a usable, good-looking app for the owner and the first outside tester). Design mock-ups approved by the owner on 2026-11-13. Order, one work package per session: UX-1 (quality tiers) **DONE**, UX-2 (shell and branding) **DONE**, UX-3a (Mein Inventory / Crew Inventory split, Crew page read-only) **DONE**, UX-3b (material rows with average and range, depth indicator, KPI strip) **DONE**, UX-4 (Crew Inventory overview polish) next, UX-5 (global key set), UX-6 (icons, dashboard polish). Binding specification: `docs/frozen/INVENTORY_UX_V1_1.md`.
+- UX series (owner priority: a usable, good-looking app for the owner and the first outside tester). Design mock-ups approved by the owner on 2026-11-13. Order, one work package per session: UX-1 (quality tiers) **DONE**, UX-2 (shell and branding) **DONE**, UX-3a (Mein Inventory / Crew Inventory split, Crew page read-only) **DONE**, UX-3b (material rows with average and range, depth indicator, KPI strip) **DONE**, UX-4 (Crew Inventory overview) **DONE**, UX-5 (global key set) **DONE**, UX-5b (key help) **DONE**, UX-6 (icons, dashboard polish) next. Binding specification: `docs/frozen/INVENTORY_UX_V1_2.md`.
 
 ## PAUSED
 
@@ -63,7 +67,10 @@
 
 ## NEXT
 
-1. UX-4: Crew Inventory overview (player level), then UX-5 (global key set) and UX-6 (icons, dashboard polish).
+1. UX-6 (icons, dashboard polish). Afterwards implementation packages from `INVENTORY_UX_V1_2.md`, each its own session:
+   - (a) `B` key (section 13.1) and the hint "B bearbeiten" in the hint bar (section 13.2);
+   - (b) Crew edit symbol with jump to Mein Inventory (the lot's inline editor opens) and return (section 3.1). Today the link only jumps to the lot and highlights it; it does not open the editor.
+   - Open owner wishes (not commissioned): background image for Crew Inventory, material image. Image source and rights are unresolved.
 2. After the UX series the owner chooses the next package (candidates: F4-B and a UEX source foundation, each as its own package, only after an explicit owner decision). F4-B (gameplay relevance / exclusion contract) and a UEX source foundation stay separate work packages. The licence / redistribution decision for scunpacked-data stays open and is tracked below.
 3. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
 
@@ -80,7 +87,7 @@
 
 ## RELEVANT CONTRACTS
 
-- FROZEN specifications in `docs/frozen/`, registered in `docs/RULE_INDEX.md` section 5. Most relevant right now: `INVENTORY_UX_V1_1.md` (inventory UX, quality tiers, key set), `VECTOR_SOURCE_AUTHORITY_V1.md` (external source identity and authority), `DB_ENVIRONMENT_GOVERNANCE_V1.md` (Production read and write gates), `VECTOR_VERSIONING_V1_1.md` (LIVE/PTU isolation), `VECTOR_GOVERNANCE_V1.md` (global governance).
+- FROZEN specifications in `docs/frozen/`, registered in `docs/RULE_INDEX.md` section 5. Most relevant right now: `INVENTORY_UX_V1_2.md` (inventory UX, quality tiers, key set, key help), `VECTOR_SOURCE_AUTHORITY_V1.md` (external source identity and authority), `DB_ENVIRONMENT_GOVERNANCE_V1.md` (Production read and write gates), `VECTOR_VERSIONING_V1_1.md` (LIVE/PTU isolation), `VECTOR_GOVERNANCE_V1.md` (global governance).
 - Operating contracts: `AGENTS.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`.
 - Recovery: `docs/handover/VECTOR_RESTART_HANDOVER.md` (control block, drift procedure, Blueprint decisions) and `SCMDB_LOCATION_HANDOVER.md` (frozen location contracts).
 - Evidence: `docs/governance/PROJECT_LEAD_EVIDENCE.md` (generator, CURRENT and ARCHIVE contract, Project Lead bootstrap).
