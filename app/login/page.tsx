@@ -7,14 +7,16 @@ export const dynamic = 'force-dynamic'
 
 type LoginPageProps = {
   searchParams?: {
-    next?: string
+    // Repeated query parameters arrive as an array; safeRelativePath treats
+    // anything but a plain string as "no value".
+    next?: string | string[]
   }
 }
 
 export default async function LoginPage({
   searchParams,
 }: LoginPageProps) {
-  const nextPath = safeRelativePath(searchParams?.next ?? null, '/vector')
+  const nextPath = safeRelativePath(searchParams?.next, '/vector')
   const supabase = createSupabaseServerClient()
   const {
     data: { user },
