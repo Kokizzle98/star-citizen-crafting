@@ -1,7 +1,7 @@
 # VECTOR Rule Index
 
 **Status:** PROPOSED  
-**Version:** 1.2  
+**Version:** 1.3  
 **Purpose:** Canonical registry and navigation index for VECTOR rules, specifications, architecture decisions, proposals and retired references.
 
 ## 1. Purpose
@@ -65,7 +65,8 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `VECTOR_GOVERNANCE_V1.md` | Global governance, rule lifecycle, repository/release authority | `FROZEN` | Current Production authority; proposed successor: `VECTOR_GOVERNANCE_V1_1.md` |
 | `VECTOR_VERSIONING_V1_1.md` | VECTOR version, SC build and dataset versioning/isolation, typed contexts and PTU Preview boundary | `FROZEN` | Sole binding VERSIONING authority after successful governed merge of the freeze-transition change set to `main`; full-document successor to v1.0 |
 | `VECTOR_VERSIONING_V1.md` | Historical VECTOR version, SC build and dataset versioning/isolation authority | `SUPERSEDED` | Superseded in full by `VECTOR_VERSIONING_V1_1.md`; predecessor file remains physically unchanged for historical traceability |
-| `INVENTORY_UX_V1_1.md` | Personal and Crew Inventory UX and interaction behavior, quality tiers, level model, global key set | `FROZEN` | Owner decision 2026-11-13; full-document successor to v1.0; uses current location, keyboard and dataset-context invariants |
+| `INVENTORY_UX_V1_2.md` | Personal and Crew Inventory UX and interaction behavior, quality tiers, level model, global key set, key help | `FROZEN` | Owner decision 2026-11-14; full-document successor to v1.1; uses current location, keyboard and dataset-context invariants |
+| `INVENTORY_UX_V1_1.md` | Historical Personal and Crew Inventory UX and interaction behavior | `SUPERSEDED` | Superseded in full by `INVENTORY_UX_V1_2.md`; file remains physically unchanged for historical traceability |
 | `INVENTORY_UX_V1.md` | Historical Personal Inventory UX and interaction behavior | `SUPERSEDED` | Superseded in full by `INVENTORY_UX_V1_1.md`; file remains physically unchanged for historical traceability |
 | `FLEET_DATA_MODEL_V1.md` | User ship identity, ownership and fleet data semantics | `FROZEN` | Fleet planning remains separately specified/planned |
 | `PERSISTENCE_PROVENANCE_V1.md` | Persistence classes, provenance and game-state history | `FROZEN` | Requires alignment with proposed Data Context Model before that proposal can freeze |
@@ -85,7 +86,6 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; complete remaining cross-spec alignment before freeze |
 | `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile its preview/staging validation (§18) with FROZEN `DB_ENVIRONMENT_GOVERNANCE_V1.md`, which defers a separate staging environment (`DB-ENV-09`); bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
-| `INVENTORY_UX_V1_2.md` | Personal and Crew Inventory UX and interaction behavior, quality tiers, level model, global key set, key help | `PROPOSED` | Full-document successor candidate to `INVENTORY_UX_V1_1.md`; V1.1 bleibt FROZEN und allein verbindlich bis zur Freigabe |
 
 ## 7. PLANNED normative specifications
 

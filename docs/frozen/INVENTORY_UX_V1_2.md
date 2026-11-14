@@ -1,18 +1,18 @@
 # VECTOR Inventory UX v1.2
 
-**Status:** PROPOSED  
+**Status:** FROZEN  
 **Version:** 1.2  
-**Base Commit:** `c483aa9` (`develop` at the time of writing)  
+**Base Commit:** `6e3ba14` (`develop` at the time of promotion)  
 **Authority Scope:** INVENTORY_UX  
-**Approved By:** pending project_owner approval (the owner decisions of 2026-11-14 are recorded in section 1; promotion is a separate step)  
-**Supersedes:** `INVENTORY_UX_V1_1.md` v1.1 in full (after approval)  
+**Approved By:** project_owner (owner decision 2026-11-14; binding for development on `develop` from merge of the promotion change set, part of the Production rule set once released to `main`)  
+**Supersedes:** `INVENTORY_UX_V1_1.md` v1.1 in full  
 **Scope:** Personal and Crew inventory interaction, quality tiers, level model, global key set, key help, lot representation, key figure strip, Crew overview, quantity/quality handling, locations, filtering, grouping, editing, accessibility and dataset isolation
 
 ## 1. Purpose
 
 This document is the full-document successor to Inventory UX v1.1 and defines the UX and interaction rules for the personal and Crew VECTOR inventory. Sections 3.1, 9.1, 9.2, 13.1, 13.2, 17, 18 and 19 are the amendments of v1.2 (owner decisions of 2026-11-14); all other rules carry over from v1.1 unchanged. The inventory must support fast stock maintenance without hiding the underlying lot structure required for location, quantity, unit and quality accuracy.
 
-Until this document is approved and promoted to FROZEN, `INVENTORY_UX_V1_1.md` alone is binding. This proposal is design input only and changes no data model, no merge key and no authorization rule.
+This document is FROZEN and is the sole binding inventory UX specification. `INVENTORY_UX_V1_1.md` is registered as `SUPERSEDED`. This document changes no data model, no merge key and no authorization rule.
 
 Amendments of v1.2:
 
@@ -22,7 +22,7 @@ Amendments of v1.2:
 4. Key help: hint bar and overview (section 13.2).
 5. Already built elements are recorded so that the specification matches the product: key figure strip (section 9.1) and Crew overview (section 9.2). Description only; nothing new is added.
 6. Acceptance criteria 20 and following (section 18).
-7. Frozen decision replaced by the status of this proposal (section 19).
+7. Frozen decision (section 19).
 
 ## 2. Core model
 
@@ -444,10 +444,10 @@ An implementation conforms to Inventory UX v1.2 when:
 26. The key figure strip follows section 9.1.
 27. The Crew overview follows section 9.2 and is display only.
 
-## 19. Status of this document
+## 19. Frozen decision
 
-VECTOR Inventory UX v1.2 is **PROPOSED**. It is the full-document successor to v1.1 once approved. `INVENTORY_UX_V1_1.md` stays **FROZEN** and binding, and remains physically unchanged, until the project owner approves the promotion. Promotion (move to `docs/frozen/`, registration of v1.1 as `SUPERSEDED`, `docs/RULE_INDEX.md`) is a separate step after the owner's approval.
+VECTOR Inventory UX v1.2 is **FROZEN** and is the full-document successor to v1.1. `INVENTORY_UX_V1_1.md` is registered as `SUPERSEDED` and remains physically unchanged for historical traceability.
 
-After promotion this document supersedes conflicting legacy inventory behavior from the former SC Group Crafting handover where newer VECTOR-wide FROZEN rules exist, especially the persistent `Unbekannt` system-location rule, inline CRUD rule, keyboard UX rule and strict LIVE/PTU dataset isolation.
+This document supersedes conflicting legacy inventory behavior from the former SC Group Crafting handover where newer VECTOR-wide FROZEN rules exist, especially the persistent `Unbekannt` system-location rule, inline CRUD rule, keyboard UX rule and strict LIVE/PTU dataset isolation.
 
 Material amendments require a further successor version of this document and the normal VECTOR Governance process
