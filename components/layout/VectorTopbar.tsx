@@ -1,0 +1,94 @@
+﻿import Link from 'next/link'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { AccountDrawer } from '@/components/account/AccountDrawer'
+import { getCrewContext } from '@/lib/groups/crew-context'
+import { CrewSelector } from '@/components/layout/CrewSelector'
+import { UnitControl } from '@/components/layout/UnitPreference'
+import { liveDatasetLabel } from '@/components/layout/dataset-label'
+import { SCMDB_BLUEPRINT_LIVE_SYNC_PIN } from '@/lib/blueprints/blueprint-sync-payload'
+
+type AppRole = 'USER' | 'ONTOLOGY_ADMIN' | 'SYSTEM_ADMIN'
+
+export async function VectorTopbar() {
+  const supabase = createSupabaseServerClient()
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return (
+      <header className="vector-topbar vector-topbar--anonymous">
+        <Link className="vector-topbar__login" href="/login">
+          Anmelden
+        </Link>
+      </header>
+    )
+  }
+
+  const [
+    { data: profile },
+    { data: game },
+    { data: appRole },
+    crewContext,
+  ] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('nickname')
+      .eq('id', user.id)
+      .maybeSingle(),
+
+    supabase
+      .from('game_accounts')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('game_code', 'STAR_CITIZEN')
+      .eq('verification_status', 'VERIFIED')
+      .maybeSingle(),
+
+    supabase.rpc('get_my_app_role'),
+    getCrewContext(user.id),
+  ])
+
+  const activeGroup = crewContext.activeGroup
+  const dataset = liveDatasetLabel(SCMDB_BLUEPRINT_LIVE_SYNC_PIN.version)
+  const datasetText = dataset.gameVersion ? `LIVE · ${dataset.gameVersion}` : 'LIVE'
+
+  const nickname =
+    profile?.nickname ??
+    'VECTOR Account'
+
+  return (
+    <header className="vector-topbar">
+      <div className="vector-topbar__context">
+        <CrewSelector
+          activeGroupId={crewContext.activeGroupId}
+          availableGroups={crewContext.availableGroups}
+        />
+
+        <button
+          type="button"
+          className="vector-topbar__control"
+          aria-disabled="true"
+          aria-label={`Dataset: ${datasetText.replace(' · ', ', Spielversion ')}. Dataset-Auswahl folgt später.`}
+          title={`Aktiver LIVE-Datensatz ${dataset.build} · Dataset-Auswahl (LIVE/PTU) folgt in einer späteren Version`}
+        >
+          <span className="vector-topbar__control-text">
+            <span>DATASET</span>
+            <strong className="vector-topbar__live">● {datasetText}</strong>
+          </span>
+          <span aria-hidden="true">▾</span>
+        </button>
+        <UnitControl />
+      </div>
+
+      <AccountDrawer
+        nickname={nickname}
+        groupName={activeGroup?.name}
+        groupRole={activeGroup?.role}
+        isAdmin={(appRole as AppRole) === 'SYSTEM_ADMIN'}
+        rsiLinked={Boolean(game)}
+      />
+    </header>
+  )
+}

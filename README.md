@@ -4,6 +4,10 @@ VECTOR is a community-driven, hobby project for Star Citizen players focused on 
 
 The project is intentionally free to use and designed to grow with the community. Monetization is not the primary goal and will only be considered later, if at all, once the project proves useful and sustainable.
 
+## Unofficial fan project
+
+VECTOR is an unofficial Star Citizen fan project. It is not affiliated with, endorsed by or sponsored by Cloud Imperium Games or Roberts Space Industries. Star Citizen®, Roberts Space Industries® and Cloud Imperium® are registered trademarks of Cloud Imperium Rights LLC. This project does not use official logos or artwork. Game data comes from community sources and may be incomplete or outdated.
+
 ## Vision
 
 VECTOR exists to make Star Citizen planning more structured, transparent, and useful for players. The goal is to provide a practical tool that helps players better understand:
@@ -100,7 +104,7 @@ This layer handles:
 - resolver logic for ambiguous or incomplete information
 
 ### 4. Database and Migration Layer
-Security-sensitive workflows are included to support controlled staging and production safety:
+Security-sensitive workflows are included to support controlled Production database safety (see docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md; there is currently no separate staging database):
 - `database/`
 - `database/migrations/`
 
@@ -114,7 +118,7 @@ This layer is intended to ensure:
 The project includes guardrails such as:
 - local-only environment handling
 - no secret leakage
-- staging-only migration expectations
+- migrations validated by local and PGlite contract tests, review and CI, then applied to Production only after an explicit named GO and checked with read-only postchecks
 - production blockers until checks pass
 - explicit handling of missing or unresolved data
 
@@ -147,7 +151,7 @@ This architecture separates:
 ## Safety Rules
 CITIZEN_ID_ENABLED=false is the default
 Never commit .env.local or server secrets
-Database migrations must be validated in staging first
+Database migrations follow docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md: local and PGlite contract tests, review and CI, then an explicit named Production-migration GO and read-only postchecks (there is currently no separate staging database)
 Production promotion is blocked until checks pass
 Missing or unresolved data must remain visible as review states
 

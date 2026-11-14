@@ -1,7 +1,7 @@
 # VECTOR Rule Index
 
 **Status:** PROPOSED  
-**Version:** 1.0  
+**Version:** 1.3  
 **Purpose:** Canonical registry and navigation index for VECTOR rules, specifications, architecture decisions, proposals and retired references.
 
 ## 1. Purpose
@@ -65,12 +65,16 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `VECTOR_GOVERNANCE_V1.md` | Global governance, rule lifecycle, repository/release authority | `FROZEN` | Current Production authority; proposed successor: `VECTOR_GOVERNANCE_V1_1.md` |
 | `VECTOR_VERSIONING_V1_1.md` | VECTOR version, SC build and dataset versioning/isolation, typed contexts and PTU Preview boundary | `FROZEN` | Sole binding VERSIONING authority after successful governed merge of the freeze-transition change set to `main`; full-document successor to v1.0 |
 | `VECTOR_VERSIONING_V1.md` | Historical VECTOR version, SC build and dataset versioning/isolation authority | `SUPERSEDED` | Superseded in full by `VECTOR_VERSIONING_V1_1.md`; predecessor file remains physically unchanged for historical traceability |
-| `INVENTORY_UX_V1.md` | Personal Inventory UX and interaction behavior | `FROZEN` | Uses current location, keyboard and dataset-context invariants |
+| `INVENTORY_UX_V1_2.md` | Personal and Crew Inventory UX and interaction behavior, quality tiers, level model, global key set, key help | `FROZEN` | Owner decision 2026-11-14; full-document successor to v1.1; uses current location, keyboard and dataset-context invariants |
+| `INVENTORY_UX_V1_1.md` | Historical Personal and Crew Inventory UX and interaction behavior | `SUPERSEDED` | Superseded in full by `INVENTORY_UX_V1_2.md`; file remains physically unchanged for historical traceability |
+| `INVENTORY_UX_V1.md` | Historical Personal Inventory UX and interaction behavior | `SUPERSEDED` | Superseded in full by `INVENTORY_UX_V1_1.md`; file remains physically unchanged for historical traceability |
 | `FLEET_DATA_MODEL_V1.md` | User ship identity, ownership and fleet data semantics | `FROZEN` | Fleet planning remains separately specified/planned |
 | `PERSISTENCE_PROVENANCE_V1.md` | Persistence classes, provenance and game-state history | `FROZEN` | Requires alignment with proposed Data Context Model before that proposal can freeze |
 | `GAME_WIPE_MODEL_V1.md` | Star Citizen game-wipe planning/execution semantics | `FROZEN` | LIVE dataset trigger and Production User State target must remain distinct |
 | `PLATFORM_CRITICAL_ACTIONS_V1.md` | Platform-destructive/critical administrative actions | `FROZEN` | Separate from ordinary game wipes |
 | `ROLLBACK_POLICY_V1.md` | Application, database and dataset rollback/recovery | `FROZEN` | Dataset rollback does not imply game-state recovery |
+| `DB_ENVIRONMENT_GOVERNANCE_V1.md` | Supabase database environment identity, data classification, Production read and write gates, migration gates | `FROZEN` | Owner decision 2026-11-11 (`DB-ENV-01` to `DB-ENV-09`); separates technical environment classification from data classification; a separate staging environment is `DEFERRED` |
+| `VECTOR_SOURCE_AUTHORITY_V1.md` | External game-data and observation sources: cross-source item identity (exact CIG UUID), variant identity, per-domain source authority (SCMDB, scunpacked-data, Star Citizen Wiki API, UEX ingame, UEX marketplace), source freshness, evidence discipline, runtime boundary | `FROZEN` | Owner decision 2026-11-12; absorbs the planned `SCMDB_SOURCE_AUTHORITY_V1`; classifies no gameplay relevance (F4-B) and lifts no gate (F4-S stays stopped at the source / distribution gate) |
 
 ## 6. Current PROPOSED registry
 
@@ -80,7 +84,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `DATA_CONTEXT_MODEL_V1.md` | Build classification, LIVE/PTU dataset contexts, Production User State, PTU Preview, epochs | `PROPOSED` | Not a prerequisite for promoting `VECTOR_VERSIONING_V1_1.md`; must be reconciled with the then-FROZEN v1.1 and applicable FROZEN specifications before its own freeze; proposals do not resolve R3 |
 | `DATASET_PIPELINE_V1.md` | `DATASET_PIPELINE` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; align mutable-state boundaries with applicable FROZEN rules before freeze |
 | `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; complete remaining cross-spec alignment before freeze |
-| `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile staging requirement with README; bind paths to actual repository layout |
+| `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile its preview/staging validation (§18) with FROZEN `DB_ENVIRONMENT_GOVERNANCE_V1.md`, which defers a separate staging environment (`DB-ENV-09`); bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
 
 ## 7. PLANNED normative specifications
@@ -109,6 +113,8 @@ Global invariants are cross-domain constraints. Their authoritative definition m
 | No-guess behavior | Distributed across current FROZEN rules; consolidation planned | Missing/uncertain source, location, identity, resolver and channel decisions |
 | Critical-action fail-closed behavior | `PLATFORM_CRITICAL_ACTIONS_V1.md` | Platform-critical destructive actions |
 | Rollback fail-closed behavior | `ROLLBACK_POLICY_V1.md` | Application/database/dataset recovery |
+| Production database write gate | `DB_ENVIRONMENT_GOVERNANCE_V1.md` | Every persistent mutation of the VECTOR Supabase Production environment |
+| Cross-source item identity (exact CIG UUID, no name join) and `NO_EVIDENCE != NEGATIVE_EVIDENCE` for external sources | `VECTOR_SOURCE_AUTHORITY_V1.md` | Every join or interpretation across external game-data and observation sources |
 
 Until No-Guess has one canonical normative home, this index records it as a global invariant only where an existing FROZEN specification explicitly states the applicable no-guess rule. The index does not create new domain behavior by itself.
 
@@ -139,7 +145,7 @@ docs/architecture/legacy/
 docs/reviews/archive/
 ```
 
-`RULE_SET_REVIEW_2026-10-29.md` is a `REVIEW_RECORD`, not a policy. Its findings are remediation inputs and remain historically unchanged after remediation.
+`archive/RULE_SET_REVIEW_2026-10-29.md` is a `REVIEW_RECORD`, not a policy. Its findings are remediation inputs and remain historically unchanged after remediation.
 
 | Review record | Status | Authority Scope | Authority |
 |---|---|---|---|
@@ -171,7 +177,7 @@ Before changing VECTOR behavior:
 5. If an applicable FROZEN conflict cannot be resolved by explicit supersession and scope, stop with `FROZEN_CONFLICT` instead of guessing.
 6. Follow the applicable validation/release gates before Production.
 
-A concise repository-root `AGENTS.md` should later point contributors and coding agents to this index rather than duplicating the full rule set.
+A concise repository-root `AGENTS.md` points contributors and coding agents to this index rather than duplicating the full rule set.
 
 ## 13. Known remediation queue from review 2026-10-29
 
@@ -182,7 +188,7 @@ A concise repository-root `AGENTS.md` should later point contributors and coding
 | R3 LIVE/PTU preview boundary | `RESOLVED` | Resolved by the governed full-document promotion of `VECTOR_VERSIONING_V1_1.md` as FROZEN and the simultaneous supersession registration of v1.0. `DATA_CONTEXT_MODEL_V1.md` remains PROPOSED and must reconcile with FROZEN v1.1 before its own freeze |
 | R4 migration gates and paths | `OPEN` | `MIGRATION_TEST_CONTRACT_V1.md` + README/repository layout |
 | R5 freeze lifecycle / ADR location | `OPEN` | `VECTOR_GOVERNANCE_V1.md` |
-| R6 contributor/agent entry point | `OPEN` | repository-root `AGENTS.md` |
+| R6 contributor/agent entry point | `RESOLVED` | repository-root `AGENTS.md` (pointer only; `CLAUDE.md` refers to it) |
 
 ## 14. Status decision
 
