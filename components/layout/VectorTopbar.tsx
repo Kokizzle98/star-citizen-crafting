@@ -4,6 +4,8 @@ import { AccountDrawer } from '@/components/account/AccountDrawer'
 import { getCrewContext } from '@/lib/groups/crew-context'
 import { CrewSelector } from '@/components/layout/CrewSelector'
 import { UnitControl } from '@/components/layout/UnitPreference'
+import { liveDatasetLabel } from '@/components/layout/dataset-label'
+import { SCMDB_BLUEPRINT_LIVE_SYNC_PIN } from '@/lib/blueprints/blueprint-sync-payload'
 
 type AppRole = 'USER' | 'ONTOLOGY_ADMIN' | 'SYSTEM_ADMIN'
 
@@ -49,6 +51,8 @@ export async function VectorTopbar() {
   ])
 
   const activeGroup = crewContext.activeGroup
+  const dataset = liveDatasetLabel(SCMDB_BLUEPRINT_LIVE_SYNC_PIN.version)
+  const datasetText = dataset.gameVersion ? `LIVE · ${dataset.gameVersion}` : 'LIVE'
 
   const nickname =
     profile?.nickname ??
@@ -66,12 +70,12 @@ export async function VectorTopbar() {
           type="button"
           className="vector-topbar__control"
           aria-disabled="true"
-          aria-label="Dataset: LIVE. Dataset-Auswahl folgt später."
-          title="Dataset-Auswahl (LIVE/PTU) folgt in einer späteren Version"
+          aria-label={`Dataset: ${datasetText.replace(' · ', ', Spielversion ')}. Dataset-Auswahl folgt später.`}
+          title={`Aktiver LIVE-Datensatz ${dataset.build} · Dataset-Auswahl (LIVE/PTU) folgt in einer späteren Version`}
         >
           <span className="vector-topbar__control-text">
             <span>DATASET</span>
-            <strong className="vector-topbar__live">● LIVE</strong>
+            <strong className="vector-topbar__live">● {datasetText}</strong>
           </span>
           <span aria-hidden="true">▾</span>
         </button>
