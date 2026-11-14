@@ -10,6 +10,8 @@ import { InventoryCrewOverview } from '@/components/inventory/InventoryCrewOverv
 import { QualityChip, QualityLegend } from '@/components/quality/QualityChip'
 import { EditInventoryLotForm } from '@/components/inventory/EditInventoryLotForm'
 import { useInventoryKeys } from '@/components/inventory/useInventoryKeys'
+import { KeyHelpDialog } from '@/components/inventory/KeyHelpDialog'
+import { KeyHintBar } from '@/components/inventory/KeyHintBar'
 import { inventoryEditInitialValue } from '@/lib/inventory/inventory-edit-display'
 import { INVENTORY_ERROR_MESSAGES, INVENTORY_SUCCESS_MESSAGES, type InventoryErrorCode } from '@/lib/inventory/inventory-error-messages'
 import type { InventoryLocationOption } from '@/lib/inventory/inventory-form-options'
@@ -400,6 +402,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
       >
         Filter zurücksetzen
       </button>
+      <KeyHelpDialog />
     </div>
 
     <p className="inventory-filter-result" role="status">
@@ -431,5 +434,6 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
             </Group>)}
           </div>
         </Group>)}
+    <KeyHintBar page={crewViewerUserId !== undefined ? 'crew' : 'own'} inlineEditorActive={editingLotId !== null} deleteConfirmOpen={deletingLotId !== null} />
   </section>
 }
