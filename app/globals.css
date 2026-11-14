@@ -2118,3 +2118,21 @@ h1, h2, h3,
   margin: 1rem 0 0;
   color: var(--muted);
 }
+
+/* Edit symbol on Crew Inventory (UX-5d): a link to Mein Inventory, navigation only. */
+.inventory-edit-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  border: 1px solid #2f6fd6;
+  border-radius: .35rem;
+  background: rgba(47, 111, 214, .18);
+  color: #8ab8ff;
+  text-decoration: none;
+}
+
+.inventory-edit-link:hover {
+  background: rgba(47, 111, 214, .32);
+}

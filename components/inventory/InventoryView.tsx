@@ -12,6 +12,10 @@ import { EditInventoryLotForm } from '@/components/inventory/EditInventoryLotFor
 import { useInventoryKeys } from '@/components/inventory/useInventoryKeys'
 import { KeyHelpDialog } from '@/components/inventory/KeyHelpDialog'
 import { KeyHintBar } from '@/components/inventory/KeyHintBar'
+import {
+  buildReturnState, editLinkHref, parseEditMarker, parseReturnMarker, returnHref, saveReturnState, takeReturnState,
+  type StorageLike,
+} from '@/lib/inventory/inventory-return-state'
 import { inventoryEditInitialValue } from '@/lib/inventory/inventory-edit-display'
 import { INVENTORY_ERROR_MESSAGES, INVENTORY_SUCCESS_MESSAGES, type InventoryErrorCode } from '@/lib/inventory/inventory-error-messages'
 import type { InventoryLocationOption } from '@/lib/inventory/inventory-form-options'
@@ -86,6 +90,10 @@ type Editing = {
   pending: boolean
   setPending: (pending: boolean) => void
   start: (id: string) => void
+  /** The editor was opened through the edit symbol on Crew Inventory: saving or cancelling it leads back to Crew Inventory. */
+  startFromCrew: (id: string) => void
+  /** Crew page only: remember the position before the jump to Mein Inventory. */
+  rememberPosition: (lotId: string) => void
   cancel: () => void
   success: (code: 'LOT_UPDATED' | 'LOT_MERGED') => void
   startDelete: (id: string) => void
@@ -94,6 +102,11 @@ type Editing = {
 }
 
 const lotKey = (row: InventoryRow) => `lot:${row.inventory_id}`
+
+/** sessionStorage can be missing or throw (private mode, blocked): then there is simply no saved position. */
+function sessionStore(): StorageLike | null {
+  try { return window.sessionStorage } catch { return null }
+}
 
 function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: MaterialUnits; mode: UnitMode; editing: Editing }) {
   return <div className="vector-inventory-table" role="region" aria-label="Lots" tabIndex={0}>
@@ -128,7 +141,10 @@ function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: Mat
                       else editing.deleteTriggerRefs.current.delete(row.inventory_id)
                     }} disabled={editing.pending} onClick={() => editing.startDelete(row.inventory_id)}>Löschen</button>}
                     {editing.crewViewerUserId !== undefined && (row.owner_user_id === editing.crewViewerUserId
-                      ? <Link href={`/vector/inventory#lot-${row.inventory_id}`}>In Mein Inventory bearbeiten</Link>
+? <Link className="inventory-edit-link" href={editLinkHref(row.inventory_id)} aria-label="In Mein Inventory bearbeiten" title="In Mein Inventory bearbeiten"
+                          onClick={() => editing.rememberPosition(row.inventory_id)}
+                          onKeyDown={(event) => { if (event.key === ' ') event.preventDefault() }}
+                          onKeyUp={(event) => { if (event.key === ' ') event.currentTarget.click() }}><span aria-hidden="true">✎</span></Link>
                       : <span>Nur ansehen</span>)}
                   </>}</td>
             </>}
@@ -161,6 +177,9 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
   const [pending, setPending] = useState(false)
   const [openGroups, setOpenGroups] = useState<ReadonlySet<string>>(new Set())
   const [highlightLotId, setHighlightLotId] = useState<string | null>(null)
+  // Lot whose editor was opened through the Crew edit symbol; saving or cancelling it leads back to Crew Inventory.
+  const [returnLotId, setReturnLotId] = useState<string | null>(null)
+  const [pendingScroll, setPendingScroll] = useState<number | null>(null)
   const [success, setSuccess] = useState<'LOT_UPDATED' | 'LOT_MERGED' | 'LOT_DELETED' | null>(null)
   const [error, setError] = useState<InventoryErrorCode | null>(null)
   const deletePending = useRef(false)
@@ -287,7 +306,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     if (!row || row.owner_user_id !== currentUserId) return null
     return inventoryEditInitialValue(row, materialKind(units, row.material)) ? row.inventory_id : null
   }
-  const { selectedKey } = useInventoryKeys({
+  const { selectedKey, path: keyPath, reveal } = useInventoryKeys({
     childKeys,
     openGroups,
     setGroupOpen,
@@ -307,19 +326,78 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
 
   const editing: Editing = {
     currentUserId, crewViewerUserId, locations: locationOptions, highlightLotId, selectedKey, editingLotId, deletingLotId, deleteCancelRef, editTriggerRefs, deleteTriggerRefs, pending, setPending,
-    start: (id) => { setSuccess(null); setError(null); setDeletingLotId(null); setEditingLotId(id) },
+    start: (id) => { setSuccess(null); setError(null); setDeletingLotId(null); setReturnLotId(null); setEditingLotId(id) },
+    startFromCrew: (id) => { editing.start(id); setReturnLotId(id) },
+    rememberPosition: (lotId) => {
+      saveReturnState(sessionStore(), lotId, buildReturnState({
+        view, open: [...openGroups], path: keyPath, selected: selectedKey, scrollY: window.scrollY,
+      }, Date.now()))
+    },
     cancel: () => { restoreEditFocusId.current = editingLotId; setEditingLotId(null) },
     success: (code) => { setEditingLotId(null); setSuccess(code); router.refresh() },
-    startDelete: (id) => { setSuccess(null); setError(null); setEditingLotId(null); setDeletingLotId(id) },
+    startDelete: (id) => { setSuccess(null); setError(null); setEditingLotId(null); setReturnLotId(null); setDeletingLotId(id) },
     cancelDelete: () => { restoreDeleteFocusId.current = deletingLotId; setDeletingLotId(null); setError(null) },
     confirmDelete,
   }
+  // On mount, once: the two ways a page is entered through the Crew round trip. The latest closure is kept in a ref
+  // so the mount effect needs no dependency list.
+  const onMount = useRef<() => void>(() => {})
+  useEffect(() => {
+    onMount.current = () => {
+      if (currentUserId !== null) {
+        // Mein Inventory, opened through the Crew symbol: select the lot and open its editor (same start as the button).
+        // Only with the marker and an own, editable lot; otherwise nothing opens.
+        const lotId = parseEditMarker(window.location.search, window.location.hash)
+        const row = lotId === null ? undefined : rows.find((candidate) => candidate.inventory_id === lotId)
+        if (lotId !== null && row && editableLotId(lotKey(row)) !== null) {
+          reveal([`G:m:${row.material}`], lotKey(row))
+          editing.startFromCrew(lotId)
+        }
+      }
+      if (crewViewerUserId !== undefined) {
+        // Crew Inventory, coming back: restore open groups, selection and scroll once; then forget the saved position.
+        const lotId = parseReturnMarker(window.location.search)
+        if (lotId === null) return
+        try { window.history.replaceState(window.history.state, '', window.location.pathname) } catch { /* the marker may stay in the URL */ }
+        const state = takeReturnState(sessionStore(), lotId, Date.now())
+        if (state === null) return
+        setView(state.view)
+        setOpenGroups(new Set(state.open))
+        reveal(state.path, state.selected)
+        setPendingScroll(state.scrollY)
+      }
+    }
+  })
+  const mounted = useRef(false)
+  useEffect(() => {
+    if (mounted.current) return // React strict mode runs mount effects twice in development
+    mounted.current = true
+    onMount.current()
+  }, [])
+  // Way back: the editor opened through the Crew symbol ends by saving or cancelling (every other way to end an
+  // edit clears `returnLotId` first). Then Crew Inventory restores the saved position (once, see above).
+  const previousEditingLotId = useRef<string | null>(null)
+  useEffect(() => {
+    const previous = previousEditingLotId.current
+    previousEditingLotId.current = editingLotId
+    if (previous !== null && editingLotId === null && returnLotId === previous) {
+      setReturnLotId(null)
+      router.replace(returnHref(previous))
+    }
+  }, [editingLotId, returnLotId, router])
+  // The groups are open in the DOM after the render that set `pendingScroll`.
+  useEffect(() => {
+    if (pendingScroll === null) return
+    window.scrollTo(0, pendingScroll)
+    setPendingScroll(null)
+  }, [pendingScroll])
+
   return <section className="inventory-view" aria-label={label}>
     <div role="status">{success ? INVENTORY_SUCCESS_MESSAGES[success] : null}</div>
     {error && <div role="alert">{INVENTORY_ERROR_MESSAGES[error]}</div>}
     <div className="inventory-view__controls" role="group" aria-label="Inventory Ansicht">
-      <button type="button" disabled={pending} aria-pressed={view === 'GLOBAL'} onClick={() => { setEditingLotId(null); setDeletingLotId(null); setError(null); setView('GLOBAL') }}>GLOBAL</button>
-      <button type="button" disabled={pending} aria-pressed={view === 'LOCATION'} onClick={() => { setEditingLotId(null); setDeletingLotId(null); setError(null); setView('LOCATION') }}>LOCATION</button>
+      <button type="button" disabled={pending} aria-pressed={view === 'GLOBAL'} onClick={() => { setEditingLotId(null); setReturnLotId(null); setDeletingLotId(null); setError(null); setView('GLOBAL') }}>GLOBAL</button>
+      <button type="button" disabled={pending} aria-pressed={view === 'LOCATION'} onClick={() => { setEditingLotId(null); setReturnLotId(null); setDeletingLotId(null); setError(null); setView('LOCATION') }}>LOCATION</button>
     </div>
     {!metadataAvailable && <p role="status">LIVE Materialdaten nicht verfügbar; Einheiten sind unbekannt.</p>}
     <InventoryKpiStrip rows={visibleRows} units={units} crew={crewViewerUserId !== undefined} />
@@ -447,6 +525,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
             </Group>)}
           </div>
         </Group>)}
-    <KeyHintBar page={crewViewerUserId !== undefined ? 'crew' : 'own'} inlineEditorActive={editingLotId !== null} deleteConfirmOpen={deletingLotId !== null} ownLotSelected={editableLotId(selectedKey) !== null} />
+    <KeyHintBar page={crewViewerUserId !== undefined ? 'crew' : 'own'} inlineEditorActive={editingLotId !== null} deleteConfirmOpen={deletingLotId !== null} ownLotSelected={editableLotId(selectedKey) !== null}
+      groupSelected={selectedKey !== null && !selectedKey.startsWith('lot:') && currentUserId !== null && locationOptions !== null} />
   </section>
 }

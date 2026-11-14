@@ -33,6 +33,9 @@ export type KeyHelpEntry = {
   needsOwnLot?: boolean
 }
 
+/** Hint for D / F while a material or location row is selected on Mein Inventory. */
+export const OPEN_THEN_EDIT_HINT = 'öffnen, dann B bearbeiten'
+
 export const KEY_HELP: readonly KeyHelpEntry[] = [
   { id: 'select', label: 'W / S', keys: ['w', 's'], action: 'select-prev', context: 'inventory',
     text: 'Eintrag davor / danach wählen', short: 'wählen', hintIn: ['normal'] },
@@ -87,10 +90,20 @@ export function hintState(state: { page: 'own' | 'crew'; inlineEditorActive: boo
 }
 
 /** The entries the hint bar shows in the given page state. */
-export function hintEntries(state: { page: 'own' | 'crew'; inlineEditorActive: boolean; deleteConfirmOpen: boolean; ownLotSelected?: boolean }): KeyHelpEntry[] {
+export function hintEntries(state: {
+  page: 'own' | 'crew'
+  inlineEditorActive: boolean
+  deleteConfirmOpen: boolean
+  ownLotSelected?: boolean
+  /** Mein Inventory: a material or location row is selected (no lot yet) and own lots can be edited. */
+  groupSelected?: boolean
+}): KeyHelpEntry[] {
   const current = hintState(state)
   const ownLot = state.page === 'own' && state.ownLotSelected === true
-  return KEY_HELP.filter((entry) => entry.hintIn.includes(current) && (!entry.needsOwnLot || ownLot))
+  const group = state.page === 'own' && state.groupSelected === true && !ownLot
+  return KEY_HELP
+    .filter((entry) => entry.hintIn.includes(current) && (!entry.needsOwnLot || ownLot))
+    .map((entry) => (entry.id === 'open' && group && current === 'normal' ? { ...entry, short: OPEN_THEN_EDIT_HINT } : entry))
 }
 
 /** Entries of one context for the overview, in table order. */
