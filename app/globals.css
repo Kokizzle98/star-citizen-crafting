@@ -1539,7 +1539,29 @@
   gap: .4rem .9rem;
   padding: .65rem .8rem;
   cursor: pointer;
-  list-style-position: inside;
+  list-style: none;
+}
+
+/* The native marker disappears with display:flex / list-style: none; an own, visible indicator replaces it.
+   The shape changes (closed ▸, open ▾), so it does not rely on colour alone. */
+.fabricator-disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+
+.fabricator-disclosure__summary::before {
+  content: '▸';
+  content: '▸' / '';
+  flex: none;
+  width: 1em;
+  color: var(--cyan);
+  font-size: .9rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.fabricator-disclosure[open] > .fabricator-disclosure__summary::before {
+  content: '▾';
+  content: '▾' / '';
 }
 
 .fabricator-disclosure__summary:focus-visible {

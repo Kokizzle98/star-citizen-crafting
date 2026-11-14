@@ -394,9 +394,13 @@ function VariantChooser({ family, current, label, differs, onChoose }: {
   differs: (variant: FabricatorVariantView) => boolean
   onChoose: (variant: FabricatorVariantView) => void
 }) {
-  const [open, setOpen] = useState(false)
+  const [open, setOpenState] = useState(false)
+  // Raised only by a variant pick: the focus goes back to the summary line (the pick button is hidden by then).
+  // A plain toggle on the summary goes through `setOpenState` and does not move the focus.
+  const [focusSignal, setFocusSignal] = useState(0)
+  const setOpen = (next: boolean) => { setOpenState(next); setFocusSignal(signal => signal + 1) }
   return (
-    <FabricatorDisclosure className="fabricator-variant" open={open} onOpenChange={setOpen}
+    <FabricatorDisclosure className="fabricator-variant" open={open} onOpenChange={setOpenState} focusSummarySignal={focusSignal}
       summary={<>
         <span className="fabricator-disclosure__label">Variante</span>
         <strong>{label(current)}</strong>
