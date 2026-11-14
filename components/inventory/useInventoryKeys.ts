@@ -46,7 +46,13 @@ export function useInventoryKeys({
   resetFilters: () => void
   /** Key B on the selected entry; true if an editor was opened. The view checks ownership and editability. */
   onEdit: (selectedKey: string) => boolean
-}): { selectedKey: string | null } {
+}): {
+  selectedKey: string | null
+  /** Entered groups (valid ones only). */
+  path: string[]
+  /** Sets the entered groups and the selection from outside (return from another page, jump to a lot). Keys only; opens nothing. */
+  reveal: (path: string[], selected: string | null) => void
+} {
   const [enteredPath, setEnteredPath] = useState<string[]>([])
   const [selected, setSelected] = useState<string | null>(null)
 
@@ -113,5 +119,10 @@ export function useInventoryKeys({
     }
   })
 
-  return { selectedKey }
+  function reveal(nextPath: string[], nextSelected: string | null) {
+    setEnteredPath(nextPath)
+    setSelected(nextSelected)
+  }
+
+  return { selectedKey, path, reveal }
 }
