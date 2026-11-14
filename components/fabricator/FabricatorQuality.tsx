@@ -1,6 +1,7 @@
 'use client'
 
 import { QualityChip, QualityLegend } from '@/components/quality/QualityChip'
+import { FabricatorDisclosure } from './FabricatorDisclosure'
 import { useMemo, useState, type KeyboardEvent } from 'react'
 import type { FabricatorBaselineView, FabricatorPropertyView, FabricatorRecipeView } from '@/lib/fabricator/fabricator-catalog'
 import type { FabricatorRecipeCraftability } from '@/lib/fabricator/fabricator-craftability'
@@ -121,6 +122,18 @@ export function FabricatorQuality({ recipe, baselines, properties, preset, craft
   return (
     <section className="fabricator-quality" aria-labelledby="fabricator-quality-title">
       <h3 id="fabricator-quality-title">Qualität &amp; Produktwerte</h3>
+      {rows.length === 0
+        ? <p className="fabricator-notice">Dieses Rezept enthält keine Qualitätsmodifikatoren.</p>
+        : <div className="vector-inventory-table fabricator-stats" role="region" aria-label="Produktwerte" tabIndex={0}>
+            <table>
+              <thead><tr>
+                <th scope="col">Wert</th><th scope="col">Basis</th><th scope="col">Gecraftet</th>
+                <th scope="col">Δ absolut</th><th scope="col">Δ %</th><th scope="col">Status</th>
+              </tr></thead>
+              <tbody>{rows.map(row => <StatRow key={row.propertyKey} row={row} recipe={recipe} />)}</tbody>
+            </table>
+          </div>}
+
       <QualityLegend />
 
       <dl className="fabricator-quality__summary">
@@ -139,88 +152,81 @@ export function FabricatorQuality({ recipe, baselines, properties, preset, craft
         Qualität des gecrafteten Items.
       </p>
 
-      <fieldset className="fabricator-choice">
-        <legend>Alle Materialien gemeinsam setzen</legend>
-        <p className="fabricator-muted">Setzt alle Materialien auf einen Wert. Danach ist jedes Material wieder einzeln einstellbar.</p>
-        <QualityInput id="fabricator-quality-all" label="Qualität für alle Materialien" value={bulk} onChange={setAll} />
-        <div className="fabricator-choice__options">
-          <button type="button" disabled={!anyAvailable}
-            onClick={() => setQualities(initialSlotQualities(recipe.slots, craftability))}>
-            Auf verfügbare Material-Qualitäten zurücksetzen
-          </button>
-          <button type="button" disabled={presetQuality === null}
-            onClick={() => presetQuality !== null && setAll(presetQuality)}>
-            Alle auf gemeinsames Preset{presetQuality !== null ? ` (Q${presetQuality})` : ''}
-          </button>
-        </div>
-      </fieldset>
-
-      {relevant.length > 0 && (
-        <ul className="fabricator-quality__materials" aria-label="Qualität je Material">
-          {relevant.map(slot => {
-            const quality = qualities[slot.slotKey]
-            const own = available(slot.slotKey)
-            return (
-              <li key={slot.slotKey} className="fabricator-quality__material">
-                <p>
-                  <strong>{slot.material.name}</strong> <span className="fabricator-muted">· {slot.name}</span>
-                  <span className="fabricator-material__quality">
-                    {own !== null ? <>Verfügbar: <QualityChip quality={own} /> (bestmöglich, mengengewichtet)</> : 'Verfügbar: kein ausreichender nutzbarer Bestand'}
-                    {slot.material.minQuality > 0 ? ` · Mindestqualität Q${slot.material.minQuality}` : ''}
-                  </span>
-                </p>
-                <QualityInput id={`fabricator-quality-slot-${slot.slotKey}`} label={`Qualität ${slot.material.name} (${slot.name})`}
-                  value={quality} onChange={value => setOne(slot.slotKey, value)} />
-                <ul className="fabricator-quality__effects" aria-label={`Auswirkung von ${slot.material.name}`}>
-                  {rows.filter(row => row.slotKeys.includes(slot.slotKey)).map(row => {
-                    const contribution = row.contributions.find(c => c.slotKey === slot.slotKey)
-                    return (
-                      <li key={row.propertyKey}>
-                        Beeinflusst {row.name}:{' '}
-                        {contribution && contribution.value !== null
-                          ? formatContribution(contribution.operation, contribution.value)
-                          : <span className="fabricator-muted">kein SCMDB-Modifikator für Q{quality}</span>}
-                      </li>
-                    )
-                  })}
-                </ul>
-                {own !== null && quality > own && (
-                  <p className="fabricator-notice fabricator-notice--warning" role="status">
-                    <span aria-hidden="true">⚠</span> Q{quality} ist eine Simulation und wird durch den aktuellen Bestand nicht garantiert (verfügbar: Q{own}).
-                  </p>
-                )}
-                {quality < slot.material.minQuality && (
-                  <p className="fabricator-notice fabricator-notice--warning" role="status">
-                    <span aria-hidden="true">⚠</span> Q{quality} liegt unter der Mindestqualität Q{slot.material.minQuality}. Ingame wäre das so nicht herstellbar.
-                  </p>
-                )}
-              </li>
-            )
-          })}
-        </ul>
-      )}
-      {withoutEffect.length > 0 && (
-        <p className="fabricator-muted">
-          Ohne Einfluss auf Produktwerte (laut SCMDB): {withoutEffect.map(slot => `${slot.material.name} (${slot.name})`).join(', ')}
-        </p>
-      )}
       {!anyAvailable && (
         <p className="fabricator-notice" role="status">
           <span aria-hidden="true">ℹ</span> Die Materialqualitäten sind eine Simulation. Ob der Bestand sie erlaubt, ist nicht belegt.
         </p>
       )}
 
-      {rows.length === 0
-        ? <p className="fabricator-notice">Dieses Rezept enthält keine Qualitätsmodifikatoren.</p>
-        : <div className="vector-inventory-table fabricator-stats" role="region" aria-label="Produktwerte" tabIndex={0}>
-            <table>
-              <thead><tr>
-                <th scope="col">Wert</th><th scope="col">Basis</th><th scope="col">Gecraftet</th>
-                <th scope="col">Δ absolut</th><th scope="col">Δ %</th><th scope="col">Status</th>
-              </tr></thead>
-              <tbody>{rows.map(row => <StatRow key={row.propertyKey} row={row} recipe={recipe} />)}</tbody>
-            </table>
-          </div>}
+      <FabricatorDisclosure className="fabricator-disclosure--quality"
+        summary={<><strong>Material-Qualität im Detail</strong>
+          <span className="fabricator-disclosure__hint">{relevant.length > 0 ? formatQualityRange(relevant.map(slot => qualities[slot.slotKey])) : 'keine Materialien mit Einfluss'}</span></>}>
+        <fieldset className="fabricator-choice">
+          <legend>Alle Materialien gemeinsam setzen</legend>
+          <p className="fabricator-muted">Setzt alle Materialien auf einen Wert. Danach ist jedes Material wieder einzeln einstellbar.</p>
+          <QualityInput id="fabricator-quality-all" label="Qualität für alle Materialien" value={bulk} onChange={setAll} />
+          <div className="fabricator-choice__options">
+            <button type="button" disabled={!anyAvailable}
+              onClick={() => setQualities(initialSlotQualities(recipe.slots, craftability))}>
+              Auf verfügbare Material-Qualitäten zurücksetzen
+            </button>
+            <button type="button" disabled={presetQuality === null}
+              onClick={() => presetQuality !== null && setAll(presetQuality)}>
+              Alle auf gemeinsames Preset{presetQuality !== null ? ` (Q${presetQuality})` : ''}
+            </button>
+          </div>
+        </fieldset>
+
+        {relevant.length > 0 && (
+          <ul className="fabricator-quality__materials" aria-label="Qualität je Material">
+            {relevant.map(slot => {
+              const quality = qualities[slot.slotKey]
+              const own = available(slot.slotKey)
+              return (
+                <li key={slot.slotKey} className="fabricator-quality__material">
+                  <p>
+                    <strong>{slot.material.name}</strong> <span className="fabricator-muted">· {slot.name}</span>
+                    <span className="fabricator-material__quality">
+                      {own !== null ? <>Verfügbar: <QualityChip quality={own} /> (bestmöglich, mengengewichtet)</> : 'Verfügbar: kein ausreichender nutzbarer Bestand'}
+                      {slot.material.minQuality > 0 ? ` · Mindestqualität Q${slot.material.minQuality}` : ''}
+                    </span>
+                  </p>
+                  <QualityInput id={`fabricator-quality-slot-${slot.slotKey}`} label={`Qualität ${slot.material.name} (${slot.name})`}
+                    value={quality} onChange={value => setOne(slot.slotKey, value)} />
+                  <ul className="fabricator-quality__effects" aria-label={`Auswirkung von ${slot.material.name}`}>
+                    {rows.filter(row => row.slotKeys.includes(slot.slotKey)).map(row => {
+                      const contribution = row.contributions.find(c => c.slotKey === slot.slotKey)
+                      return (
+                        <li key={row.propertyKey}>
+                          Beeinflusst {row.name}:{' '}
+                          {contribution && contribution.value !== null
+                            ? formatContribution(contribution.operation, contribution.value)
+                            : <span className="fabricator-muted">kein SCMDB-Modifikator für Q{quality}</span>}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  {own !== null && quality > own && (
+                    <p className="fabricator-notice fabricator-notice--warning" role="status">
+                      <span aria-hidden="true">⚠</span> Q{quality} ist eine Simulation und wird durch den aktuellen Bestand nicht garantiert (verfügbar: Q{own}).
+                    </p>
+                  )}
+                  {quality < slot.material.minQuality && (
+                    <p className="fabricator-notice fabricator-notice--warning" role="status">
+                      <span aria-hidden="true">⚠</span> Q{quality} liegt unter der Mindestqualität Q{slot.material.minQuality}. Ingame wäre das so nicht herstellbar.
+                    </p>
+                  )}
+                </li>
+              )
+            })}
+          </ul>
+        )}
+        {withoutEffect.length > 0 && (
+          <p className="fabricator-muted">
+            Ohne Einfluss auf Produktwerte (laut SCMDB): {withoutEffect.map(slot => `${slot.material.name} (${slot.name})`).join(', ')}
+          </p>
+        )}
+      </FabricatorDisclosure>
     </section>
   )
 }

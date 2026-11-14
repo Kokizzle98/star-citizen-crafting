@@ -1525,6 +1525,77 @@
   margin-top: 1.25rem;
 }
 
+/* UX-6a: uniform collapse pattern (native details/summary, keyboard and AT built in). */
+.fabricator-disclosure {
+  margin-top: 1rem;
+  border: 1px solid var(--line);
+  border-radius: .45rem;
+}
+
+.fabricator-disclosure__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .4rem .9rem;
+  padding: .65rem .8rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+/* The native marker disappears with display:flex / list-style: none; an own, visible indicator replaces it.
+   The shape changes (closed ▸, open ▾), so it does not rely on colour alone. */
+.fabricator-disclosure__summary::-webkit-details-marker {
+  display: none;
+}
+
+.fabricator-disclosure__summary::before {
+  content: '▸';
+  content: '▸' / '';
+  flex: none;
+  width: 1em;
+  color: var(--cyan);
+  font-size: .9rem;
+  line-height: 1;
+  text-align: center;
+}
+
+.fabricator-disclosure[open] > .fabricator-disclosure__summary::before {
+  content: '▾';
+  content: '▾' / '';
+}
+
+.fabricator-disclosure__summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.fabricator-disclosure__label,
+.fabricator-disclosure__hint {
+  color: var(--muted);
+  font-size: .8rem;
+}
+
+.fabricator-disclosure__action {
+  margin-left: auto;
+  color: var(--cyan);
+  font-size: .85rem;
+}
+
+.fabricator-disclosure[open] > .fabricator-disclosure__summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.fabricator-disclosure__body {
+  min-width: 0;
+  padding: .25rem .8rem .8rem;
+}
+
+.fabricator-disclosure__body > .fabricator-choice:first-child {
+  margin-top: .5rem;
+  border: 0;
+  padding: 0;
+}
+
 .fabricator-set {
   margin-top: 1.25rem;
 }
