@@ -141,8 +141,10 @@ function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: Mat
                       else editing.deleteTriggerRefs.current.delete(row.inventory_id)
                     }} disabled={editing.pending} onClick={() => editing.startDelete(row.inventory_id)}>Löschen</button>}
                     {editing.crewViewerUserId !== undefined && (row.owner_user_id === editing.crewViewerUserId
-                      ? <Link className="inventory-edit-link" href={editLinkHref(row.inventory_id)} aria-label="In Mein Inventory bearbeiten" title="In Mein Inventory bearbeiten"
-                          onClick={() => editing.rememberPosition(row.inventory_id)}><span aria-hidden="true">✎</span></Link>
+? <Link className="inventory-edit-link" href={editLinkHref(row.inventory_id)} aria-label="In Mein Inventory bearbeiten" title="In Mein Inventory bearbeiten"
+                          onClick={() => editing.rememberPosition(row.inventory_id)}
+                          onKeyDown={(event) => { if (event.key === ' ') event.preventDefault() }}
+                          onKeyUp={(event) => { if (event.key === ' ') event.currentTarget.click() }}><span aria-hidden="true">✎</span></Link>
                       : <span>Nur ansehen</span>)}
                   </>}</td>
             </>}
