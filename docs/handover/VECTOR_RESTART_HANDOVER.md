@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v6 (counted up from v5; checkpoint rotation after PR #66, base commit `3f29025addb837901d35bc988a9ff10750d1e38d`)
+- Document version: v7 (counted up from v6; checkpoint rotation after PR #72, base commit `914bbe0d113179c2b5d27db18b36500723821a8a`)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -13,17 +13,17 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `UX series (UX-4 to UX-6)`. UX-1 (quality tiers, #61), UX-2 (shell and branding, #62), UX-3a (Mein Inventory / Crew Inventory split, #64) and UX-3b (material rows, depth indicator, KPI strip, #66) are done. Each UX work package is its own pull request and its own session; binding specification is `docs/frozen/INVENTORY_UX_V1_1.md`.
+- Work package: `UX series (UX-6 and the implementation packages of Inventory UX v1.2)`. UX-1 (quality tiers, #61), UX-2 (shell and branding, #62), UX-3a (Mein Inventory / Crew Inventory split, #64), UX-3b (material rows, depth indicator, KPI strip, #66), UX-4 (Crew overview, #68), UX-5 (key set, #69) and UX-5b (key help, #70) are done; Inventory UX v1.2 is FROZEN (#71, #72). Each UX work package is its own pull request and its own session; binding specification is `docs/frozen/INVENTORY_UX_V1_2.md`.
 - Branch: `develop` (each UX work package works on its own feature branch)
 - Base: `develop`
-- Checkpoint date: `2026-11-13`
-- Work-package base (historical): `3f29025addb837901d35bc988a9ff10750d1e38d`
-- Active checkpoint anchor: `3f29025addb837901d35bc988a9ff10750d1e38d`
+- Checkpoint date: `2026-11-14`
+- Work-package base (historical): `914bbe0d113179c2b5d27db18b36500723821a8a`
+- Active checkpoint anchor: `914bbe0d113179c2b5d27db18b36500723821a8a`
 - Working-tree expectation: `CLEAN`
 - Active PR: none at rotation time; each UX work package opens its own pull request against `develop`
 - PR base: `develop`
 
-The active anchor is the verified `develop` head after PR #66. The allowed scope below authorizes the documentation rotation and the planned UX series paths only: no migration, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #72. The allowed scope below authorizes the documentation rotation and the planned UX series paths only: no migration, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
@@ -36,6 +36,7 @@ Allowed scope after the active checkpoint anchor (exactly these paths):
 - `components/layout/`
 - `components/quality/`
 - `lib/inventory/`
+- `lib/keyboard/`
 - `lib/quality/`
 - `tests/`
 
@@ -91,6 +92,10 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#62` (UX-2 design foundations and shell): merged into `develop` on 2026-11-13 as `8b98db7`.
 - PR `#64` (UX-3a Mein Inventory / Crew Inventory split): merged into `develop` on 2026-11-13 as `6f10bf1`.
 - PR `#66` (UX-3b material rows with average and range, depth indicator, KPI strip): merged into `develop` on 2026-11-13 as `3f29025`.
+- PR `#68` (UX-4 Crew Inventory overview, variant A): merged into `develop` on 2026-11-14 as `463d91d`.
+- PR `#69` (UX-5 global key set): merged into `develop` on 2026-11-14 as `77ee94a`.
+- PR `#70` (UX-5b key help): merged into `develop` on 2026-11-14 as `c483aa9`.
+- PR `#71` (Inventory UX v1.2 proposal) and PR `#72` (promotion to FROZEN, `INVENTORY_UX_V1_1.md` superseded, `docs/RULE_INDEX.md` v1.3): merged into `develop` on 2026-11-14 as `6e3ba14` and `914bbe0`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -135,7 +140,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`UX series` (owner priority, 2026-11-13): design mock-ups approved by the owner; specification `INVENTORY_UX_V1_1.md` FROZEN. Order, one work package per session: UX-1 **DONE**, UX-2 **DONE**, UX-3a **DONE**, UX-3b **DONE**, UX-4 (Crew Inventory overview, player level) next, UX-5, UX-6. No database change is part of this series.
+`UX series` (owner priority, 2026-11-13): design mock-ups approved by the owner; specification `INVENTORY_UX_V1_2.md` FROZEN (`INVENTORY_UX_V1_1.md` superseded). Order, one work package per session: UX-1 **DONE**, UX-2 **DONE**, UX-3a **DONE**, UX-3b **DONE**, UX-4 **DONE**, UX-5 **DONE**, UX-5b **DONE**, UX-6 (icons, dashboard polish) next; afterwards the `B` key with its hint (section 13.1, 13.2) and the Crew edit symbol with jump and return (section 3.1). No database change is part of this series.
 
 Previous active package `Fabricator Phase 1`: F1 to F3 are **DONE**; F4 (gameplay relevance) is in the evidence phase. Current state (2026-11-12):
 
@@ -434,4 +439,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Start UX-4 as its own session and pull request against `develop`: Crew Inventory overview with the player level. Binding specification: `docs/frozen/INVENTORY_UX_V1_1.md`. No Production mutation. Afterwards UX-5 and UX-6; then the owner chooses the next package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation). The licence / redistribution decision for scunpacked-data stays open. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Start UX-6 (icons, dashboard polish) as its own session and pull request against `develop`. Binding specification: `docs/frozen/INVENTORY_UX_V1_2.md`. No Production mutation. Afterwards the implementation packages from v1.2, each its own session: (a) `B` key and the hint "B bearbeiten"; (b) Crew edit symbol with jump to Mein Inventory (opens the lot's editor) and return. Open owner wishes, not commissioned: Crew Inventory background image, material image (source and rights unresolved). Then the owner chooses the next package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation). The licence / redistribution decision for scunpacked-data stays open. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
