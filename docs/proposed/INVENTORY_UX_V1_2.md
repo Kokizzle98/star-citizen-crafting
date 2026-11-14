@@ -213,7 +213,7 @@ Both inventory pages show a read-only strip "Kennzahlen" above the filters:
 | Figure | Meaning |
 |---|---|
 | Materialien | number of distinct materials |
-| Menge SCU | total quantity of VOLUME materials |
+| Menge SCU | total quantity of VOLUME materials, formatted with the active unit preference (AUTO/SCU/cSCU/mSCU/µSCU); the displayed value always includes its concrete unit |
 | Menge Stück | total quantity of COUNT materials (pieces) |
 | Lots | number of lots ("dein Bestand" on Mein Inventory, "Crew-Bestand" on Crew Inventory) |
 | Zuletzt geändert | most recent lot update: "heute, HH:mm" if it lies on the current calendar day (Europe/Berlin), otherwise "TT.MM.JJJJ"; "–" without a timestamp |
