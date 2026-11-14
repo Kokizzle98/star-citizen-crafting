@@ -4,9 +4,9 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v7 (counted up from v6; checkpoint rotation after PR #72)
-- **State verified through commit:** `914bbe0d113179c2b5d27db18b36500723821a8a`
-- **Updated by work package:** Checkpoint rotation after PR #72 (develop `914bbe0`): UX-4, UX-5, UX-5b and Inventory UX v1.2 done, UX-6 next
+- **Document version:** v8 (counted up from v7; checkpoint rotation after PR #77, Rotation-9)
+- **State verified through commit:** `de12e8f5a1881e630b5eaf240bfcd84be7ab6af5`
+- **Updated by work package:** Checkpoint rotation after PR #77 (develop `de12e8f`, Rotation-9, documentation only): UX-5c, UX-5d, UX-6a and UX-6b done, release `develop` to `main` next
 - **Checkpoint date:** 2026-11-14
 
 ## How to read this file
@@ -51,11 +51,16 @@
 - UX-5 global key set: **DONE**. #69 (`77ee94a`): keys per section 13.1 (W/S, D/F, A, Q/E, T, R, 1 to 4; 5 and 6 "BALD"), Esc order. `lib/keyboard/key-set.ts`, `components/layout/useKeySet.ts`. No new write path.
 - UX-5b key help: **DONE**. #70 (`c483aa9`): hint bar per state and "Tastenhilfe" overview, table in `lib/keyboard/key-help.ts`, tested against the key logic. Display only.
 - Inventory UX v1.2: **DONE**. #71 (`6e3ba14`) proposal, #72 (`914bbe0`) promotion to FROZEN as full-document successor; `INVENTORY_UX_V1_1.md` registered `SUPERSEDED` (`docs/RULE_INDEX.md` v1.3). Documentation only.
+- Checkpoint rotation after PR #72 (Rotation-8): **DONE**. #73 (`16dc3d3`): PROJECT_STATE v7, handover v7, anchor `914bbe0`, allowed scope adds `lib/keyboard/`. Documentation only.
+- UX-5c `B` key: **DONE**. #74 (`de31ad5`): action `edit` (`INVENTORY_UX_V1_2.md` section 13.1), hint "B bearbeiten" only with a selected own lot on Mein Inventory (section 13.2); starts the same editor as the edit button; no key for deleting. No new write path.
+- UX-5d Crew edit symbol with jump and return: **DONE**. #75 (`8ea2425`): the symbol on own lots in Crew Inventory (link "In Mein Inventory bearbeiten") opens the editor of exactly that lot; save or cancel returns to the saved position (`lib/inventory/inventory-return-state.ts`); hint "öffnen, dann B bearbeiten" on material and location rows. Display and navigation only.
+- UX-6a Fabricator clarity pass and dataset label in the header: **DONE**. #76 (`c4d60fe`): `Rezept & Crew-Bestand` and `Material-Qualität im Detail` are collapsed (`components/fabricator/FabricatorDisclosure.tsx`, native `details` / `summary` with own indicator and focus on the variant row after the choice), the variant choice is one compact row after selection, and the header shows `LIVE · 4.10.2` taken from the existing repository-pinned dataset (`components/layout/dataset-label.ts`, LIVE only, no selection, no second hard-coded version). No functional change.
+- UX-6b Dashboard polish: **DONE**. #77 (`de12e8f`): Inventory card is a link, uniform card footers, status with glyph, readable contrast, labelled project state, and the entry hint for new users names the crew membership first ("Neu hier? Du brauchst zuerst eine Crew-Mitgliedschaft: Lass dich von deiner Crew einladen.") with a link to Mein Inventory. Display only.
 - Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`; #56 (`6586108`) public-repo boundary clarification and checkpoint rotation. Documentation only, no Production mutation.
 
 ## ACTIVE
 
-- UX series (owner priority: a usable, good-looking app for the owner and the first outside tester). Design mock-ups approved by the owner on 2026-11-13. Order, one work package per session: UX-1 (quality tiers) **DONE**, UX-2 (shell and branding) **DONE**, UX-3a (Mein Inventory / Crew Inventory split, Crew page read-only) **DONE**, UX-3b (material rows with average and range, depth indicator, KPI strip) **DONE**, UX-4 (Crew Inventory overview) **DONE**, UX-5 (global key set) **DONE**, UX-5b (key help) **DONE**, UX-6 (icons, dashboard polish) next. Binding specification: `docs/frozen/INVENTORY_UX_V1_2.md`.
+- UX series (owner priority: a usable, good-looking app for the owner and the first outside tester). Design mock-ups approved by the owner on 2026-11-13. Order, one work package per session: UX-1 (quality tiers) **DONE**, UX-2 (shell and branding) **DONE**, UX-3a (Mein Inventory / Crew Inventory split, Crew page read-only) **DONE**, UX-3b (material rows with average and range, depth indicator, KPI strip) **DONE**, UX-4 (Crew Inventory overview) **DONE**, UX-5 (global key set) **DONE**, UX-5b (key help) **DONE**, UX-5c (`B` key) **DONE**, UX-5d (Crew edit symbol with jump and return) **DONE**, UX-6a (Fabricator clarity pass, dataset label) **DONE**, UX-6b (dashboard polish) **DONE**. The series is complete as planned; remaining open points are listed under OPEN DECISIONS. Binding specification: `docs/frozen/INVENTORY_UX_V1_2.md`.
 
 ## PAUSED
 
@@ -67,19 +72,23 @@
 
 ## NEXT
 
-1. UX-6 (icons, dashboard polish). Afterwards implementation packages from `INVENTORY_UX_V1_2.md`, each its own session:
-   - (a) `B` key (section 13.1) and the hint "B bearbeiten" in the hint bar (section 13.2);
-   - (b) Crew edit symbol with jump to Mein Inventory (the lot's inline editor opens) and return (section 3.1). Today the link only jumps to the lot and highlights it; it does not open the editor.
-   - Open owner wishes (not commissioned): background image for Crew Inventory, material image. Image source and rights are unresolved.
-2. After the UX series the owner chooses the next package (candidates: F4-B and a UEX source foundation, each as its own package, only after an explicit owner decision). F4-B (gameplay relevance / exclusion contract) and a UEX source foundation stay separate work packages. The licence / redistribution decision for scunpacked-data stays open and is tracked below.
-3. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
+1. Release `develop` to `main` (formal release boundary, `VECTOR_GOVERNANCE_V1` section 3.3 and 8), as its own session and pull request `develop` -> `main`. Merge method: **merge commit** (no squash, no rebase); see `docs/handover/VECTOR_RESTART_HANDOVER.md` section 6. `main` (`eb6f108`, PR #11) is an ancestor of `develop`, so the merge is conflict-free and `data/` is identical on both. Before the merge: the Project Lead compares the migration objects with Production read-only and the owner gives the release gate. Merging does not apply any migration (`DB-ENV-07`); no Production mutation is part of the release.
+2. Dataset package (owner, planned for the week after this rotation): the SCMDB data sync workflow (see OPEN DECISIONS) and the dataset handling around it.
+3. Small follow-ups from the open points below (crew invitation UI, dashboard milestone text, links in the empty states), each its own package only after an owner decision.
+4. After that the owner chooses the next package (candidates: F4-B and a UEX source foundation, each as its own package, only after an explicit owner decision). F4-B (gameplay relevance / exclusion contract) and a UEX source foundation stay separate work packages. The licence / redistribution decision for scunpacked-data stays open and is tracked below. Open owner wishes (not commissioned): background image for Crew Inventory, material image. Image source and rights are unresolved.
+5. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
 
 ## OPEN DECISIONS
 
 - Licence and redistribution of scunpacked-data (no licence file): unresolved. Option B keeps the index local and uncommitted until this is decided; a later move to option A or A′ needs its own owner decision. No other owner decision is pending for the current work package.
-- Later UX work package (not started): compact lot / location display in the Fabricator, grouping by player and location, progressive disclosure, and a clear distinction between "available in the crew" and "available at one place".
+- Later UX work package (not started): compact lot / location display in the Fabricator, grouping by player and location, further progressive disclosure (the collapsible recipe and quality sections are done in UX-6a), and a clear distinction between "available in the crew" and "available at one place".
 - `SCMDB_SOURCE_AUTHORITY_V1` is absorbed by the FROZEN `VECTOR_SOURCE_AUTHORITY_V1`; `PROVIDER_AUTHORITY_V1` (user-state providers) stays PLANNED.
 - Known items that will need a decision later, none started: a later UX / design pass (blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, the narrow app shell / sidebar on small screens); the known crew `active_group` inconsistency (`getCrewContext()` falls back to the first crew while the crew RPCs report `ACTIVE_GROUP_REQUIRED`), deliberately unchanged; the `Crew Security Hardening` work package (LOW to MEDIUM findings, due before the first user outside the current test group); archiving or removing the legacy audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders (separate Cleanup Gate); Rule Index remediation items R1, R2, R4 and R5; the later WP-AOM-01 gates (Security Finding Register, Backup Gate, Cleanup Gate), which stay separate future work.
+- Open points found before the release (2026-11-14, none started, none blocks the release):
+  - **No crew invitation UI.** The database has `invite_group_member` and `respond_group_invite`, but no page or component calls them (only `set_active_group` and the read RPCs are used). Issuing an invitation (crew owner) and accepting it (invited user) are missing. The dashboard hint "Lass dich von deiner Crew einladen" therefore has no in-app path.
+  - **Data sync pushes directly to the default branch and is failing.** `.github/workflows/sync-scmdb-data.yml` (daily, `contents: write`) commits and pushes `data/scmdb` directly to the checked-out default branch (`develop`), outside the pull request flow. It is reported failing since 2026-10-29; the last data commit is from that day. The dataset package (see NEXT) takes this on.
+  - **Dashboard milestone text is outdated.** `app/vector/page.tsx` still shows `NÄCHSTER MEILENSTEIN: Fabricator Quality & Stats`, although F3 is done.
+  - **Empty states without a link.** The empty states in `app/vector/inventory/page.tsx` and `app/vector/inventory/crew/page.tsx` give a text only, no link to the next action.
 
 ## OPEN INFRASTRUCTURE WORK
 
