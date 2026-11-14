@@ -85,6 +85,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; complete remaining cross-spec alignment before freeze |
 | `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile its preview/staging validation (§18) with FROZEN `DB_ENVIRONMENT_GOVERNANCE_V1.md`, which defers a separate staging environment (`DB-ENV-09`); bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
+| `INVENTORY_UX_V1_2.md` | Personal and Crew Inventory UX and interaction behavior, quality tiers, level model, global key set, key help | `PROPOSED` | Full-document successor candidate to `INVENTORY_UX_V1_1.md`; V1.1 bleibt FROZEN und allein verbindlich bis zur Freigabe |
 
 ## 7. PLANNED normative specifications
 
