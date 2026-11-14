@@ -9,6 +9,7 @@ import { InventoryKpiStrip } from '@/components/inventory/InventoryKpiStrip'
 import { InventoryCrewOverview } from '@/components/inventory/InventoryCrewOverview'
 import { QualityChip, QualityLegend } from '@/components/quality/QualityChip'
 import { EditInventoryLotForm } from '@/components/inventory/EditInventoryLotForm'
+import { useInventoryKeys } from '@/components/inventory/useInventoryKeys'
 import { inventoryEditInitialValue } from '@/lib/inventory/inventory-edit-display'
 import { INVENTORY_ERROR_MESSAGES, INVENTORY_SUCCESS_MESSAGES, type InventoryErrorCode } from '@/lib/inventory/inventory-error-messages'
 import type { InventoryLocationOption } from '@/lib/inventory/inventory-form-options'
@@ -51,8 +52,9 @@ function Summary({ rows, units, mode, showPlayers = false }: { rows: InventoryRo
 }
 
 /** A collapsible group whose open state lives in the view (needed for the depth indicator and the anchor jump). */
-function Group({ id, open, onOpenChange, title, summary, children }: {
+function Group({ id, open, selected, onOpenChange, title, summary, children }: {
   id: string
+  selected: boolean
   open: ReadonlySet<string>
   onOpenChange: (id: string, open: boolean) => void
   title: string
@@ -60,7 +62,7 @@ function Group({ id, open, onOpenChange, title, summary, children }: {
   children: React.ReactNode
 }) {
   return <details className="inventory-group" open={open.has(id)} onToggle={(event) => onOpenChange(id, event.currentTarget.open)}>
-    <summary><span>{title}</span>{summary}</summary>
+    <summary data-key-selected={selected ? 'true' : undefined}><span>{title}</span>{summary}</summary>
     {children}
   </details>
 }
@@ -77,6 +79,8 @@ type Editing = {
   deleteTriggerRefs: MutableRefObject<Map<string, HTMLButtonElement>>
   /** Lot to highlight briefly after an anchor jump. */
   highlightLotId: string | null
+  /** Entry selected with the keys W / S (section 13.1); a lot key is `lot:<id>`. */
+  selectedKey: string | null
   pending: boolean
   setPending: (pending: boolean) => void
   start: (id: string) => void
@@ -87,6 +91,8 @@ type Editing = {
   confirmDelete: (id: string) => void
 }
 
+const lotKey = (row: InventoryRow) => `lot:${row.inventory_id}`
+
 function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: MaterialUnits; mode: UnitMode; editing: Editing }) {
   return <div className="vector-inventory-table" role="region" aria-label="Lots" tabIndex={0}>
     <table>
@@ -95,7 +101,8 @@ function Lots({ rows, units, mode, editing }: { rows: InventoryRow[]; units: Mat
         const initial = inventoryEditInitialValue(row, materialKind(units, row.material))
         const canEdit = editing.currentUserId !== null && row.owner_user_id === editing.currentUserId && initial && editing.locations
         const canDelete = editing.currentUserId !== null && row.owner_user_id === editing.currentUserId
-        return <tr key={row.inventory_id} id={`lot-${row.inventory_id}`} className={editing.highlightLotId === row.inventory_id ? 'inventory-lot--highlight' : undefined}>
+        return <tr key={row.inventory_id} id={`lot-${row.inventory_id}`} className={editing.highlightLotId === row.inventory_id ? 'inventory-lot--highlight' : undefined}
+          data-key-selected={editing.selectedKey === lotKey(row) ? 'true' : undefined}>
           {editing.editingLotId === row.inventory_id && canEdit && editing.locations
             ? <td colSpan={6}><EditInventoryLotForm key={row.inventory_id} row={row} initial={initial} locations={editing.locations}
                 pending={editing.pending} setPending={editing.setPending} onCancel={editing.cancel} onSuccess={editing.success} /></td>
@@ -197,15 +204,6 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
       setPending(false)
     }
   }
-  const editing: Editing = {
-    currentUserId, crewViewerUserId, locations: locationOptions, highlightLotId, editingLotId, deletingLotId, deleteCancelRef, editTriggerRefs, deleteTriggerRefs, pending, setPending,
-    start: (id) => { setSuccess(null); setError(null); setDeletingLotId(null); setEditingLotId(id) },
-    cancel: () => { restoreEditFocusId.current = editingLotId; setEditingLotId(null) },
-    success: (code) => { setEditingLotId(null); setSuccess(code); router.refresh() },
-    startDelete: (id) => { setSuccess(null); setError(null); setEditingLotId(null); setDeletingLotId(id) },
-    cancelDelete: () => { restoreDeleteFocusId.current = deletingLotId; setDeletingLotId(null); setError(null) },
-    confirmDelete,
-  }
   const setGroupOpen = (id: string, open: boolean) => setOpenGroups((previous) => {
     if (previous.has(id) === open) return previous
     const next = new Set(previous)
@@ -259,6 +257,48 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     openGroups.has(`L:m:${group[0].material}`) &&
     locations(group).some((locationRows) => openGroups.has(`L:l:${group[0].material}|${locationRows[0].location_id}`)))
 
+  const resetFilters = () => {
+    setQuery('')
+    setPlayerFilter('')
+    setLocationFilter('')
+    setQualityMin('')
+    setQualityMax('')
+    setSort('MATERIAL_ASC')
+  }
+  // Entries of the list below a path of entered groups, in the order they are drawn (keys W / S / D / F / A).
+  const groupPrefix = view === 'GLOBAL' ? 'G' : 'L'
+  const materialKey = (rowsOfMaterial: InventoryRow[]) => `${groupPrefix}:m:${rowsOfMaterial[0].material}`
+  const locationKey = (rowsOfLocation: InventoryRow[]) => `L:l:${rowsOfLocation[0].material}|${rowsOfLocation[0].location_id}`
+  const childKeys = (path: readonly string[]): string[] | null => {
+    if (path.length === 0) return materialGroups.map(materialKey)
+    const material = materialGroups.find((group) => materialKey(group) === path[0])
+    if (!material) return null
+    if (path.length === 1) return view === 'GLOBAL' ? material.map(lotKey) : locations(material).map(locationKey)
+    if (view === 'GLOBAL' || path.length > 2) return null
+    const location = locations(material).find((group) => locationKey(group) === path[1])
+    return location ? location.map(lotKey) : null
+  }
+  const { selectedKey } = useInventoryKeys({
+    childKeys,
+    openGroups,
+    setGroupOpen,
+    inlineEditActive: editingLotId !== null,
+    transientActive: deletingLotId !== null,
+    cancelEdit: () => editing.cancel(),
+    cancelTransient: () => editing.cancelDelete(),
+    blocked: pending,
+    resetFilters,
+  })
+
+  const editing: Editing = {
+    currentUserId, crewViewerUserId, locations: locationOptions, highlightLotId, selectedKey, editingLotId, deletingLotId, deleteCancelRef, editTriggerRefs, deleteTriggerRefs, pending, setPending,
+    start: (id) => { setSuccess(null); setError(null); setDeletingLotId(null); setEditingLotId(id) },
+    cancel: () => { restoreEditFocusId.current = editingLotId; setEditingLotId(null) },
+    success: (code) => { setEditingLotId(null); setSuccess(code); router.refresh() },
+    startDelete: (id) => { setSuccess(null); setError(null); setEditingLotId(null); setDeletingLotId(id) },
+    cancelDelete: () => { restoreDeleteFocusId.current = deletingLotId; setDeletingLotId(null); setError(null) },
+    confirmDelete,
+  }
   return <section className="inventory-view" aria-label={label}>
     <div role="status">{success ? INVENTORY_SUCCESS_MESSAGES[success] : null}</div>
     {error && <div role="alert">{INVENTORY_ERROR_MESSAGES[error]}</div>}
@@ -356,14 +396,7 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
       <button
         type="button"
         disabled={pending}
-        onClick={() => {
-          setQuery('')
-          setPlayerFilter('')
-          setLocationFilter('')
-          setQualityMin('')
-          setQualityMax('')
-          setSort('MATERIAL_ASC')
-        }}
+        onClick={resetFilters}
       >
         Filter zurücksetzen
       </button>
@@ -381,17 +414,17 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     {visibleRows.length > 0 && <p className="inventory-depth" role="status">{depthLabel(view, materialOpen, locationOpen)}</p>}
 
     {view === 'GLOBAL'
-      ? materialGroups.map((materialRows) => <Group key={materialRows[0].material} id={`G:m:${materialRows[0].material}`}
+      ? materialGroups.map((materialRows) => <Group key={materialRows[0].material} id={`G:m:${materialRows[0].material}`} selected={selectedKey === materialKey(materialRows)}
           open={openGroups} onOpenChange={setGroupOpen} title={materialRows[0].material}
           summary={<Summary rows={materialRows} units={units} mode={mode} showPlayers={crewViewerUserId !== undefined} />}>
           <Lots rows={materialRows} units={units} mode={mode} editing={editing} />
         </Group>)
-      : materialGroups.map((materialRows) => <Group key={materialRows[0].material} id={`L:m:${materialRows[0].material}`}
+      : materialGroups.map((materialRows) => <Group key={materialRows[0].material} id={`L:m:${materialRows[0].material}`} selected={selectedKey === materialKey(materialRows)}
           open={openGroups} onOpenChange={setGroupOpen} title={materialRows[0].material}
           summary={<Summary rows={materialRows} units={units} mode={mode} showPlayers={crewViewerUserId !== undefined} />}>
           <div className="inventory-group__children">
             {locations(materialRows).map((locationRows) => <Group key={locationRows[0].location_id}
-              id={`L:l:${materialRows[0].material}|${locationRows[0].location_id}`}
+              id={`L:l:${materialRows[0].material}|${locationRows[0].location_id}`} selected={selectedKey === locationKey(locationRows)}
               open={openGroups} onOpenChange={setGroupOpen} title={locationRows[0].location_name}
               summary={<Summary rows={locationRows} units={units} mode={mode} />}>
               <Lots rows={locationRows} units={units} mode={mode} editing={editing} />

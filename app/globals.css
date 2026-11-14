@@ -2007,3 +2007,11 @@ h1, h2, h3,
 .inventory-crew-overview__tiers li strong { margin-left: auto; }
 .inventory-crew-overview__players li span:first-child { font-weight: 700; margin-right: auto; }
 .inventory-crew-overview__players li span:not(:first-child) { color: var(--muted); }
+
+/* Key selection (INVENTORY_UX_V1_1 13.1): entry chosen with W / S. */
+.inventory-group > summary[data-key-selected="true"],
+.vector-inventory-table tr[data-key-selected="true"] {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+  background: rgba(25, 216, 237, .1);
+}
