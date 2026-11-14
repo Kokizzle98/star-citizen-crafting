@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v7 (counted up from v6; checkpoint rotation after PR #72, base commit `914bbe0d113179c2b5d27db18b36500723821a8a`)
+- Document version: v8 (counted up from v7; checkpoint rotation after PR #77, Rotation-9, base commit `de12e8f5a1881e630b5eaf240bfcd84be7ab6af5`)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -13,25 +13,27 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `UX series (UX-6 and the implementation packages of Inventory UX v1.2)`. UX-1 (quality tiers, #61), UX-2 (shell and branding, #62), UX-3a (Mein Inventory / Crew Inventory split, #64), UX-3b (material rows, depth indicator, KPI strip, #66), UX-4 (Crew overview, #68), UX-5 (key set, #69) and UX-5b (key help, #70) are done; Inventory UX v1.2 is FROZEN (#71, #72). Each UX work package is its own pull request and its own session; binding specification is `docs/frozen/INVENTORY_UX_V1_2.md`.
-- Branch: `develop` (each UX work package works on its own feature branch)
+- Work package: `Release develop to main (pre-release rotation)`. The UX series is complete as planned: UX-1 to UX-5b (see the historical checkpoints), UX-5c (`B` key, #74), UX-5d (Crew edit symbol with jump and return, #75), UX-6a (Fabricator clarity pass and dataset label in the header, #76) and UX-6b (dashboard polish, #77) are done; Inventory UX v1.2 is FROZEN (#71, #72). The release itself is its own pull request `develop` -> `main` in its own session.
+- Branch: `develop` (each work package works on its own feature branch)
 - Base: `develop`
 - Checkpoint date: `2026-11-14`
-- Work-package base (historical): `914bbe0d113179c2b5d27db18b36500723821a8a`
-- Active checkpoint anchor: `914bbe0d113179c2b5d27db18b36500723821a8a`
+- Work-package base (historical): `de12e8f5a1881e630b5eaf240bfcd84be7ab6af5`
+- Active checkpoint anchor: `de12e8f5a1881e630b5eaf240bfcd84be7ab6af5`
 - Working-tree expectation: `CLEAN`
-- Active PR: none at rotation time; each UX work package opens its own pull request against `develop`
+- Active PR: none at rotation time; the release pull request `develop` -> `main` opens in its own session, every other work package opens its own pull request against `develop`
 - PR base: `develop`
 
-The active anchor is the verified `develop` head after PR #72. The allowed scope below authorizes the documentation rotation and the planned UX series paths only: no migration, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #77. The allowed scope below authorizes the documentation rotation and the paths of the UX series and its follow-ups only; the release pull request itself changes no file beyond the merge: no migration, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
 - `docs/PROJECT_STATE.md`
 - `docs/handover/VECTOR_RESTART_HANDOVER.md`
+- `app/vector/fabricator/`
 - `app/vector/inventory/`
 - `app/vector/page.tsx`
 - `app/globals.css`
+- `components/fabricator/`
 - `components/inventory/`
 - `components/layout/`
 - `components/quality/`
@@ -96,6 +98,11 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#69` (UX-5 global key set): merged into `develop` on 2026-11-14 as `77ee94a`.
 - PR `#70` (UX-5b key help): merged into `develop` on 2026-11-14 as `c483aa9`.
 - PR `#71` (Inventory UX v1.2 proposal) and PR `#72` (promotion to FROZEN, `INVENTORY_UX_V1_1.md` superseded, `docs/RULE_INDEX.md` v1.3): merged into `develop` on 2026-11-14 as `6e3ba14` and `914bbe0`.
+- PR `#73` (checkpoint rotation after PR #72, Rotation-8): merged into `develop` on 2026-11-14 as `16dc3d3`.
+- PR `#74` (UX-5c `B` key edits the selected own lot): merged into `develop` on 2026-11-14 as `de31ad5`.
+- PR `#75` (UX-5d Crew edit symbol with jump and return): merged into `develop` on 2026-11-14 as `8ea2425`.
+- PR `#76` (UX-6a Fabricator clarity pass and dataset label in the header): merged into `develop` on 2026-11-14 as `c4d60fe`.
+- PR `#77` (UX-6b dashboard polish): merged into `develop` on 2026-11-14 as `de12e8f`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -140,7 +147,11 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`UX series` (owner priority, 2026-11-13): design mock-ups approved by the owner; specification `INVENTORY_UX_V1_2.md` FROZEN (`INVENTORY_UX_V1_1.md` superseded). Order, one work package per session: UX-1 **DONE**, UX-2 **DONE**, UX-3a **DONE**, UX-3b **DONE**, UX-4 **DONE**, UX-5 **DONE**, UX-5b **DONE**, UX-6 (icons, dashboard polish) next; afterwards the `B` key with its hint (section 13.1, 13.2) and the Crew edit symbol with jump and return (section 3.1). No database change is part of this series.
+`Release develop to main` (pre-release rotation, 2026-11-14). The preceding `UX series` (owner priority, 2026-11-13) is complete as planned: design mock-ups approved by the owner; specification `INVENTORY_UX_V1_2.md` FROZEN (`INVENTORY_UX_V1_1.md` superseded); UX-1 **DONE**, UX-2 **DONE**, UX-3a **DONE**, UX-3b **DONE**, UX-4 **DONE**, UX-5 **DONE**, UX-5b **DONE**, UX-5c (`B` key) **DONE**, UX-5d (Crew edit symbol with jump and return) **DONE**, UX-6a (Fabricator clarity pass, dataset label `LIVE · 4.10.2` in the header) **DONE**, UX-6b (dashboard polish, crew hint for new users) **DONE**. No database change was part of this series.
+
+The release is the formal release boundary (`VECTOR_GOVERNANCE_V1` section 3.3): one pull request `develop` -> `main`, merge method merge commit (section 6), preceded by the release gate (`VECTOR_GOVERNANCE_V1` section 8) and the Project Lead's read-only comparison of the migration objects with Production. The merge applies no migration and is no Production mutation.
+
+Open points found before the release, none started (details in `docs/PROJECT_STATE.md` under OPEN DECISIONS): no crew invitation UI; the SCMDB data sync workflow pushes directly to the default branch and is reported failing since 2026-10-29 (dataset package planned for the following week); the dashboard milestone text is outdated; the empty states in `app/vector/inventory/` have no link.
 
 Previous active package `Fabricator Phase 1`: F1 to F3 are **DONE**; F4 (gameplay relevance) is in the evidence phase. Current state (2026-11-12):
 
@@ -262,6 +273,7 @@ Completed packages: `Restart Safety + AI Efficiency v1` (PR #10) and `Repository
 - Do not create recursive review-evidence commits.
 - Do not run repository-wide AI audits when a bounded check can answer the question.
 - Do not use Max review by default.
+- Do not squash or rebase-merge the release pull request `develop` -> `main`; use a **merge commit**. Reason: `main` (`eb6f108`, PR #11) is an ancestor of `develop`, a merge commit keeps that ancestry and the two histories do not drift apart; a squash or rebase would create commits on `main` that `develop` does not contain and make the next release conflict-prone. This is an operational rule that follows `VECTOR_GOVERNANCE_V1` section 3.3 (merge into `main` is the release boundary) and does not change it. The merge itself applies no migration (`DB-ENV-07`).
 
 ## 7. RECOVERY PROCEDURE
 
@@ -439,4 +451,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Start UX-6 (icons, dashboard polish) as its own session and pull request against `develop`. Binding specification: `docs/frozen/INVENTORY_UX_V1_2.md`. No Production mutation. Afterwards the implementation packages from v1.2, each its own session: (a) `B` key and the hint "B bearbeiten"; (b) Crew edit symbol with jump to Mein Inventory (opens the lot's editor) and return. Open owner wishes, not commissioned: Crew Inventory background image, material image (source and rights unresolved). Then the owner chooses the next package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation). The licence / redistribution decision for scunpacked-data stays open. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: Release `develop` to `main` as its own session and pull request `develop` -> `main`, merge method **merge commit** (section 6). Preconditions: this rotation merged, the Project Lead's read-only comparison of the migration objects with Production done, the release gate (`VECTOR_GOVERNANCE_V1` section 8) passed, and the owner's explicit release decision. The merge applies no migration; no Production mutation. Afterwards: the dataset package (SCMDB data sync workflow, planned for the following week), then small follow-ups from the open points in `docs/PROJECT_STATE.md` (crew invitation UI, dashboard milestone text, links in the empty states), each its own package after an owner decision. Open owner wishes, not commissioned: Crew Inventory background image, material image (source and rights unresolved). Then the owner chooses the next package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation). The licence / redistribution decision for scunpacked-data stays open. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
