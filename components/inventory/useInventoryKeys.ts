@@ -11,14 +11,14 @@ import {
 } from '@/lib/keyboard/key-set'
 
 /**
- * Inventory part of the global key set (INVENTORY_UX_V1_1 section 13.1):
+ * Inventory part of the global key set (INVENTORY_UX_V1_2 section 13.1):
  * W / S select, D / F go one level deeper, A and Esc go one level back,
- * B asks the view to edit the selected lot (the view decides whether that
- * lot may be edited), T focuses the search, R resets the filters. Q / E live in InventorySwitch,
- * 1 to 6 in VectorShell.
+ * B edits the selected lot, T focuses the search, R resets the filters.
+ * Q / E live in InventorySwitch, 1 to 6 in VectorShell.
  *
- * The keys only move a visible selection and open or close the same groups a
- * click opens or closes. They never start an edit and never write anything.
+ * The keys move the selection and open or close the same groups a click opens
+ * or closes. B delegates opening the editor to the view (`onEdit`); the hook
+ * itself writes nothing and never deletes.
  */
 export function useInventoryKeys({
   childKeys,
