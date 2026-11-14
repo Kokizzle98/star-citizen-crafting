@@ -32,9 +32,12 @@ export default async function VectorPage() {
         className="vector-dashboard__modules"
         aria-label="VECTOR Alpha Module"
       >
-        <article className="vector-module-card">
+        <Link
+          href="/vector/inventory"
+          className="vector-module-card vector-module-card--link"
+        >
           <span className="vector-module-card__status">
-            VERFÜGBAR
+            <span aria-hidden="true">✓</span> VERFÜGBAR
           </span>
 
           <h2>Inventory</h2>
@@ -45,16 +48,16 @@ export default async function VectorPage() {
           </p>
 
           <span className="vector-module-card__footer">
-            WP3
+            Mein · Crew · Öffnen <span aria-hidden="true">→</span>
           </span>
-        </article>
+        </Link>
 
         <Link
           href="/vector/fabricator"
           className="vector-module-card vector-module-card--link"
         >
           <span className="vector-module-card__status">
-            VERFÜGBAR
+            <span aria-hidden="true">✓</span> VERFÜGBAR
           </span>
 
           <h2>Fabricator</h2>
@@ -65,7 +68,7 @@ export default async function VectorPage() {
           </p>
 
           <span className="vector-module-card__footer">
-            Workspace · Rezept · Crew · Öffnen <span aria-hidden="true">→</span>
+            Rezept · Crew · Öffnen <span aria-hidden="true">→</span>
           </span>
         </Link>
 
@@ -74,7 +77,7 @@ export default async function VectorPage() {
           className="vector-module-card vector-module-card--link"
         >
           <span className="vector-module-card__status">
-            VERFÜGBAR
+            <span aria-hidden="true">✓</span> VERFÜGBAR
           </span>
 
           <h2>Blueprints</h2>
@@ -85,19 +88,24 @@ export default async function VectorPage() {
           </p>
 
           <span className="vector-module-card__footer">
-            Ownership / Tracking · Öffnen <span aria-hidden="true">→</span>
+            Katalog · Besitz · Öffnen <span aria-hidden="true">→</span>
           </span>
         </Link>
       </section>
 
-      <section className="vector-dashboard__status">
+      <p className="vector-dashboard__hint">
+        Neu hier? Wähle oben deine Crew und lege in{' '}
+        <Link href="/vector/inventory">Mein Inventory</Link> dein erstes Lot an.
+      </p>
+
+      <section className="vector-dashboard__status" aria-label="Projektstand">
         <div>
-          <span>CURRENT STATE</span>
+          <span>AKTUELLER STAND</span>
           <strong>Inventory · SCMDB Locations · Blueprints · Fabricator</strong>
         </div>
 
         <div>
-          <span>NEXT PRODUCT MILESTONE</span>
+          <span>NÄCHSTER MEILENSTEIN</span>
           <strong>Fabricator Quality &amp; Stats</strong>
         </div>
       </section>

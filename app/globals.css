@@ -835,7 +835,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
 
-  margin-top: 1rem;
+  margin-top: 1.25rem;
 }
 
 .vector-module-card {
@@ -861,7 +861,8 @@
 .vector-module-card__status {
   align-self: flex-start;
 
-  color: var(--cyan);
+  /* same pattern as the Fabricator status: glyph + text, colour only supports it */
+  color: var(--success);
 
   font-size: .62rem;
   letter-spacing: .13em;
@@ -881,9 +882,9 @@
   margin-top: auto;
   padding-top: 1rem;
 
-  color: #55727d;
+  color: var(--muted);
 
-  font-size: .66rem;
+  font-size: .72rem;
   letter-spacing: .08em;
 }
 
@@ -892,7 +893,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1px;
 
-  margin-top: 1rem;
+  margin-top: 1.25rem;
 
   border: 1px solid var(--line);
   border-radius: .55rem;
@@ -920,6 +921,16 @@
 
 .vector-dashboard__status strong {
   color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.vector-dashboard__hint {
+  margin: 1.25rem 0 0;
+  color: var(--muted);
+}
+
+.vector-dashboard__hint a {
+  color: var(--cyan);
 }
 
 .vector-inventory-table {
@@ -1143,7 +1154,8 @@
   text-decoration: none;
 }
 
-.vector-module-card--link:hover {
+.vector-module-card--link:hover,
+.vector-module-card--link:focus-visible {
   border-color: var(--cyan);
 }
 
