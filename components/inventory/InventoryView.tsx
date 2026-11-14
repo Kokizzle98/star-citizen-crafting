@@ -280,6 +280,13 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     const location = locations(material).find((group) => locationKey(group) === path[1])
     return location ? location.map(lotKey) : null
   }
+  // The lot an edit may start on: own lot, same condition as the "Bearbeiten" button (canEdit). Never on the Crew page.
+  const editableLotId = (key: string | null): string | null => {
+    if (key === null || currentUserId === null || !locationOptions) return null
+    const row = visibleRows.find((candidate) => lotKey(candidate) === key)
+    if (!row || row.owner_user_id !== currentUserId) return null
+    return inventoryEditInitialValue(row, materialKind(units, row.material)) ? row.inventory_id : null
+  }
   const { selectedKey } = useInventoryKeys({
     childKeys,
     openGroups,
@@ -290,6 +297,12 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     cancelTransient: () => editing.cancelDelete(),
     blocked: pending,
     resetFilters,
+    onEdit: (key) => {
+      const id = editableLotId(key)
+      if (id === null) return false
+      editing.start(id)
+      return true
+    },
   })
 
   const editing: Editing = {
@@ -434,6 +447,6 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
             </Group>)}
           </div>
         </Group>)}
-    <KeyHintBar page={crewViewerUserId !== undefined ? 'crew' : 'own'} inlineEditorActive={editingLotId !== null} deleteConfirmOpen={deletingLotId !== null} />
+    <KeyHintBar page={crewViewerUserId !== undefined ? 'crew' : 'own'} inlineEditorActive={editingLotId !== null} deleteConfirmOpen={deletingLotId !== null} ownLotSelected={editableLotId(selectedKey) !== null} />
   </section>
 }

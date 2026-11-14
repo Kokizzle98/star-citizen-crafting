@@ -29,6 +29,8 @@ export type KeyHelpEntry = {
   hintIn: readonly HintState[]
   /** Number keys of areas that are not built yet ("BALD"): no effect. */
   soon?: boolean
+  /** The hint bar shows this entry only on Mein Inventory while an own, editable lot is selected. */
+  needsOwnLot?: boolean
 }
 
 export const KEY_HELP: readonly KeyHelpEntry[] = [
@@ -38,6 +40,8 @@ export const KEY_HELP: readonly KeyHelpEntry[] = [
     text: 'Gewählten Eintrag öffnen (eine Ebene tiefer)', short: 'öffnen', hintIn: ['normal'] },
   { id: 'back', label: 'A', keys: ['a'], action: 'back', context: 'inventory',
     text: 'Eine Ebene zurück', short: 'zurück', hintIn: ['normal'] },
+  { id: 'edit', label: 'B', keys: ['b'], action: 'edit', context: 'inventory', needsOwnLot: true,
+    text: 'Gewähltes eigenes Lot bearbeiten', short: 'bearbeiten', hintIn: ['normal'] },
   { id: 'view', label: 'Q / E', keys: ['q', 'e'], action: 'view-prev', context: 'mein-crew',
     text: 'Q = Mein Inventory, E = Crew Inventory', short: 'Mein/Crew', hintIn: ['normal'] },
   { id: 'search', label: 'T', keys: ['t'], action: 'focus-search', context: 'inventory',
@@ -83,9 +87,10 @@ export function hintState(state: { page: 'own' | 'crew'; inlineEditorActive: boo
 }
 
 /** The entries the hint bar shows in the given page state. */
-export function hintEntries(state: { page: 'own' | 'crew'; inlineEditorActive: boolean; deleteConfirmOpen: boolean }): KeyHelpEntry[] {
+export function hintEntries(state: { page: 'own' | 'crew'; inlineEditorActive: boolean; deleteConfirmOpen: boolean; ownLotSelected?: boolean }): KeyHelpEntry[] {
   const current = hintState(state)
-  return KEY_HELP.filter((entry) => entry.hintIn.includes(current))
+  const ownLot = state.page === 'own' && state.ownLotSelected === true
+  return KEY_HELP.filter((entry) => entry.hintIn.includes(current) && (!entry.needsOwnLot || ownLot))
 }
 
 /** Entries of one context for the overview, in table order. */
