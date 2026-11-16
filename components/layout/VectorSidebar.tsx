@@ -2,14 +2,17 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { BRAND, NAVIGATION } from '@/components/layout/navigation'
+import { BRAND, NAVIGATION, VISITOR_NAVIGATION } from '@/components/layout/navigation'
 
 export function VectorSidebar({
   collapsed,
   onToggle,
+  visitor = false,
 }: {
   collapsed: boolean
   onToggle: () => void
+  /** Nobody is signed in: show only the public entries (VISITOR_NAVIGATION). */
+  visitor?: boolean
 }) {
   const pathname = usePathname()
 
@@ -19,7 +22,7 @@ export function VectorSidebar({
       aria-label="VECTOR Navigation"
     >
       <div className="vector-sidebar__brand">
-        <Link href="/vector" aria-label={`${BRAND.name} Dashboard`}>
+        <Link href={visitor ? '/' : '/vector'} aria-label={visitor ? `${BRAND.name} Startseite` : `${BRAND.name} Dashboard`}>
           <strong>{BRAND.name}</strong>
           <span>{BRAND.tagline}</span>
         </Link>
@@ -36,7 +39,19 @@ export function VectorSidebar({
       </div>
 
       <nav className="vector-sidebar__nav" aria-label="Module">
-        {NAVIGATION.map((item) => {
+        {visitor && VISITOR_NAVIGATION.map((item) => (
+          <Link
+            href={item.href}
+            key={item.href}
+            aria-label={item.label}
+            aria-current={pathname === item.href ? 'page' : undefined}
+          >
+            <span className="vector-sidebar__number" aria-hidden="true" />
+            <span className="vector-sidebar__icon" aria-hidden="true">{item.icon}</span>
+            <span className="vector-sidebar__label">{item.label}</span>
+          </Link>
+        ))}
+        {!visitor && NAVIGATION.map((item) => {
           const content = (
             <>
               <span className="vector-sidebar__number" aria-hidden="true">

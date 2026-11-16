@@ -38,7 +38,7 @@ test('sidebar renders from the configuration; BALD entries are not links and not
 })
 
 test('no positive tabindex anywhere in the shell', async () => {
-  for (const f of ['app/layout.tsx', 'components/layout/VectorShell.tsx', 'components/layout/VectorSidebar.tsx', 'components/layout/VectorTopbar.tsx']) {
+  for (const f of ['app/layout.tsx', 'components/layout/VectorShell.tsx', 'components/layout/VectorShellClient.tsx', 'components/layout/VectorSidebar.tsx', 'components/layout/VectorTopbar.tsx']) {
     assert.doesNotMatch(await read(f), /tabIndex=\{?["']?[1-9]/, f)
   }
 })

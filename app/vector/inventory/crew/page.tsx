@@ -1,3 +1,4 @@
+import { requireUser } from '@/lib/auth/authorization'
 import { getActiveGroupInventory } from '@/lib/inventory/inventory-read'
 import { getLiveMaterialUnits } from '@/lib/inventory/material-units'
 import { InventoryView } from '@/components/inventory/InventoryView'
@@ -13,6 +14,8 @@ export const metadata = {
 // in RLS/RPC; this separation is presentation only (INVENTORY_UX_V1_1 3, 16).
 export default async function CrewInventoryPage() {
   const result = await getActiveGroupInventory()
+  // Without a login the read fails; send visitors to the login like Blueprints and Fabricator do, not to an error text.
+  if (result.status !== 'success') await requireUser()
   const [metadata, auth] = result.status === 'success'
     ? await Promise.all([getLiveMaterialUnits(), createSupabaseServerClient().auth.getUser()])
     : [null, null]
