@@ -4,10 +4,10 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v8 (counted up from v7; checkpoint rotation after PR #77, Rotation-9)
-- **State verified through commit:** `de12e8f5a1881e630b5eaf240bfcd84be7ab6af5`
-- **Updated by work package:** Checkpoint rotation after PR #77 (develop `de12e8f`, Rotation-9, documentation only): UX-5c, UX-5d, UX-6a and UX-6b done, release `develop` to `main` next
-- **Checkpoint date:** 2026-11-14
+- **Document version:** v9 (counted up from v8; checkpoint rotation after PR #83, Rotation-10, base commit `217fa9155a1690fb833479d831cb93186311bd92`)
+- **State verified through commit:** `217fa9155a1690fb833479d831cb93186311bd92`
+- **Updated by work package:** Checkpoint rotation after PR #83 (develop `217fa91`, Rotation-10, documentation only): release done (PR #79, `main` `e916f69`), PRs #80 to #83 merged into `develop`, next release deliberately deferred
+- **Checkpoint date:** 2026-11-16
 
 ## How to read this file
 
@@ -56,6 +56,11 @@
 - UX-5d Crew edit symbol with jump and return: **DONE**. #75 (`8ea2425`): the symbol on own lots in Crew Inventory (link "In Mein Inventory bearbeiten") opens the editor of exactly that lot; save or cancel returns to the saved position (`lib/inventory/inventory-return-state.ts`); hint "öffnen, dann B bearbeiten" on material and location rows. Display and navigation only.
 - UX-6a Fabricator clarity pass and dataset label in the header: **DONE**. #76 (`c4d60fe`): `Rezept & Crew-Bestand` and `Material-Qualität im Detail` are collapsed (`components/fabricator/FabricatorDisclosure.tsx`, native `details` / `summary` with own indicator and focus on the variant row after the choice), the variant choice is one compact row after selection, and the header shows `LIVE · 4.10.2` taken from the existing repository-pinned dataset (`components/layout/dataset-label.ts`, LIVE only, no selection, no second hard-coded version). No functional change.
 - UX-6b Dashboard polish: **DONE**. #77 (`de12e8f`): Inventory card is a link, uniform card footers, status with glyph, readable contrast, labelled project state, and the entry hint for new users names the crew membership first ("Neu hier? Du brauchst zuerst eine Crew-Mitgliedschaft: Lass dich von deiner Crew einladen.") with a link to Mein Inventory. Display only.
+- Release `develop` to `main`: **DONE**. PR #79 (merge commit, `main` = `e916f69`). Rollback point: tag `pre-release-2026-11-14` on `eb6f108`.
+- Login hardening: **DONE**. #80 (`e2a8b66`): `next` redirect hardened (findings F1 and F4 from the review of PR #79).
+- UX-7 public start page: **DONE**. #81 (`cdd9340`): public start page, fan project notice, link to the official site.
+- FAB-UX-1 Fabricator basics: **DONE**. #82 (`858ddfc`): hint bar, WASD keys, variant panel stays open, hint in the variant area.
+- UX-8 visitor navigation: **DONE**. #83 (`217fa91`): visitors see only Start and Sign in; Inventory redirects to sign-in without a login.
 - Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`; #56 (`6586108`) public-repo boundary clarification and checkpoint rotation. Documentation only, no Production mutation.
 
 ## ACTIVE
@@ -72,10 +77,15 @@
 
 ## NEXT
 
-1. Release `develop` to `main` (formal release boundary, `VECTOR_GOVERNANCE_V1` section 3.3 and 8), as its own session and pull request `develop` -> `main`. Merge method: **merge commit** (no squash, no rebase); see `docs/handover/VECTOR_RESTART_HANDOVER.md` section 6. `main` (`eb6f108`, PR #11) is an ancestor of `develop`, so the merge is conflict-free and `data/` is identical on both. Before the merge: the Project Lead compares the migration objects with Production read-only and the owner gives the release gate. Merging does not apply any migration (`DB-ENV-07`); no Production mutation is part of the release.
-2. Dataset package (owner, planned for the week after this rotation): the SCMDB data sync workflow (see OPEN DECISIONS) and the dataset handling around it.
-3. Small follow-ups from the open points below (crew invitation UI, dashboard milestone text, links in the empty states), each its own package only after an owner decision.
-4. After that the owner chooses the next package (candidates: F4-B and a UEX source foundation, each as its own package, only after an explicit owner decision). F4-B (gameplay relevance / exclusion contract) and a UEX source foundation stay separate work packages. The licence / redistribution decision for scunpacked-data stays open and is tracked below. Open owner wishes (not commissioned): background image for Crew Inventory, material image. Image source and rights are unresolved.
+1. **No release for now.** The next release `develop` -> `main` is deliberately deferred (owner decision): little of substance has happened since the test release (PR #79, `main` = `e916f69`). When it is due, it is its own session and pull request with merge method **merge commit** (see `docs/handover/VECTOR_RESTART_HANDOVER.md` section 6).
+2. Small follow-ups from the Copilot review of PR #79 (F2, F3 and F5 to F10): already classified as deferred; open, details with the owner. Each is its own small package.
+3. Backlog (each its own small package, only after an owner decision where noted):
+   - Return to the requested page after sign-in (`next` target in `requireUser`; auth change).
+   - Empty states in `app/vector/inventory/` (links to the next action).
+   - Dataset update (LIVE 4.10.3, PTU separate, workflow sync): only with an explicit owner GO.
+   - Onboarding of player name / player account and the crew invitation UI.
+   - Fabricator and Inventory design according to the mock-ups.
+4. After that the owner chooses the next package (candidates: F4-B and a UEX source foundation, each as its own package, only after an explicit owner decision). The licence / redistribution decision for scunpacked-data stays open and is tracked below. Open owner wishes (not commissioned): background image for Crew Inventory, material image. Image source and rights are unresolved.
 5. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
 
 ## OPEN DECISIONS
