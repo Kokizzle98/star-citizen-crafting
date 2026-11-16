@@ -1403,6 +1403,7 @@
 .fabricator-result__meta,
 .fabricator-muted,
 .fabricator-choice__hint,
+.fabricator-choice__note,
 .fabricator-lot__reason {
   color: var(--muted);
   font-size: .8rem;

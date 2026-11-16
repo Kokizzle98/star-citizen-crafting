@@ -41,6 +41,8 @@ import type { FabricatorCrewResult } from '@/lib/fabricator/fabricator-workspace
 import { availablePreset } from '@/lib/fabricator/fabricator-preset'
 import { affectedProperties } from '@/lib/fabricator/fabricator-stats'
 import { FabricatorDisclosure } from './FabricatorDisclosure'
+import { KeyHintBar } from '@/components/inventory/KeyHintBar'
+import { useKeySet } from '@/components/layout/useKeySet'
 import { FabricatorQuality } from './FabricatorQuality'
 import { FabricatorVisual } from './FabricatorVisual'
 
@@ -162,6 +164,45 @@ export function FabricatorWorkspace({ catalog, crew }: { catalog: FabricatorCata
     if (next >= 0) document.getElementById(optionId(shown[next].key))?.scrollIntoView({ block: 'nearest' })
   }
 
+  // W / S take the same step as ArrowUp / ArrowDown in the list.
+  function stepActive(key: 'ArrowUp' | 'ArrowDown') {
+    const next = nextActiveIndex(activeIndex, shown.length, key)
+    setActiveIndex(next)
+    if (next >= 0) document.getElementById(optionId(shown[next].key))?.scrollIntoView({ block: 'nearest' })
+  }
+
+  // Same key set as the inventory (useKeySet): W / S choose, D / F open, A back, T search, R reset.
+  // Letters rest while typing in a field. B, Q / E do not apply here; 1 to 6 live in VectorShell.
+  useKeySet((event) => {
+    if (event.type !== 'action') return false
+    switch (event.action.type) {
+      case 'select-prev':
+      case 'select-next':
+        if (shown.length === 0) return false
+        stepActive(event.action.type === 'select-prev' ? 'ArrowUp' : 'ArrowDown')
+        return true
+      case 'open':
+        if (activeIndex < 0 || !shown[activeIndex]) return false
+        selectFamily(shown[activeIndex].key)
+        return true
+      case 'back':
+        if (selection === null) return false
+        setSelection(null)
+        return true
+      case 'focus-search': {
+        const field = document.getElementById('fabricator-search')
+        if (!field) return false
+        field.focus()
+        return true
+      }
+      case 'reset-filters':
+        updateFilters(EMPTY_FABRICATOR_FILTERS)
+        return true
+      default:
+        return false
+    }
+  })
+
   const optionId = (key: string) => `fabricator-option-${key.replace(/[^A-Za-z0-9_-]/g, '_')}`
   const activeId = activeIndex >= 0 && shown[activeIndex] ? optionId(shown[activeIndex].key) : undefined
   const selectedFamily = selection ? familiesByKey.get(selection.familyKey) ?? null : null
@@ -261,6 +302,9 @@ export function FabricatorWorkspace({ catalog, crew }: { catalog: FabricatorCata
               </div>}
         </div>
       </div>
+
+      <KeyHintBar page="crew" inlineEditorActive={false} deleteConfirmOpen={false}
+        ownLotSelected={false} groupSelected={false} omit={['view']} />
     </section>
   )
 }
@@ -384,7 +428,7 @@ function FabricatorDetail({ family, selection, onChange, catalog, recipeResults,
 
 /**
  * Variant choice (UX-6a): one compact line with the current variant and "Ändern";
- * picking a variant closes it again. Every variant stays reachable and keeps its
+ * picking a variant keeps it open (FAB-UX-1). Every variant stays reachable and keeps its
  * own identity: the line names the variant and flags deviating values.
  */
 function VariantChooser({ family, current, label, differs, onChoose }: {
@@ -394,13 +438,12 @@ function VariantChooser({ family, current, label, differs, onChoose }: {
   differs: (variant: FabricatorVariantView) => boolean
   onChoose: (variant: FabricatorVariantView) => void
 }) {
-  const [open, setOpenState] = useState(false)
-  // Raised only by a variant pick: the focus goes back to the summary line (the pick button is hidden by then).
-  // A plain toggle on the summary goes through `setOpenState` and does not move the focus.
-  const [focusSignal, setFocusSignal] = useState(0)
-  const setOpen = (next: boolean) => { setOpenState(next); setFocusSignal(signal => signal + 1) }
+  // The panel stays open after a pick (FAB-UX-1): switching between variants needs no reopening,
+  // and the focus stays on the pressed button. It closes only through the summary line ("Ändern").
+  const [open, setOpen] = useState(false)
+  const anyDiffers = family.variants.some(differs)
   return (
-    <FabricatorDisclosure className="fabricator-variant" open={open} onOpenChange={setOpenState} focusSummarySignal={focusSignal}
+    <FabricatorDisclosure className="fabricator-variant" open={open} onOpenChange={setOpen}
       summary={<>
         <span className="fabricator-disclosure__label">Variante</span>
         <strong>{label(current)}</strong>
@@ -413,13 +456,18 @@ function VariantChooser({ family, current, label, differs, onChoose }: {
         <div className="fabricator-choice__options">
           {family.variants.map(v => (
             <button key={v.variantKey} type="button" aria-pressed={v.variantKey === current.variantKey}
-              onClick={() => { onChoose(v); setOpen(false) }}>
+              onClick={() => onChoose(v)}>
               {label(v)}{v.isBase && v.label !== 'Basis' ? ' · Basis' : ''}
               {differs(v) && <span className="fabricator-choice__hint"> · abweichende Werte</span>}
               {family.kind === 'ARMOR_SET' && <span className="fabricator-choice__hint"> · {v.components.length} von {family.slots.length} Komponenten</span>}
             </button>
           ))}
         </div>
+        <p className="fabricator-choice__note">
+          {anyDiffers
+            ? 'Einzelne Varianten haben abweichende Werte. Rezept und Werte gelten für die gewählte Variante.'
+            : 'Alle Varianten: gleiches Rezept.'}
+        </p>
       </fieldset>
     </FabricatorDisclosure>
   )

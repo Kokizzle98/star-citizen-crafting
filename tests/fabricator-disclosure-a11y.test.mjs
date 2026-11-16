@@ -19,19 +19,13 @@ test('every Fabricator summary shows an own indicator: native marker hidden, sha
   assert.doesNotMatch(css.slice(css.indexOf('.fabricator-disclosure__summary::before')), /@keyframes fabricator-disclosure|transition:[^;]*transform/)
 })
 
-test('after a variant pick the focus goes to the summary of the variant line, not after a plain toggle', () => {
-  // the disclosure focuses its own summary when the signal goes up, and never on mount (signal 0)
-  assert.match(disclosure, /focusSummarySignal = 0/)
-  assert.match(disclosure, /if \(focusSummarySignal > 0\) detailsRef\.current\?\.querySelector<HTMLElement>\(':scope > summary'\)\?\.focus\(\)/)
-  assert.match(disclosure, /\}, \[focusSummarySignal\]\)/)
-  // only the variant pick raises the signal; opening or closing by the summary does not
-  assert.equal([...workspace.matchAll(/setFocusSignal\(/g)].length, 1, 'raised in one place only')
-  assert.match(workspace, /const setOpen = \(next: boolean\) => \{ setOpenState\(next\); setFocusSignal\(signal => signal \+ 1\) \}/)
-  assert.match(workspace, /onClick=\{\(\) => \{ onChoose\(v\); setOpen\(false\) \}\}/, 'the pick uses the focusing close')
-  assert.match(workspace, /onOpenChange=\{setOpenState\} focusSummarySignal=\{focusSignal\}/, 'a plain toggle does not')
+test('a variant pick keeps the panel open and does not move the focus (FAB-UX-1); the summary toggles it', () => {
+  const chooser = workspace.slice(workspace.indexOf('function VariantChooser'), workspace.indexOf('/** Navigation only'))
+  assert.match(chooser, /onClick=\{\(\) => onChoose\(v\)\}/, 'the pick only chooses')
+  assert.doesNotMatch(code(chooser), /setOpen\(false\)|focusSignal|setFocusSignal/, 'no close and no focus jump after a pick')
+  assert.match(chooser, /onOpenChange=\{setOpen\}/, 'open and close stay with the summary line')
   // other disclosures (recipe, quality) never ask for focus
-  const quality = code(workspace)
-  assert.equal([...quality.matchAll(/focusSummarySignal=/g)].length, 1)
+  assert.equal([...code(workspace).matchAll(/focusSummarySignal=/g)].length, 0)
 })
 
 function code(source) { return source.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '') }
