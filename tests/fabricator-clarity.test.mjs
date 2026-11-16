@@ -64,11 +64,11 @@ test('material quality details are collapsed; the compact overall quality stays 
   assert.doesNotMatch(code(quality), /reduce\(|average|mean\(|\/ relevant\.length/i)
 })
 
-test('variant choice is one compact line after the pick, every variant stays reachable and named', () => {
+test('variant choice is one compact line until opened, every variant stays reachable and named', () => {
   assert.match(workspace, /<VariantChooser key=\{family\.key\} family=\{family\} current=\{variant\}/)
   const chooser = workspace.slice(workspace.indexOf('function VariantChooser'), workspace.indexOf('/** Navigation only'))
   assert.match(chooser, /useState\(false\)/, 'starts compact')
-  assert.match(chooser, /onClick=\{\(\) => \{ onChoose\(v\); setOpen\(false\) \}\}/, 'closes after the pick')
+  assert.match(chooser, /onClick=\{\(\) => onChoose\(v\)\}/, 'stays open after the pick (FAB-UX-1)')
   assert.match(chooser, /<strong>\{label\(current\)\}<\/strong>/)
   assert.match(chooser, /differs\(current\) && <span className="fabricator-choice__hint">abweichende Werte<\/span>/)
   assert.match(chooser, /Ändern/)

@@ -5,7 +5,7 @@ import { hintEntries } from '@/lib/keyboard/key-help'
  * apply in the current state. Display only; the keys themselves are handled in
  * useInventoryKeys / InventorySwitch / VectorShell.
  */
-export function KeyHintBar({ page, inlineEditorActive, deleteConfirmOpen, ownLotSelected, groupSelected }: {
+export function KeyHintBar({ page, inlineEditorActive, deleteConfirmOpen, ownLotSelected, groupSelected, omit = [] }: {
   page: 'own' | 'crew'
   inlineEditorActive: boolean
   deleteConfirmOpen: boolean
@@ -13,8 +13,11 @@ export function KeyHintBar({ page, inlineEditorActive, deleteConfirmOpen, ownLot
   ownLotSelected: boolean
   /** Mein Inventory only: a material or location row is selected. */
   groupSelected: boolean
+  /** Entry ids that do not apply on the page using the bar (e.g. `view` outside the inventory). */
+  omit?: readonly string[]
 }) {
   const entries = hintEntries({ page, inlineEditorActive, deleteConfirmOpen, ownLotSelected, groupSelected })
+    .filter((entry) => !omit.includes(entry.id))
   return <div className="key-hint-bar" role="group" aria-label="Tastenhilfe">
     <ul>
       {entries.map((entry) => <li key={entry.id}><kbd>{entry.label}</kbd> {entry.short}</li>)}
