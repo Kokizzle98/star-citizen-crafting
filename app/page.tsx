@@ -1,28 +1,39 @@
-const cards = [
-  ['Inventory', 'Persönliche und freigegebene Bestände verwalten.'],
-  ['Fabricator', 'Blueprints, Materialbedarf und Qualitätsziele prüfen.'],
-  ['Fleet', 'Actual und Target Loadouts getrennt planen.'],
-  ['Trading', 'Marktübersicht, Aufträge und UEE-Börse.'],
-]
+import Link from 'next/link'
+import { FAN_PROJECT_NOTICE, OFFICIAL_SITE } from '@/components/layout/navigation'
+
+const highlights = [
+  ['Inventory', 'Bestände der Crew erfassen und gemeinsam im Blick behalten.'],
+  ['Blueprints', 'Blueprints durchsuchen und die eigenen markieren.'],
+  ['Fabricator', 'Materialbedarf und Qualitätsziele fürs Crafting prüfen.'],
+] as const
 
 export default function HomePage() {
   return (
-    <>
-      <section className="hero" aria-labelledby="vector-title">
-        <p className="eyebrow">RESTART 1.2.0 · DEVELOP</p>
-        <h1 id="vector-title">VECTOR</h1>
-        <p>Die neue Plattform-Baseline. Legacy v1.3.2 bleibt archiviert.</p>
-      </section>
-      <section className="grid" aria-label="VECTOR Module">
-        {cards.map(([title, description]) => (
-          <article className="card" key={title}>
-            <span className="status">PREFLIGHT</span>
-            <h2>{title}</h2>
-            <p>{description}</p>
-            <button type="button" disabled aria-disabled="true">Wird integriert</button>
-          </article>
+    <section className="landing" aria-labelledby="vector-title">
+      <h1 id="vector-title">VECTOR</h1>
+      <p className="landing__lead">
+        Group Terminal für Crafting, Inventar und Blueprints in Star Citizen. Alpha.
+      </p>
+
+      <ul className="landing__list">
+        {highlights.map(([title, description]) => (
+          <li key={title}>
+            <strong>{title}</strong>
+            <span>{description}</span>
+          </li>
         ))}
-      </section>
-    </>
+      </ul>
+
+      <Link className="landing__login" href="/login">
+        Anmelden
+      </Link>
+
+      <p className="landing__notice">
+        {FAN_PROJECT_NOTICE}{' '}
+        <a href={OFFICIAL_SITE.url} target="_blank" rel="noopener noreferrer">
+          {OFFICIAL_SITE.label}
+        </a>
+      </p>
+    </section>
   )
 }

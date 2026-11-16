@@ -28,3 +28,8 @@ export const BRAND = { name: 'VECTOR', tagline: 'Group Terminal by Kokizzle98' }
 
 export const FAN_PROJECT_NOTICE =
   'Inoffizielles Fan-Projekt, nicht mit Cloud Imperium Games verbunden.'
+
+export const OFFICIAL_SITE = {
+  url: 'https://robertsspaceindustries.com',
+  label: 'Star Citizen (offizielle Seite)',
+} as const
