@@ -2219,3 +2219,82 @@ h1, h2, h3,
 .inventory-edit-link:hover {
   background: rgba(47, 111, 214, .32);
 }
+
+
+/* ==========================================================================
+   PUBLIC LANDING PAGE (UX-7)
+   ========================================================================== */
+
+.landing {
+  display: grid;
+  gap: 1.25rem;
+  justify-items: start;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem;
+}
+
+.landing h1 {
+  margin: 0;
+  color: var(--cyan);
+  font-family: var(--font-display-stack);
+  font-size: clamp(2.5rem, 7vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: .08em;
+}
+
+.landing__lead {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.landing__list {
+  display: grid;
+  gap: .6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.landing__list li {
+  display: grid;
+  gap: .1rem;
+}
+
+.landing__list span {
+  color: var(--muted);
+}
+
+.landing__login {
+  display: inline-block;
+  min-height: 44px;
+  padding: .7rem 1.4rem;
+  border: 1px solid var(--cyan);
+  border-radius: .4rem;
+  color: var(--cyan);
+  text-decoration: none;
+}
+
+.landing__login:hover {
+  background: rgba(25, 216, 237, .1);
+}
+
+.landing__notice {
+  margin: 1rem 0 0;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
+  color: var(--text);
+}
+
+.landing__notice a {
+  color: var(--cyan);
+}
+
+.vector-footer {
+  flex-wrap: wrap;
+  gap: .25rem .6rem;
+}
+
+.vector-footer a {
+  color: inherit;
+}
