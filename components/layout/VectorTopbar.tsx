@@ -1,5 +1,6 @@
 ﻿import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+import { getLayoutUser } from '@/components/layout/layout-user'
 import { AccountDrawer } from '@/components/account/AccountDrawer'
 import { getCrewContext } from '@/lib/groups/crew-context'
 import { CrewSelector } from '@/components/layout/CrewSelector'
@@ -12,9 +13,7 @@ type AppRole = 'USER' | 'ONTOLOGY_ADMIN' | 'SYSTEM_ADMIN'
 export async function VectorTopbar() {
   const supabase = createSupabaseServerClient()
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const user = await getLayoutUser()
 
   if (!user) {
     return (

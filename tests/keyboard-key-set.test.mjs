@@ -137,7 +137,7 @@ test('the hook attaches one keydown listener and removes it on unmount', async (
 })
 
 test('the shell maps number keys through NAVIGATION and routeForDigit only', async () => {
-  const shell = await readText('components/layout/VectorShell.tsx')
+  const shell = await readText('components/layout/VectorShellClient.tsx')
   assert.match(shell, /routeForDigit\(event\.action\.digit, NAVIGATION\)/)
   assert.match(shell, /useKeySet\(/)
   assert.doesNotMatch(shell, /['"]\/vector\/(inventory|blueprints|fabricator)['"]/)
@@ -178,7 +178,7 @@ test('Crew Inventory stays read-only: no edit state, no write keys', async () =>
 
 test('the key set adds no positive tabindex and Esc/Enter never move focus to the header', async () => {
   for (const file of [
-    'components/layout/useKeySet.ts', 'components/layout/VectorShell.tsx', 'components/inventory/useInventoryKeys.ts',
+    'components/layout/useKeySet.ts', 'components/layout/VectorShellClient.tsx', 'components/inventory/useInventoryKeys.ts',
     'components/inventory/InventorySwitch.tsx', 'components/inventory/InventoryView.tsx', 'lib/keyboard/key-set.ts',
   ]) {
     const source = await readText(file)
