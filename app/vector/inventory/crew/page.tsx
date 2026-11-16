@@ -34,7 +34,7 @@ export default async function CrewInventoryPage() {
 
       {result.status === 'success' && (
         result.rows.length === 0 ? (
-          <p>Für diese Crew ist noch kein Inventory vorhanden.</p>
+          <p>Für diese Crew ist noch kein Inventory vorhanden. Sobald Crew-Mitglieder unter „Mein Inventory“ Lots hinzufügen, erscheinen sie hier.</p>
         ) : (
           <InventoryView rows={result.rows} units={metadata?.units ?? {}} metadataAvailable={metadata?.available ?? false}
             currentUserId={null} crewViewerUserId={viewerUserId} locations={null} label="Crew Inventory" />
