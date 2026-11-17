@@ -4,10 +4,10 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v10 (counted up from v9; REPO-TIDY-1 path updates only, no state change, base commit `9b882f9c81cb29fc6d1bbd6e07d581b16970a2b8`)
+- **Document version:** v11 (counted up from v10; checkpoint Release 2 done, base commit `9d58d615fecedb093749fb680aba332338990a00`)
 - **State verified through commit:** `217fa9155a1690fb833479d831cb93186311bd92`
-- **Updated by work package:** Checkpoint rotation after PR #83 (develop `217fa91`, Rotation-10, documentation only): release done (PR #79, `main` `e916f69`), PRs #80 to #83 merged into `develop`, next release deliberately deferred
-- **Checkpoint date:** 2026-11-16
+- **Updated by work package:** DOC-REL-2, checkpoint Release 2 done (develop `9d58d61`, documentation only): release PR #87 merged as merge commit (`main` `66c531bd`, tag `release-2026-11-17`), PRs #81 to #86 in the release. `State verified through commit` below is deliberately unchanged: the state was not re-verified in full, the entries for #84 to #87 come from the repository history (`git log`) and the owner report
+- **Checkpoint date:** 2026-11-17
 
 ## How to read this file
 
@@ -61,6 +61,10 @@
 - UX-7 public start page: **DONE**. #81 (`cdd9340`): public start page, fan project notice, link to the official site.
 - FAB-UX-1 Fabricator basics: **DONE**. #82 (`858ddfc`): hint bar, WASD keys, variant panel stays open, hint in the variant area.
 - UX-8 visitor navigation: **DONE**. #83 (`217fa91`): visitors see only Start and Sign in; Inventory redirects to sign-in without a login.
+- Checkpoint rotation after PR #83: **DONE**. #84 (`875f9f5`), documentation only.
+- INV-EMPTY-1 empty states in Inventory: **DONE**. #85 (`9b882f9`): explanatory hints with the next step for empty Mein Inventory / Crew Inventory, the Location view when every lot is in `Unbekannt`, and filters without a match; clearer text for `PLAYER_CONTEXT_REQUIRED`. Texts and display only.
+- REPO-TIDY-1 repository root tidy: **DONE**. #86 (`9d58d61`): audit scripts V4 to V6 and the resolver config to `scripts/audit/`, armor scripts to `scripts/armor-environment/`, notes to `docs/notes/` and `docs/handover/`, unused audit scripts V2 and V3 removed, audit workflow paths adjusted. No logic change.
+- Release 2 `develop` -> `main`: **DONE**. PR #87 (merge commit, `main` = `66c531bd`, tag `release-2026-11-17` on `66c531bd`). Rollback points: tag `pre-release-2026-11-14` on `eb6f108` and the previous `main` `e916f69`. Delta: #81 to #86 (#80 was already in `main` through #79). No database, data, dependency or environment change in the release.
 - Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`; #56 (`6586108`) public-repo boundary clarification and checkpoint rotation. Documentation only, no Production mutation.
 
 ## ACTIVE
@@ -77,11 +81,10 @@
 
 ## NEXT
 
-1. **No release for now.** The next release `develop` -> `main` is deliberately deferred (owner decision): little of substance has happened since the test release (PR #79, `main` = `e916f69`). When it is due, it is its own session and pull request with merge method **merge commit** (see `docs/handover/VECTOR_RESTART_HANDOVER.md` section 6).
+1. **Release 2 is done** (PR #87, `main` = `66c531bd`, tag `release-2026-11-17`; rollback points `pre-release-2026-11-14` on `eb6f108` and `e916f69`). The next release `develop` -> `main` is its own session and pull request with merge method **merge commit** (see `docs/handover/VECTOR_RESTART_HANDOVER.md` section 6). After PR #87, `main` and `develop` have identical file content (`git diff` empty); `main` is ahead only by the two release merge commits `e916f69` (#79) and `66c531b` (#87), which `develop` does not contain. The merge base is the `develop` head `9d58d61`, so the next release merge is clean without merging `main` back into `develop` (no back-merge was done after #79 either). A back-merge is optional and would be its own owner decision. Owner follow-up after the release: check the audit workflow run on `main` (first run with the new paths) and the Vercel Production deployment.
 2. Small follow-ups from the Copilot review of PR #79 (F2, F3 and F5 to F10): already classified as deferred; open, details with the owner. Each is its own small package.
 3. Backlog (each its own small package, only after an owner decision where noted):
    - Return to the requested page after sign-in (`next` target in `requireUser`; auth change).
-   - Empty states in `app/vector/inventory/` (links to the next action).
    - Dataset update (LIVE 4.10.3, PTU separate, workflow sync): only with an explicit owner GO.
    - Onboarding of player name / player account and the crew invitation UI.
    - Fabricator and Inventory design according to the mock-ups.
@@ -98,7 +101,7 @@
   - **No crew invitation UI.** The database has `invite_group_member` and `respond_group_invite`, but no page or component calls them (only `set_active_group` and the read RPCs are used). Issuing an invitation (crew owner) and accepting it (invited user) are missing. The dashboard hint "Lass dich von deiner Crew einladen" therefore has no in-app path.
   - **Data sync pushes directly to the default branch and is failing.** `.github/workflows/sync-scmdb-data.yml` (daily, `contents: write`) commits and pushes `data/scmdb` directly to the checked-out default branch (`develop`), outside the pull request flow. It is reported failing since 2026-10-29; the last data commit is from that day. The dataset package (see NEXT) takes this on.
   - **Dashboard milestone text is outdated.** `app/vector/page.tsx` still shows `NÄCHSTER MEILENSTEIN: Fabricator Quality & Stats`, although F3 is done.
-  - **Empty states without a link.** The empty states in `app/vector/inventory/page.tsx` and `app/vector/inventory/crew/page.tsx` give a text only, no link to the next action.
+  - **Empty states without a link.** Addressed in text by INV-EMPTY-1 (#85): the empty states now name the next action. They still contain no clickable link; a link would be a separate small package.
 
 ## OPEN INFRASTRUCTURE WORK
 

@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v10 (counted up from v9; REPO-TIDY-1 path updates only, no state change, base commit `9b882f9c81cb29fc6d1bbd6e07d581b16970a2b8`)
+- Document version: v11 (counted up from v10; checkpoint Release 2 done, base commit `9d58d615fecedb093749fb680aba332338990a00`)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -13,10 +13,10 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Rotation-10: project state documented (documentation only)`. The release `develop` -> `main` is **done** (PR #79, merge commit, `main` = `e916f69`; rollback point: tag `pre-release-2026-11-14` on `eb6f108`). Since `main`, four pull requests are merged into `develop`: #80 (login hardening, `next` redirect, F1 and F4 from the review of PR #79), #81 (UX-7 public start page, fan project notice, link to the official site), #82 (FAB-UX-1 Fabricator basics: hint bar, WASD, variant panel stays open, hint in the variant area) and #83 (UX-8 visitor navigation: visitors see only Start and Sign in, Inventory redirects to sign-in without a login). The next release is deliberately deferred (owner decision).
+- Work package: `DOC-REL-2: checkpoint Release 2 done (documentation only)`. Release 2 `develop` -> `main` is **done** (PR #87, merge commit, `main` = `66c531bd`, tag `release-2026-11-17`; rollback points: tag `pre-release-2026-11-14` on `eb6f108` and the previous `main` `e916f69`). The earlier release was PR #79 (merge commit `e916f69`). The checkpoint anchor and the allowed-scope list below are deliberately not advanced here (a proper checkpoint rotation is a separate step). Before Release 2, these pull requests were merged into `develop` (all included in the release): #80 (login hardening, already in `main` through #79), #81 (UX-7 public start page), #82 (FAB-UX-1 Fabricator basics), #83 (UX-8 visitor navigation), #84 (Rotation-10 documentation), #85 (INV-EMPTY-1 empty states in Inventory) and #86 (REPO-TIDY-1 repository root tidy). The next release is its own session and pull request.
 - Branch: `develop` (each work package works on its own feature branch)
 - Base: `develop`
-- Checkpoint date: `2026-11-16`
+- Checkpoint date: `2026-11-17`
 - Work-package base (historical): `217fa9155a1690fb833479d831cb93186311bd92`
 - Active checkpoint anchor: `217fa9155a1690fb833479d831cb93186311bd92`
 - Working-tree expectation: `CLEAN`
@@ -108,6 +108,10 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#81` (UX-7 public start page, fan project notice, link to the official site): merged into `develop` as `cdd9340`.
 - PR `#82` (FAB-UX-1 Fabricator basics): merged into `develop` as `858ddfc`.
 - PR `#83` (UX-8 visitor navigation, Inventory redirects to sign-in without a login): merged into `develop` as `217fa91`.
+- PR `#84` (checkpoint rotation after PR #83, Rotation-10): merged into `develop` as `875f9f5`.
+- PR `#85` (INV-EMPTY-1 explanatory empty states in Inventory, texts and display only): merged into `develop` as `9b882f9`.
+- PR `#86` (REPO-TIDY-1 repository root tidy, no logic change): merged into `develop` as `9d58d61`.
+- PR `#87` (Release 2 `develop` -> `main`): merged into `main` as merge commit `66c531bd`; tag `release-2026-11-17` on `66c531bd`; rollback points tag `pre-release-2026-11-14` on `eb6f108` and the previous `main` `e916f69`. No database, data, dependency or environment change.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -152,9 +156,9 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Rotation-10` (2026-11-16, documentation only). No feature work package is active. The release `develop` -> `main` is done (PR #79, `main` = `e916f69`, rollback tag `pre-release-2026-11-14` on `eb6f108`). `develop` = `217fa91` carries #80 (login hardening), #81 (UX-7), #82 (FAB-UX-1) and #83 (UX-8) on top of `main`. The next release is deliberately deferred (owner decision).
+`DOC-REL-2` (2026-11-17, documentation only). No feature work package is active. Release 2 `develop` -> `main` is done: PR #87 as merge commit, `main` = `66c531bd`, tag `release-2026-11-17`, rollback points tag `pre-release-2026-11-14` on `eb6f108` and the previous `main` `e916f69`. `develop` = `9d58d61` (#81 to #86 are in the release). After PR #87, `main` and `develop` have identical file content (`git diff` empty); `main` is ahead only by the two release merge commits `e916f69` (#79) and `66c531b` (#87), which `develop` does not contain. The merge base is the `develop` head `9d58d61`, so the next release merge is clean without merging `main` back into `develop` (no back-merge was done after #79 either). A back-merge is optional and would be its own owner decision. Owner follow-up after the release: check the audit workflow run on `main` (first run with the new `scripts/audit/` paths) and the Vercel Production deployment.
 
-Open, details with the owner: small follow-ups from the Copilot review of PR #79 (F2, F3 and F5 to F10, already classified as deferred). Backlog (each its own small package): return to the requested page after sign-in (`next` target in `requireUser`, auth change); empty states in `app/vector/inventory/`; dataset update (LIVE 4.10.3, PTU separate, workflow sync, only with an explicit owner GO); onboarding of player name / player account and the crew invitation UI; Fabricator / Inventory design according to the mock-ups. More details in `docs/PROJECT_STATE.md`.
+Open, details with the owner: small follow-ups from the Copilot review of PR #79 (F2, F3 and F5 to F10, already classified as deferred). Backlog (each its own small package): return to the requested page after sign-in (`next` target in `requireUser`, auth change); dataset update (LIVE 4.10.3, PTU separate, workflow sync, only with an explicit owner GO); onboarding of player name / player account and the crew invitation UI; Fabricator / Inventory design according to the mock-ups. More details in `docs/PROJECT_STATE.md`.
 
 
 Previous active package `Fabricator Phase 1`: F1 to F3 are **DONE**; F4 (gameplay relevance) is in the evidence phase. Current state (2026-11-12):
@@ -277,7 +281,7 @@ Completed packages: `Restart Safety + AI Efficiency v1` (PR #10) and `Repository
 - Do not create recursive review-evidence commits.
 - Do not run repository-wide AI audits when a bounded check can answer the question.
 - Do not use Max review by default.
-- Do not squash or rebase-merge the release pull request `develop` -> `main`; use a **merge commit**. Reason: `main` (`eb6f108`, PR #11) is an ancestor of `develop`, a merge commit keeps that ancestry and the two histories do not drift apart; a squash or rebase would create commits on `main` that `develop` does not contain and make the next release conflict-prone. This is an operational rule that follows `VECTOR_GOVERNANCE_V1` section 3.3 (merge into `main` is the release boundary) and does not change it. The merge itself applies no migration (`DB-ENV-07`).
+- Do not squash or rebase-merge the release pull request `develop` -> `main`; use a **merge commit**. Reason: `main` (`eb6f108`, PR #11) is an ancestor of `develop`, a merge commit keeps that ancestry and the two histories do not drift apart; a squash or rebase would create commits on `main` that `develop` does not contain and make the next release conflict-prone. Release 2 (#87) was merged this way. This is an operational rule that follows `VECTOR_GOVERNANCE_V1` section 3.3 (merge into `main` is the release boundary) and does not change it. The merge itself applies no migration (`DB-ENV-07`).
 
 ## 7. RECOVERY PROCEDURE
 
@@ -455,4 +459,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: No release for now (deliberately deferred, owner decision). The owner chooses the next small package from the backlog in `docs/PROJECT_STATE.md` (return to the requested page after sign-in, empty states in `app/vector/inventory/`, dataset update with an explicit owner GO, onboarding and crew invitation UI, Fabricator / Inventory design according to the mock-ups) or from the open follow-ups of the review of PR #79 (details with the owner). When the next release is due, it is its own session and pull request with merge method **merge commit** (section 6). The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract. The licence / redistribution decision for scunpacked-data stays open.
+NEXT STEP: Release 2 is done (PR #87, `main` = `66c531bd`, tag `release-2026-11-17`). The owner checks the audit workflow run on `main` and the Vercel Production deployment, then chooses the next small package from the backlog in `docs/PROJECT_STATE.md` (return to the requested page after sign-in, dataset update with an explicit owner GO, onboarding and crew invitation UI, Fabricator / Inventory design according to the mock-ups) or from the open follow-ups of the review of PR #79 (details with the owner). The next release is its own session and pull request with merge method **merge commit** (section 6). The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract. The licence / redistribution decision for scunpacked-data stays open.
