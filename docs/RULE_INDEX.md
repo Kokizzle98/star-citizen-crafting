@@ -1,7 +1,7 @@
 # VECTOR Rule Index
 
 **Status:** PROPOSED  
-**Version:** 1.4\
+**Version:** 1.5 (2026-11-17: `DATASET_PIPELINE_V1.md` v1.2 and `SCMDB_SOURCE_INVENTORY.md` registered; base `8f504ef`)\
 **Purpose:** Canonical registry and navigation index for VECTOR rules, specifications, architecture decisions, proposals and retired references.
 
 ## 1. Purpose
@@ -83,7 +83,8 @@ The following registry reflects the current known VECTOR rule set and must be re
 |---|---|---|---|
 | `VECTOR_GOVERNANCE_V1_1.md` | Global governance, lifecycle, rule authority and FROZEN conflict resolution | `PROPOSED` | Successor to `VECTOR_GOVERNANCE_V1.md` v1.0; required to resolve R1 |
 | `DATA_CONTEXT_MODEL_V1.md` | Build classification, LIVE/PTU dataset contexts, Production User State, PTU Preview, epochs | `PROPOSED` | Not a prerequisite for promoting `VECTOR_VERSIONING_V1_1.md`; must be reconciled with the then-FROZEN v1.1 and applicable FROZEN specifications before its own freeze; proposals do not resolve R3 |
-| `DATASET_PIPELINE_V1.md` | `DATASET_PIPELINE` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; align mutable-state boundaries with applicable FROZEN rules before freeze |
+| `DATASET_PIPELINE_V1.md` | `DATASET_PIPELINE` | `PROPOSED` | Version 1.2 (base `8f504ef`): adds dataset identity and Source Export Revision, channel manifest over domain revisions (compatibility with FROZEN `VECTOR_VERSIONING_V1_1.md` §5 and `ROLLBACK_POLICY_V1.md` §5 and §11 shown in its §34, no FROZEN change), two activation paths under `DB-ENV-04`, VECTOR-required SCMDB source set, two-stage fingerprint precheck, retention classification and state naming reconciliation. Not frozen. Freeze blockers: open decisions in its §43 (owner decisions 19 to 21), implementation and tests; N2 category semantics and N4 identity namespace are reconciled at proposal level; align mutable-state boundaries with applicable FROZEN rules before freeze |
+| `SCMDB_SOURCE_INVENTORY.md` | None (non-normative evidence input to `DATASET_PIPELINE`) | `PROPOSED` | Version 1.1 (base `8f504ef`): per-file classification of `data/scmdb/` (24 files) and reconciliation with `SCMDB_SCHEMA_CATALOG_PROFILE_V1.md`. Analysis and recommendation only; it decides no exclusion and is not intended to be frozen |
 | `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; complete remaining cross-spec alignment before freeze |
 | `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile its preview/staging validation (§18) with FROZEN `DB_ENVIRONMENT_GOVERNANCE_V1_1.md` (`DB-ENV-09`: a separate `DEVELOP` environment on the Free plan is allowed, Production gates unchanged); bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
