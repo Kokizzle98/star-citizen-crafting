@@ -916,7 +916,7 @@ Added in v1.2:
 - no file of the VECTOR-required source set is excluded without a recorded owner decision (§36);
 - every repository consumer of `data/scmdb/` maps to a registered domain (§37.3);
 - a precheck that cannot prove `UNCHANGED` never reports `UNCHANGED` (§37.4);
-- a no-material-change run writes nothing persistent and needs no owner action (§38);
+- a new build or export in which every registered domain is `UNCHANGED` creates no manifest, no database row and no pull request, and needs no owner action; it only appends to the observation record (§37.5, §38);
 - garbage-collection classification is computed from references, not age (§40).
 
 ## 33. Dataset identity and Source Export Revision
@@ -971,7 +971,7 @@ Binding rules:
 2. It never overwrites, updates in place or silently replaces the earlier Source Export Revision, its domain revisions or its manifests.
 3. If the precheck finds a material change (§37.5, §38.1), the result is a new channel Dataset Revision for the same build. This matches FROZEN `VECTOR_VERSIONING_V1_1.md` §4.3: VECTOR version and SC build unchanged, dataset revision incremented.
 4. The earlier revision stays available as a rollback target, subject to §40.
-5. If no registered domain changed, the new Source Export Revision is still recorded, as an observation (§38). The active Dataset Revision stays as it is.
+5. If no registered domain changed, the new Source Export Revision is still recorded, in the append-only observation record (§38, §39). No manifest is created, and the active manifest stays unchanged.
 
 The current database schema cannot hold a second revision of the same build (§42).
 
@@ -1016,7 +1016,6 @@ Channel Dataset Revision (manifest) =
     canonical_domain_input_fingerprint        (stage 2, §37.2)
     projector / resolver / rule versions
     generated_from  (build, source_export_revision)
-    verified_through (build, source_export_revision) = this manifest's own
   completeness and validation evidence
   recorded_at, verified_at
   status                                      (§41)
@@ -1024,15 +1023,17 @@ Channel Dataset Revision (manifest) =
 
 A domain revision is the immutable, channel-scoped output of one domain projector. It is generated from exactly one Source Export Revision.
 
+A manifest is created only under the conditions in §37.5. A new CIG build or a new Source Export Revision alone does not create one. When a domain revision is later found unchanged against newer builds or exports, that result goes into the append-only observation record (§39). It is never written into a manifest.
+
 ### 34.2 Binding conditions
 
 The manifest model is valid only together with all of the following conditions:
 
-- **M1 (one revision per channel).** The manifest is the channel's single Dataset Revision. It carries the one `<channel>_dataset_revision` and the one `<channel>_source_revision` value required by `VECTOR_VERSIONING_V1_1.md` §5.
-- **M2 (recorded by the pipeline, immutable).** Only the pipeline creates a manifest, at verification time and before any activation. Once recorded, a manifest never changes, apart from its status transitions (§41).
-- **M3 (connected to one export).** Every referenced domain revision is connected to the manifest's single Source Export Revision. It is either generated from it, or reused from an earlier revision. Reuse is allowed only when the domain's stage-2 fingerprint over the manifest's export equals the reused revision's fingerprint and all projector, resolver and rule versions are identical (§37.5). Any other reuse is prohibited.
+- **M1 (one revision per channel).** The manifest is the channel's single Dataset Revision. It carries the one `<channel>_dataset_revision` and the one `<channel>_source_revision` value required by `VECTOR_VERSIONING_V1_1.md` §5. The source revision is the manifest's own Source Export Revision. A later export in which every domain stayed `UNCHANGED` is an observation. It never becomes the source revision of an existing manifest.
+- **M2 (recorded by the pipeline, immutable).** Only the pipeline creates a manifest, at verification time and before any activation. Once recorded, a manifest never changes, apart from its status transitions (§41). Later verification results, including verified-through builds, are not written into it (§39).
+- **M3 (connected to one export).** At the time it is recorded, every referenced domain revision is connected to the manifest's single Source Export Revision. It is either generated from it, or reused from an earlier revision. Reuse is allowed only when the domain's stage-2 fingerprint over the manifest's export equals the reused revision's fingerprint and all projector, resolver and rule versions are identical (§37.5). Any other reuse is prohibited.
 - **M4 (no manual combination).** No person or job assembles a manifest by hand from domain revisions. This also holds for a forward fix. A new combination exists only as the pipeline's output for one Source Export Revision.
-- **M5 (rollback re-activates a recorded manifest).** A dataset rollback selects one previously recorded and verified manifest and restores it with all referenced domain revisions as one unit. It reruns the current validation, the Completeness Filter and the activation gate (`ROLLBACK_POLICY_V1.md` §14). A rollback never re-points a single domain.
+- **M5 (rollback re-activates a recorded manifest).** A dataset rollback selects one previously recorded and verified manifest and restores it with all referenced domain revisions as one unit. It reruns the current validation, the Completeness Filter and the activation gate (`ROLLBACK_POLICY_V1.md` §14). A rollback never re-points a single domain. A rollback does not touch the observation record. The restored manifest keeps its own build and source revision.
 - **M6 (channel scope).** A LIVE manifest references only LIVE domain revisions, and a PTU manifest only PTU domain revisions. This holds even when the content is identical; the inventory shows identical LIVE and PTU content for `mining_*` and `cig_data_issues-*`.
 - **M7 (reference integrity).** No domain revision referenced by a retained manifest may be removed (§40).
 - **M8 (provenance).** A manifest records every field required by `VECTOR_VERSIONING_V1_1.md` §5 and keeps the SCMDB provenance listed in `ROLLBACK_POLICY_V1.md` §15.
@@ -1043,19 +1044,29 @@ Question: is "channel dataset = recorded, verified manifest over domain revision
 
 | FROZEN rule | What it requires | How the manifest model satisfies it |
 |---|---|---|
-| `VECTOR_VERSIONING_V1_1.md` §5 | Per channel, one dataset revision and one source revision, with extraction, validation, completeness and activation provenance; storage names may be adapted | M1: the manifest id is the dataset revision; its single Source Export Revision is the source revision. M8: all listed fields are recorded. `<channel>_extracted_at` is the retrieval time of the manifest's Source Export Revision; per-domain generation times are kept in addition. |
+| `VECTOR_VERSIONING_V1_1.md` §5 | Per channel, one dataset revision and one source revision, with extraction, validation, completeness and activation provenance; storage names may be adapted | M1: the manifest id is the dataset revision; its single Source Export Revision is the source revision. While the manifest is active, that stays its source revision. Newer exports without material change are observations (§38) and do not replace it. M8: all listed fields are recorded. `<channel>_extracted_at` is the retrieval time of the manifest's Source Export Revision; per-domain generation times are kept in addition. |
 | `VECTOR_VERSIONING_V1_1.md` §5 (last paragraph) | A dataset revision identifies a published reference-data state | A manifest identifies exactly one combination of domain revisions. Under M2 that combination never changes. |
 | `VECTOR_VERSIONING_V1_1.md` §4.3 | A same-build correction increments the dataset revision | §33.3: a material same-build correction produces a new manifest. |
 | `VECTOR_VERSIONING_V1_1.md` §6.2 and §8.3 | One Dataset Context per operation, from exactly one channel | One active manifest per channel is the Dataset Context. M6 prevents cross-channel references. |
-| `VECTOR_VERSIONING_V1_1.md` §12 | Change detection, then source retrieval, extraction, build detection, normalization, completeness, dataset revision, activation | Stage-1 and stage-2 prechecks (§37) are change detection. The manifest is the dataset revision, recorded before activation (M2). |
+| `VECTOR_VERSIONING_V1_1.md` §12 | Change detection, then source retrieval, extraction, build detection, normalization, completeness, dataset revision, activation | Stage-1 and stage-2 prechecks (§37) are change detection. The manifest is the dataset revision, recorded before activation (M2). §12 also states that new source data alone never activates anything. A new build or export in which every domain is `UNCHANGED` is therefore only observed (§38). |
+| `VECTOR_VERSIONING_V1_1.md` §2, §8.3 item 7, §11 | The SC component of the canonical identifier is the *approved* LIVE build | The approved LIVE build is the build of the `ACTIVE` LIVE manifest. A later verified-through build is not approved and is not identity (limit 2 below). |
+| `VECTOR_VERSIONING_V1_1.md` §7.5 | PTU Preview provenance: `sc_build`, `dataset_revision_id` and `upstream_revision` of the selected PTU dataset revision | All three come from the `ACTIVE` PTU manifest that was used: its build, its id and its own Source Export Revision. |
 | `ROLLBACK_POLICY_V1.md` §11 | Restore the manifest/metadata and all referenced content as one coherent revision; never combine a manifest from one revision with data from another; verify hashes; rerun completeness and the activation gate | M5: the rollback unit is the recorded manifest plus exactly the domain revisions it references. M7 guarantees that they still exist. The stage-1 SHA-256 map and the stage-2 fingerprints are the recorded checksums. M5 reruns completeness and the gate. |
 | `ROLLBACK_POLICY_V1.md` §5 | Do not assemble a rollback target manually from unrelated files, manifests or fragments | M2 and M4: only the pipeline creates manifests, never at rollback time and never by hand. M3: every domain revision in a manifest is connected to the manifest's own Source Export Revision, through generation or through a verified fingerprint match. The fragments are therefore not unrelated. |
 | `ROLLBACK_POLICY_V1.md` §13 | Rollback is channel-scoped; no mixed runtime dataset | M6. |
-| `ROLLBACK_POLICY_V1.md` §17 and §32 item 3 | History is preserved; dataset rollback restores one coherent revision | Manifests and Source Export Revisions are immutable (M2, §33.2); rollback adds an activation event and rewrites nothing. |
+| `ROLLBACK_POLICY_V1.md` §17 and §32 item 3 | History is preserved; dataset rollback restores one coherent revision | Manifests and Source Export Revisions are immutable (M2, §33.2), and the observation record is append-only (§39). Rollback adds an activation event and rewrites nothing. |
 
 **Result: compatible.** The model can be expressed without changing any FROZEN document, as long as conditions M1 to M8 hold.
 
-Limit of the proof: an independent rollback of a single domain would create a channel state that was never recorded and verified as a manifest. That violates `ROLLBACK_POLICY_V1.md` §11. v1.2 therefore excludes it (M5). If the owner wants per-domain rollback in the future, that needs a successor of `ROLLBACK_POLICY_V1.md` through the normal governance process. It is not needed for v1.2.
+Limit 1 (per-domain rollback): an independent rollback of a single domain would create a channel state that was never recorded and verified as a manifest. That violates `ROLLBACK_POLICY_V1.md` §11. v1.2 therefore excludes it (M5). If the owner wants per-domain rollback in the future, that needs a successor of `ROLLBACK_POLICY_V1.md` through the normal governance process. It is not needed for v1.2.
+
+Limit 2 (identity versus provenance): a Dataset Context has one canonical identifier (`VECTOR_VERSIONING_V1_1.md` §2) and one compact label (§10), and both use the build of the `ACTIVE` manifest. A later verified-through build (§39) is provenance, not identity. No FROZEN rule requires the identifier or the label to carry the latest upstream build:
+
+- `VECTOR_VERSIONING_V1_1.md` §2, §8.3 item 7 and §11 require the approved LIVE build;
+- `VECTOR_VERSIONING_V1_1.md` §12 rules out activation merely because new source data exists;
+- `VECTOR_VERSIONING_V1_1.md` §7.5 binds build, revision and source revision to the dataset revision actually used.
+
+Consequence: if a new Semantic SC Version leaves every registered domain `UNCHANGED`, the compact label stays at the active manifest's version, for example `LIVE 4.10.2`, while the game already runs a newer version. The detailed version view (§10) may show the verified-through build next to it as provenance. This needs no FROZEN change and no owner decision.
 
 ## 35. Activation paths
 
@@ -1138,12 +1149,14 @@ A run in which only non-trigger content changed is a no-material-change run (§3
 
 ### 37.1 Stage 1: Raw Source Fingerprint
 
-The stage-1 fingerprint is the SHA-256 map of the Source Export Revision (§33.2). Stage 1 answers one question: did any raw byte of a trigger-relevant file change for this channel?
+The stage-1 fingerprint is the SHA-256 map of the Source Export Revision (§33.2). Stage 1 answers one question per registered domain: did any raw byte of that domain's trigger-relevant files change?
 
-- If no trigger-relevant file of a channel changed and the build is unchanged, the channel result is `UNCHANGED`. Stage 2 does not run.
-- Otherwise stage 2 runs for that channel.
+The baseline is the raw hashes of the domain's files in the export from which its active domain revision was generated, or in the latest export recorded as verified for that revision (§39).
 
-Files are compared by their logical role (the `files` key in `latest.json`, for example `crafting_blueprints`), not by path. A new build renames every per-build file.
+- If every trigger-relevant file of the domain is byte-equal by logical role, the domain is `UNCHANGED` at stage 1. This holds even if the build string changed. Stage 2 is not needed for that domain.
+- Otherwise stage 2 runs for that domain.
+
+Files are compared by their logical role (the `files` key in `latest.json`, for example `crafting_blueprints`), not by path. A new build renames every per-build file. Per-build files embed the build string in their `version` field, so across builds stage 2 usually decides.
 
 ### 37.2 Stage 2: Canonical Domain Input Fingerprint
 
@@ -1214,13 +1227,33 @@ The comparison key of a domain is:
 - Fingerprint differs: `CHANGED`.
 - Fingerprint equal but any version differs: `CHANGED`. This is forced reprocessing (§25).
 
-A build change (§33.4, group 5 or the Semantic SC Version) is always material at the identity level. It produces a new manifest even if every domain is `UNCHANGED`. In that case the domain revisions are reused under M3, and their `verified_through` moves to the new build (§39).
+A new CIG build, a new Semantic SC Version or a new Source Export Revision alone never forces a manifest. A new manifest, and with it a new Dataset Revision, is created only when at least one of these holds for the channel:
+
+- at least one registered domain is `CHANGED`;
+- a `HELD_FOR_REVIEW` result is resolved into a change;
+- a projector, resolver, rule or register version forces reprocessing (this is a `CHANGED` result under the key above).
+
+The new manifest carries the current build and Source Export Revision. Domains that are `UNCHANGED` are reused under M3.
+
+If every registered domain is `UNCHANGED`, the run is observation only (§38), even when the build or the export changed. A `HELD_FOR_REVIEW` result that is resolved into "no change" leads to the same outcome.
+
+Evidence: `deltas-live.json` holds 26 LIVE build pairs. 15 of them keep the Semantic SC Version, and 12 of those report an upstream `total` of 0. A manifest per build would mean, on the database path, a named Production GO per build (§35.2) without any change in content.
 
 ## 38. No-material-change behavior
 
 ### 38.1 Definition
 
-A run has no material change for a channel when the build is unchanged and every registered domain is `UNCHANGED`. Typical causes are a `mema-cache.json` refresh, a mirror manifest timestamp, a changelog-only upstream commit, or a corrected export that touches no registered section.
+A run has no material change for a channel when every registered domain is `UNCHANGED`, either by stage-1 byte equality or by the stage-2 comparison key (§37). This explicitly includes runs with a new CIG build, a new Semantic SC Version or a new Source Export Revision.
+
+Typical causes:
+
+- a new CIG build whose registered domain inputs did not change;
+- a `mema-cache.json` refresh;
+- a mirror manifest timestamp;
+- a changelog-only upstream commit;
+- a corrected export that touches no registered section.
+
+A run with an unresolved `HELD_FOR_REVIEW` result is not a no-material-change run until the review resolves it.
 
 ### 38.2 Behavior
 
@@ -1229,8 +1262,8 @@ A no-material-change run is observation only:
 - no new dataset revision or manifest is created, and the active manifest stays unchanged;
 - no database write of any kind, in any environment;
 - no Production GO is requested;
-- no owner action is required, and no pull request needs owner review;
-- the new Source Export Revision, if the raw bytes differ, and the precheck results are recorded as an observation.
+- no owner action is required, and no pull request is opened;
+- the build, the Source Export Revision and the precheck result per domain are appended to the observation record (§39).
 
 ### 38.3 Where observations live
 
@@ -1240,16 +1273,31 @@ Proposed: a single rolling, unprotected sync branch maintained by automation. It
 
 ## 39. Domain-level verification
 
-Each manifest entry records two build references per domain:
+Each domain has two build references, stored in different places:
 
-- **generated from build**: the build and Source Export Revision from which the domain revision was produced;
-- **verified through build**: the build and Source Export Revision against which the domain input was last confirmed equal (§37.5). That is the manifest's own export.
+- **generated from build**: the build and Source Export Revision from which the domain revision was produced. It is stored in the manifest entry (`generated_from`, §34.1) and is immutable.
+- **verified through build**: the latest build and Source Export Revision at which the domain input was confirmed `UNCHANGED` against that domain revision (§37.5). It is stored in the append-only observation record (§38.3).
 
-A domain revision is immutable. Its verification lives in the manifest entry, not in the revision itself. The latest "verified through" of a domain revision is derived from the newest manifest that references it.
+The observation record holds one entry per run, channel and domain:
 
-Example: `LOCATIONS generated from 4.10.2-live.12913470, verified through <later LIVE build>`. This means the locations input did not change between the two builds. It does not mean the locations were re-extracted.
+```text
+channel, domain
+domain_revision_id compared against
+comparison key (§37.5) and precheck result
+build, source_export_revision
+observed_at
+```
 
-Provenance views may show both values. Neither replaces the channel-level dataset revision (§34).
+Rules:
+
+1. Every precheck run appends entries, including runs that lead to a new manifest.
+2. Entries are never changed or deleted.
+3. "Verified through" is read from the observation record by `domain_revision_id`. It is never derived from manifests and never written into one (M2).
+4. A rollback leaves the observation record untouched (M5).
+
+Provenance views show, per channel, the `ACTIVE` manifest with its generated-from build X. For each domain they show the latest verified-through build Y from the observation record. Example: `LOCATIONS generated from 4.10.2-live.12913470, verified through <later LIVE build>`. This means the locations input did not change between the two builds. It does not mean the locations were re-extracted.
+
+The verified-through build is provenance, not identity (§34.3, limit 2). It does not replace the channel-level Dataset Revision (§34).
 
 ## 40. Retention and garbage-collection classification
 
@@ -1337,7 +1385,7 @@ Added in v1.2:
 
 19. **Owner decision:** exclusion of `workflow-state.json`, and whether `scenario_overrides` in `site-settings.json` is relevant (§36). Required before the mirror workflow package.
 20. **Owner decision:** which activation path is authoritative for which consumer, and how divergence between the paths is surfaced (§35.3).
-21. **OPEN (owner decision):** where no-material-change observations are kept (§38.3).
+21. **OPEN (owner decision):** where no-material-change observations are kept (§38.3). The append-only observation record also holds the verified-through builds (§39), so the chosen place must keep entries append-only and retrievable.
 22. Size of the recovery set per channel (§40.1).
 23. Storage of the `FAILED` reason code and of the §5 provenance fields (§41, §42).
 24. Migration that allows several Source Export Revisions per build (§42, item 1). Separate migration package under the `DB-ENV` gates.
