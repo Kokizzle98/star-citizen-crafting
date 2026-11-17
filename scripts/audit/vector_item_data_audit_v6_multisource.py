@@ -350,7 +350,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("root", nargs="?", default="data/scmdb")
     parser.add_argument("--out", default="vector-item-audit-v6-multisource")
-    parser.add_argument("--config", default="VECTOR_V5_RESOLVER_DEFINITION.json")
+    parser.add_argument("--config", default="scripts/audit/VECTOR_V5_RESOLVER_DEFINITION.json")
     args = parser.parse_args()
 
     root = Path(args.root)
