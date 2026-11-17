@@ -2,7 +2,7 @@
 import json
 from pathlib import Path
 
-CONFIG = Path('VECTOR_V5_RESOLVER_DEFINITION.json')
+CONFIG = Path('scripts/audit/VECTOR_V5_RESOLVER_DEFINITION.json')
 FAMILY_ID = 'ARMOR_ENVIRONMENT'
 
 ARMOR_ENVIRONMENT = {

@@ -8,7 +8,7 @@ Entry point for contributors and coding agents (Claude, GitHub Copilot as option
 2. `docs/PROJECT_STATE.md` — compact current state: DONE, ACTIVE, PAUSED, BLOCKED, NEXT, open decisions.
 3. `docs/handover/VECTOR_RESTART_HANDOVER.md` — recovery control block, drift procedure and `NEXT STEP`.
 4. `docs/governance/AI_OPERATING_MODEL.md` — roles and source-of-truth boundary for owner, Project Lead, engineering and review agents.
-5. `SCMDB_LOCATION_HANDOVER.md` — state and FROZEN contracts of the finished SCMDB location work.
+5. `docs/handover/SCMDB_LOCATION_HANDOVER.md` — state and FROZEN contracts of the finished SCMDB location work.
 6. `docs/frozen/` — binding specifications. Read every one that applies to your change.
 
 Authority order: FROZEN specifications, then the repository and its lifecycle information, then PROPOSED specifications (design input only), then reviews and handovers, then chat history. If two FROZEN rules conflict and no explicit supersession decides it, stop and report `FROZEN_CONFLICT` instead of guessing.

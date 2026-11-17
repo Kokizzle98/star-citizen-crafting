@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v9 (counted up from v8; checkpoint rotation after PR #83, Rotation-10, base commit `217fa9155a1690fb833479d831cb93186311bd92`)
+- Document version: v10 (counted up from v9; REPO-TIDY-1 path updates only, no state change, base commit `9b882f9c81cb29fc6d1bbd6e07d581b16970a2b8`)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -256,10 +256,10 @@ Out of scope for the whole package: the `where do I get this?` and mission UI, a
 
 Known open items, none of them started:
 
-- after this package: linking Crafting with Crew Inventory (see `SCMDB_LOCATION_HANDOVER.md`);
+- after this package: linking Crafting with Crew Inventory (see `docs/handover/SCMDB_LOCATION_HANDOVER.md`);
 - a later UX / design pass (not started, not part of any active package): blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, and the narrow app shell / sidebar on small screens;
 - known crew `active_group` inconsistency, deliberately unchanged: when `user_settings.active_group_id` is not set, `getCrewContext()` falls back to the first crew while `get_active_group_inventory()` and `get_active_crew_blueprint_status()` report `ACTIVE_GROUP_REQUIRED` (same behaviour on Inventory and Blueprints);
-- older audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders: archive or remove only after a separate, explicit decision;
+- `data/audit*` folders: archive or remove only after a separate, explicit decision (the unused audit scripts `v2` and `v3` were removed and `v4` to `v6` moved to `scripts/audit/` in REPO-TIDY-1; `v6` still imports `v4` and `v5`);
 - Rule Index items R2, R4 and R5 remain as listed in `docs/RULE_INDEX.md`.
 - open crew authorization and privacy hardening findings, currently rated LOW to MEDIUM. They are not part of the Blueprint work package and are not repaired here. Target: a separate work package `Crew Security Hardening`, to be completed or re-assessed at the latest before the first user outside the current test group. They do not block Blueprint PR 2, because the new crew function must not use the affected helpers as its sole authorization boundary.
 

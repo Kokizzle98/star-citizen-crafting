@@ -6,10 +6,10 @@ on:
     branches: [main]
     paths:
       - 'data/scmdb/**'
-      - 'vector_item_data_audit_v4_universal.py'
-      - 'vector_item_data_audit_v5_profiler.py'
-      - 'vector_item_data_audit_v6_multisource.py'
-      - 'VECTOR_V5_RESOLVER_DEFINITION.json'
+      - 'scripts/audit/vector_item_data_audit_v4_universal.py'
+      - 'scripts/audit/vector_item_data_audit_v5_profiler.py'
+      - 'scripts/audit/vector_item_data_audit_v6_multisource.py'
+      - 'scripts/audit/VECTOR_V5_RESOLVER_DEFINITION.json'
       - '.github/workflows/vector-item-data-audit.yml'
 
 permissions:
@@ -32,16 +32,16 @@ jobs:
       - name: Validate inputs
         run: |
           test -f data/scmdb/latest.json
-          test -f vector_item_data_audit_v4_universal.py
-          test -f vector_item_data_audit_v5_profiler.py
-          test -f vector_item_data_audit_v6_multisource.py
-          test -f VECTOR_V5_RESOLVER_DEFINITION.json
+          test -f scripts/audit/vector_item_data_audit_v4_universal.py
+          test -f scripts/audit/vector_item_data_audit_v5_profiler.py
+          test -f scripts/audit/vector_item_data_audit_v6_multisource.py
+          test -f scripts/audit/VECTOR_V5_RESOLVER_DEFINITION.json
 
       - name: Run V6 multi-source resolver
         run: |
           rm -rf vector-item-audit-v6-multisource
-          python vector_item_data_audit_v6_multisource.py data/scmdb \
-            --config VECTOR_V5_RESOLVER_DEFINITION.json \
+          python scripts/audit/vector_item_data_audit_v6_multisource.py data/scmdb \
+            --config scripts/audit/VECTOR_V5_RESOLVER_DEFINITION.json \
             --out vector-item-audit-v6-multisource
 
       - name: Validate V6 outputs
