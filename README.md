@@ -91,10 +91,11 @@ This layer is responsible for:
 
 ### 3. Data Resolver and Validation Layer
 This repository includes structured item and resolver logic:
-- `VECTOR_V5_RESOLVER_DEFINITION.json`
-- `vector_item_data_audit_v*.py`
-- `validate_armor_environment.py`
-- `apply_armor_environment_patch.py`
+- `scripts/audit/VECTOR_V5_RESOLVER_DEFINITION.json`
+- `scripts/audit/vector_item_data_audit_v*.py`
+- `scripts/armor-environment/validate_armor_environment.py`
+- `scripts/armor-environment/apply_armor_environment_patch.py`
+- `docs/notes/ARMOR_ENVIRONMENT_IMPLEMENTATION.md`
 
 This layer handles:
 - item normalization

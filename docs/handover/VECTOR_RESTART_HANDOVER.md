@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v8 (counted up from v7; checkpoint rotation after PR #77, Rotation-9, base commit `de12e8f5a1881e630b5eaf240bfcd84be7ab6af5`)
+- Document version: v10 (counted up from v9; REPO-TIDY-1 path updates only, no state change, base commit `9b882f9c81cb29fc6d1bbd6e07d581b16970a2b8`)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -13,17 +13,17 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `Release develop to main (pre-release rotation)`. The UX series is complete as planned: UX-1 to UX-5b (see the historical checkpoints), UX-5c (`B` key, #74), UX-5d (Crew edit symbol with jump and return, #75), UX-6a (Fabricator clarity pass and dataset label in the header, #76) and UX-6b (dashboard polish, #77) are done; Inventory UX v1.2 is FROZEN (#71, #72). The release itself is its own pull request `develop` -> `main` in its own session.
+- Work package: `Rotation-10: project state documented (documentation only)`. The release `develop` -> `main` is **done** (PR #79, merge commit, `main` = `e916f69`; rollback point: tag `pre-release-2026-11-14` on `eb6f108`). Since `main`, four pull requests are merged into `develop`: #80 (login hardening, `next` redirect, F1 and F4 from the review of PR #79), #81 (UX-7 public start page, fan project notice, link to the official site), #82 (FAB-UX-1 Fabricator basics: hint bar, WASD, variant panel stays open, hint in the variant area) and #83 (UX-8 visitor navigation: visitors see only Start and Sign in, Inventory redirects to sign-in without a login). The next release is deliberately deferred (owner decision).
 - Branch: `develop` (each work package works on its own feature branch)
 - Base: `develop`
-- Checkpoint date: `2026-11-14`
-- Work-package base (historical): `de12e8f5a1881e630b5eaf240bfcd84be7ab6af5`
-- Active checkpoint anchor: `de12e8f5a1881e630b5eaf240bfcd84be7ab6af5`
+- Checkpoint date: `2026-11-16`
+- Work-package base (historical): `217fa9155a1690fb833479d831cb93186311bd92`
+- Active checkpoint anchor: `217fa9155a1690fb833479d831cb93186311bd92`
 - Working-tree expectation: `CLEAN`
-- Active PR: none at rotation time; the release pull request `develop` -> `main` opens in its own session, every other work package opens its own pull request against `develop`
+- Active PR: none at rotation time (the rotation pull request itself is documentation only); every work package opens its own pull request against `develop`
 - PR base: `develop`
 
-The active anchor is the verified `develop` head after PR #77. The allowed scope below authorizes the documentation rotation and the paths of the UX series and its follow-ups only; the release pull request itself changes no file beyond the merge: no migration, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #83. The allowed scope below authorizes the documentation rotation and the paths of the UX series and its follow-ups only; no migration, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
@@ -103,6 +103,11 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#75` (UX-5d Crew edit symbol with jump and return): merged into `develop` on 2026-11-14 as `8ea2425`.
 - PR `#76` (UX-6a Fabricator clarity pass and dataset label in the header): merged into `develop` on 2026-11-14 as `c4d60fe`.
 - PR `#77` (UX-6b dashboard polish): merged into `develop` on 2026-11-14 as `de12e8f`.
+- PR `#79` (release `develop` -> `main`): merged into `main` as merge commit `e916f69`; rollback point tag `pre-release-2026-11-14` on `eb6f108`.
+- PR `#80` (login hardening, `next` redirect; F1 and F4 from the review of PR #79): merged into `develop` as `e2a8b66`.
+- PR `#81` (UX-7 public start page, fan project notice, link to the official site): merged into `develop` as `cdd9340`.
+- PR `#82` (FAB-UX-1 Fabricator basics): merged into `develop` as `858ddfc`.
+- PR `#83` (UX-8 visitor navigation, Inventory redirects to sign-in without a login): merged into `develop` as `217fa91`.
 
 No earlier PR is active. Do not reopen or modify them.
 
@@ -147,11 +152,10 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`Release develop to main` (pre-release rotation, 2026-11-14). The preceding `UX series` (owner priority, 2026-11-13) is complete as planned: design mock-ups approved by the owner; specification `INVENTORY_UX_V1_2.md` FROZEN (`INVENTORY_UX_V1_1.md` superseded); UX-1 **DONE**, UX-2 **DONE**, UX-3a **DONE**, UX-3b **DONE**, UX-4 **DONE**, UX-5 **DONE**, UX-5b **DONE**, UX-5c (`B` key) **DONE**, UX-5d (Crew edit symbol with jump and return) **DONE**, UX-6a (Fabricator clarity pass, dataset label `LIVE · 4.10.2` in the header) **DONE**, UX-6b (dashboard polish, crew hint for new users) **DONE**. No database change was part of this series.
+`Rotation-10` (2026-11-16, documentation only). No feature work package is active. The release `develop` -> `main` is done (PR #79, `main` = `e916f69`, rollback tag `pre-release-2026-11-14` on `eb6f108`). `develop` = `217fa91` carries #80 (login hardening), #81 (UX-7), #82 (FAB-UX-1) and #83 (UX-8) on top of `main`. The next release is deliberately deferred (owner decision).
 
-The release is the formal release boundary (`VECTOR_GOVERNANCE_V1` section 3.3): one pull request `develop` -> `main`, merge method merge commit (section 6), preceded by the release gate (`VECTOR_GOVERNANCE_V1` section 8) and the Project Lead's read-only comparison of the migration objects with Production. The merge applies no migration and is no Production mutation.
+Open, details with the owner: small follow-ups from the Copilot review of PR #79 (F2, F3 and F5 to F10, already classified as deferred). Backlog (each its own small package): return to the requested page after sign-in (`next` target in `requireUser`, auth change); empty states in `app/vector/inventory/`; dataset update (LIVE 4.10.3, PTU separate, workflow sync, only with an explicit owner GO); onboarding of player name / player account and the crew invitation UI; Fabricator / Inventory design according to the mock-ups. More details in `docs/PROJECT_STATE.md`.
 
-Open points found before the release, none started (details in `docs/PROJECT_STATE.md` under OPEN DECISIONS): no crew invitation UI; the SCMDB data sync workflow pushes directly to the default branch and is reported failing since 2026-10-29 (dataset package planned for the following week); the dashboard milestone text is outdated; the empty states in `app/vector/inventory/` have no link.
 
 Previous active package `Fabricator Phase 1`: F1 to F3 are **DONE**; F4 (gameplay relevance) is in the evidence phase. Current state (2026-11-12):
 
@@ -252,10 +256,10 @@ Out of scope for the whole package: the `where do I get this?` and mission UI, a
 
 Known open items, none of them started:
 
-- after this package: linking Crafting with Crew Inventory (see `SCMDB_LOCATION_HANDOVER.md`);
+- after this package: linking Crafting with Crew Inventory (see `docs/handover/SCMDB_LOCATION_HANDOVER.md`);
 - a later UX / design pass (not started, not part of any active package): blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, and the narrow app shell / sidebar on small screens;
 - known crew `active_group` inconsistency, deliberately unchanged: when `user_settings.active_group_id` is not set, `getCrewContext()` falls back to the first crew while `get_active_group_inventory()` and `get_active_crew_blueprint_status()` report `ACTIVE_GROUP_REQUIRED` (same behaviour on Inventory and Blueprints);
-- older audit scripts `vector_item_data_audit_v2` to `v5` and the `data/audit*` folders: archive or remove only after a separate, explicit decision;
+- `data/audit*` folders: archive or remove only after a separate, explicit decision (the unused audit scripts `v2` and `v3` were removed and `v4` to `v6` moved to `scripts/audit/` in REPO-TIDY-1; `v6` still imports `v4` and `v5`);
 - Rule Index items R2, R4 and R5 remain as listed in `docs/RULE_INDEX.md`.
 - open crew authorization and privacy hardening findings, currently rated LOW to MEDIUM. They are not part of the Blueprint work package and are not repaired here. Target: a separate work package `Crew Security Hardening`, to be completed or re-assessed at the latest before the first user outside the current test group. They do not block Blueprint PR 2, because the new crew function must not use the affected helpers as its sole authorization boundary.
 
@@ -451,4 +455,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Release `develop` to `main` as its own session and pull request `develop` -> `main`, merge method **merge commit** (section 6). Preconditions: this rotation merged, the Project Lead's read-only comparison of the migration objects with Production done, the release gate (`VECTOR_GOVERNANCE_V1` section 8) passed, and the owner's explicit release decision. The merge applies no migration; no Production mutation. Afterwards: the dataset package (SCMDB data sync workflow, planned for the following week), then small follow-ups from the open points in `docs/PROJECT_STATE.md` (crew invitation UI, dashboard milestone text, links in the empty states), each its own package after an owner decision. Open owner wishes, not commissioned: Crew Inventory background image, material image (source and rights unresolved). Then the owner chooses the next package (candidates: F4-B gameplay relevance / exclusion contract, UEX source foundation). The licence / redistribution decision for scunpacked-data stays open. The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract.
+NEXT STEP: No release for now (deliberately deferred, owner decision). The owner chooses the next small package from the backlog in `docs/PROJECT_STATE.md` (return to the requested page after sign-in, empty states in `app/vector/inventory/`, dataset update with an explicit owner GO, onboarding and crew invitation UI, Fabricator / Inventory design according to the mock-ups) or from the open follow-ups of the review of PR #79 (details with the owner). When the next release is due, it is its own session and pull request with merge method **merge commit** (section 6). The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract. The licence / redistribution decision for scunpacked-data stays open.

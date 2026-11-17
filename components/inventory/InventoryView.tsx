@@ -502,8 +502,14 @@ export function InventoryView({ rows, units, metadataAvailable, currentUserId, l
     <QualityLegend />
 
     {visibleRows.length === 0
-      ? <p className="inventory-filter-empty">Keine Lots entsprechen den aktuellen Filtern.</p>
+      ? <p className="inventory-filter-empty">Keine Treffer für diesen Filter. Mit „Filter zurücksetzen“ (Taste R) siehst du wieder alle Lots.</p>
       : null}
+
+    {view === 'LOCATION' && rows.length > 0 && rows.every((row) => row.location_name === 'Unbekannt') &&
+      <p className="inventory-filter-empty" role="status">
+        Alle Lots liegen in „Unbekannt“, deshalb zeigt die Location-Ansicht nichts anderes als Global.
+        {currentUserId !== null && locationOptions ? ' Wähle bei deinen Lots über „Bearbeiten“ eine Location.' : ' Die Besitzer können die Location in „Mein Inventory“ ändern.'}
+      </p>}
 
     {visibleRows.length > 0 && <p className="inventory-depth" role="status">{depthLabel(view, materialOpen, locationOpen)}</p>}
 

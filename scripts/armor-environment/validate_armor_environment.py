@@ -15,7 +15,7 @@ ALLOWED = {'RESOLVED', 'SOURCE_DATA_MISSING', 'REVIEW_REQUIRED'}
 
 
 def validate_config(root: Path):
-    p = root / 'VECTOR_V5_RESOLVER_DEFINITION.json'
+    p = root / 'scripts/audit/VECTOR_V5_RESOLVER_DEFINITION.json'
     data = json.loads(p.read_text(encoding='utf-8'))
     families = [x for x in data.get('resolverFamilies', []) if x.get('id') == 'ARMOR_ENVIRONMENT']
     assert len(families) == 1, 'ARMOR_ENVIRONMENT must exist exactly once'

@@ -148,7 +148,7 @@ def write_profiler(out, channel, rows):
 
 
 def main():
-    ap=argparse.ArgumentParser(); ap.add_argument('root',nargs='?',default='data/scmdb'); ap.add_argument('--out',default='vector-item-audit-v5'); ap.add_argument('--config',default='VECTOR_V5_RESOLVER_DEFINITION.json'); args=ap.parse_args()
+    ap=argparse.ArgumentParser(); ap.add_argument('root',nargs='?',default='data/scmdb'); ap.add_argument('--out',default='vector-item-audit-v5'); ap.add_argument('--config',default='scripts/audit/VECTOR_V5_RESOLVER_DEFINITION.json'); args=ap.parse_args()
     root=Path(args.root); out=Path(args.out); config=json.loads(Path(args.config).read_text(encoding='utf-8-sig'))
     v4=load_module(ROOT/'vector_item_data_audit_v4_universal.py'); latest=v4.load(root/'latest.json')
     summaries={}; channel_data={}

@@ -3,7 +3,7 @@ import { Chakra_Petch, IBM_Plex_Mono } from 'next/font/google'
 import './globals.css'
 import { VectorShell } from '@/components/layout/VectorShell'
 import { VectorTopbar } from '@/components/layout/VectorTopbar'
-import { FAN_PROJECT_NOTICE } from '@/components/layout/navigation'
+import { FAN_PROJECT_NOTICE, OFFICIAL_SITE } from '@/components/layout/navigation'
 
 // Self-hosted at build time by next/font: no runtime request to Google.
 const display = Chakra_Petch({
@@ -50,7 +50,12 @@ export default function RootLayout({
           </main>
         </VectorShell>
 
-        <footer className="vector-footer">{FAN_PROJECT_NOTICE}</footer>
+        <footer className="vector-footer">
+          {FAN_PROJECT_NOTICE}
+          <a href={OFFICIAL_SITE.url} target="_blank" rel="noopener noreferrer">
+            {OFFICIAL_SITE.label}
+          </a>
+        </footer>
       </body>
     </html>
   )

@@ -53,7 +53,7 @@
   ACTIVE_GROUP_REQUIRED:
     'Bitte wähle zuerst eine aktive Crew aus.',
   PLAYER_CONTEXT_REQUIRED:
-    'Dein Spielerprofil konnte nicht eindeutig bestimmt werden. Der Lot wurde nicht gespeichert.',
+    'Für dein Konto ist noch kein Spielername hinterlegt, deshalb wurde der Lot nicht gespeichert. Bitte hinterlege zuerst deinen Spielernamen und versuche es dann erneut.',
   INSERT_NOT_ALLOWED:
     'Der Lot konnte aufgrund der Zugriffsregeln nicht gespeichert werden.',
   INSERT_FAILED:

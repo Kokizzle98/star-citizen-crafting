@@ -24,7 +24,25 @@ export const NAVIGATION: readonly NavigationItem[] = [
   { number: '06', label: 'Trading', icon: '↔', href: null, soon: true },
 ]
 
+// Visitors without a login see no area of the app (all of them need a login):
+// only the public start page and the login. Nothing "BALD", no dead ends.
+export type VisitorNavigationItem = {
+  label: string
+  icon: string
+  href: string
+}
+
+export const VISITOR_NAVIGATION: readonly VisitorNavigationItem[] = [
+  { label: 'Start', icon: '⌂', href: '/' },
+  { label: 'Anmelden', icon: '→', href: '/login' },
+]
+
 export const BRAND = { name: 'VECTOR', tagline: 'Group Terminal by Kokizzle98' } as const
 
 export const FAN_PROJECT_NOTICE =
   'Inoffizielles Fan-Projekt, nicht mit Cloud Imperium Games verbunden.'
+
+export const OFFICIAL_SITE = {
+  url: 'https://robertsspaceindustries.com',
+  label: 'Star Citizen (offizielle Seite)',
+} as const
