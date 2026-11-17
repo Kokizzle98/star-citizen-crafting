@@ -1,7 +1,7 @@
 # VECTOR DEVELOP Database Concept
 
 - **Status:** ACCEPTED (owner decisions of 2026-11-17 recorded in sections 2, 7 and 11; the binding rule is `DB-ENV-09` in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md`; this document stays a planning document and is not FROZEN)
-- **Version:** 1.0 (counted up from 0.1; base commit `e97f88f`, WP DEV-DB-G0)
+- **Version:** 1.1 (counted up from 1.0; base commit `e97f88f`, correction base `bcd5333`, WP DEV-DB-G0-FIX: owner decisions 7 and 8 corrected on 2026-11-17)
 - **Work package:** WP DEV-DB-KONZEPT (read-only analysis and planning), accepted and updated by WP DEV-DB-G0 (documentation only; nothing was created or changed)
 - **Scope:** a second, separate Supabase project `DEVELOP` next to the existing Production project: how to build it, fill it, wire it to Vercel and operate it
 - **Out of scope:** separate Supabase contexts for `LIVE` and `PTU` (still future work, see section 9), Supabase branching, any paid plan, any change to Production
@@ -49,8 +49,9 @@ Order (each step is a gate in section 8):
 ```text
 G0  record the governance decision (DB-ENV-09 re-evaluated)   <- done: DB_ENVIRONMENT_GOVERNANCE_V1_1
 G1  owner creates the DEVELOP project
-G2  private schema snapshot of Production (structure only) -> applied to DEVELOP,
-    plus the non-SQL configuration rebuilt by hand
+G2  engineer builds schema SQL from read-only catalog queries of Production (structure only),
+    applies it to DEVELOP after the G2 GO, drift fingerprint on both projects (deviation = stop),
+    plus the non-SQL configuration rebuilt (owner decisions in the dashboard, engineer guides)
 G3  catalog data and synthetic test data seeded into DEVELOP
 G4  Vercel Preview and local development switched to DEVELOP
 G5  hardening H2 applied and tested on DEVELOP first
@@ -100,18 +101,19 @@ The private inventory (owner archive) records which of these areas Production ac
 
 | Method | Prerequisites | Credentials needed (named only, not requested) | Completeness | Repeatability | Risks |
 |---|---|---|---|---|---|
-| **A. Supabase CLI `supabase db dump` (schema only, default mode)** | Supabase CLI, Docker Desktop (the CLI runs `pg_dump` in a container), owner machine | Production database connection string including the database password (via `--db-url`), **or** a personal access token plus the database password for `supabase link` | High for project schemas: tables, constraints, indexes, policies, grants, functions, triggers, comments. Supabase-managed schemas are filtered out on purpose; objects added to managed schemas need explicit `--schema` flags | High: one command, same output format each time, diffable | The database password is a high-privilege secret on the owner machine; the output contains the full security model and must stay private; Docker / CLI version drift |
+| A. Supabase CLI `supabase db dump` (schema only, default mode) **(fallback only)** | Supabase CLI, Docker Desktop (the CLI runs `pg_dump` in a container), a terminal on the owner machine | Production database connection string including the database password (via `--db-url`), **or** a personal access token plus the database password for `supabase link` | High for project schemas: tables, constraints, indexes, policies, grants, functions, triggers, comments. Supabase-managed schemas are filtered out on purpose; objects added to managed schemas need explicit `--schema` flags | High: one command, same output format each time, diffable | The database password is a high-privilege secret on the owner machine; the output contains the full security model and must stay private; Docker / CLI version drift |
 | B. Plain `pg_dump --schema-only` | PostgreSQL 17 client tools | Same connection string with database password | High, but unfiltered: includes Supabase-managed schemas and internal role grants, which fail or conflict on a fresh project | Medium: needs manual cleanup each time | Same secret risk as A, plus error-prone manual filtering |
-| C. SQL catalog queries (read-only, through the Supabase connector) | Existing connector access | None beyond the existing connector authorization | Good for an inventory and for drift checks; reconstructing runnable DDL by hand (order, dependencies, defaults, sequences) is incomplete and error-prone | High for checks | Low secret risk; can be enforced read-only per transaction; not a reliable bootstrap |
+| **C. SQL catalog queries (strictly read-only, through the Supabase connection), converted by the engineer into dependency-ordered schema SQL (standard method)** | Supabase connection to `PRODUCTION`, used only in read-only transactions | None beyond the existing connection authorization; no database password, no access token, no terminal and no Docker on the owner machine | High when generated systematically (tables, columns, defaults, sequences, constraints, indexes, policies, grants, default privileges, functions, triggers, extensions, comments in dependency order) and proven by the fingerprint; gaps are caught as deviations | High: the same generation and the same fingerprint every time, diffable | The generated SQL is a full description of the security model: it goes only into the private archive, never into the repository; hand-assembled DDL can miss objects, so the fingerprint is mandatory and any deviation stops the work; the SQL passes through the engineer's working context (accepted by the owner decision) |
 | D. Dashboard export (copying definitions in the SQL editor / table view) | Dashboard login | Dashboard login | Low: object by object, policies and grants easy to miss | Low | Manual mistakes; the Free plan offers no downloadable backups |
 | E. `supabase db pull` | CLI, Docker, link | Access token, database password | High | High | **Not allowed against Production:** it offers to write the remote migration history table, which is a Production mutation |
 | F. Supabase branching | Paid plan | n/a | n/a | n/a | Excluded by owner decision |
 
-**Recommendation: A for the bootstrap, C for verification.**
+**Recommendation (owner decision 2026-11-17): C is the standard method for the bootstrap and for the verification; A stays a documented fallback.** The owner does not run SQL or terminal commands.
 
-- A gives a complete, runnable and repeatable structure snapshot with Supabase-aware filtering. It is run once by the owner on the owner machine, schema only (no `--data-only`, no `--role-only`), and the file goes straight to the private security folder. It never goes into the repository.
-- C is run before and after: before, to know what must be in the snapshot; after G2, to prove that DEVELOP matches Production (section 7.2).
-- Credential hygiene for A: use the connection string only in the local shell session, not in a file inside the repository; afterwards the owner rotates the database password himself in the dashboard (owner decision 2026-11-17; a Production configuration change made by the owner). A dedicated read-only login role would reduce the risk further, but creating it is a Production mutation and is not part of this concept.
+- C: the engineer reads the structure of `PRODUCTION` with catalog queries inside read-only transactions and writes runnable schema SQL in dependency order (extensions, types, sequences, tables, constraints, indexes, functions, triggers, RLS and policies, grants, default privileges, comments). The SQL is delivered to the owner as a private attachment (05_Security_Private) and is never committed, attached to a pull request or quoted in public documents.
+- Verification: a drift fingerprint (a count and a hash per object category, including grants and default privileges) is computed on both projects before and after G2 (section 7.2). Any deviation is a stop; it is fixed in the schema SQL, not by hand on one side.
+- Fallback A: only if C cannot reproduce the structure completely. It needs Docker and a terminal and a database credential for `PRODUCTION`; because that would be a terminal step on the owner side, it needs its own owner decision before use.
+- Rotating the Production database password after the snapshot stays the owner's decision 5 (done by the owner in the dashboard, no terminal); with method C no database password is used for the snapshot itself.
 
 ## 6. Filling DEVELOP
 
@@ -243,7 +245,7 @@ The Free plan does not allow separate projects for `LIVE` and `PTU` in addition 
 |---|---|---|---|---|---|---|
 | G0 | Record the decision to re-evaluate `DB-ENV-09` as a governed change (`DB_ENVIRONMENT_GOVERNANCE_V1_1`, v1.0 superseded) | Owner decides, engineer drafted the PR | Documentation (FROZEN change process) | No | Low | Revert the PR; DEVELOP stays unbuilt |
 | G1 | Create the project `DEVELOP` in the same organization: same region and Postgres major version as Production, strong database password stored in the password manager, note platform defaults installed at creation | Owner (account action) | New project | No | Low; uses the second and last Free slot | Pause or delete the project |
-| G2 | (a) Owner runs the schema-only snapshot of Production (method A) into the private folder; (b) **the owner applies the snapshot to DEVELOP locally himself** (psql / Docker), so that the dump never passes through the chat or model context; the engineer prepares the commands and a checklist (target check, single transaction, stop on first error, platform defaults) and, after the owner's GO for the verification, only reads DEVELOP and Production and compares the compact drift fingerprint (count and hash per object category); (c) owner rebuilds the non-SQL configuration (section 4.2) | Owner (a, b, c), engineer prepares and verifies read-only (b) | Read on Production; DDL on DEVELOP by the owner; DEVELOP settings | Read only | Medium: wrong target project, missing objects, duplicates with platform defaults | Reset DEVELOP (drop the project schema and reapply, or recreate the project) |
+| G2 | (a) Engineer reads the structure of `PRODUCTION` strictly read-only (catalog queries, read-only transactions, method C) and builds dependency-ordered schema SQL; (b) after the G2 GO the engineer applies it to `DEVELOP` (target verified by name before every write, single transaction where possible, stop on first error) and computes the drift fingerprint (count and hash per object category incl. grants and default privileges) on both projects; any deviation is a stop; (c) the non-SQL configuration (section 4.2) is rebuilt, the owner decides values in the dashboard, the engineer guides step by step. The schema SQL goes to the owner as a private attachment, never into the repository or a PR | Engineer (a, b); owner gives the G2 GO and makes the dashboard settings (c); the owner runs no SQL or terminal commands | Read on `PRODUCTION`; DDL on `DEVELOP`; `DEVELOP` settings | Read only | Medium: wrong target project, missing objects, duplicates with platform defaults | Reset `DEVELOP` (drop the project schema and reapply, or recreate the project) |
 | G3 | Load catalog datasets and the synthetic seed into DEVELOP | Engineer after the GO for that work package (owner provides DEVELOP keys locally) | Data on DEVELOP | No | Low to medium: wrong env file pointing at Production | Target guard in the runner; reset synthetic users and reseed |
 | G4 | Switch Vercel Preview / Development and local env to DEVELOP | Owner GO; owner or engineer with explicit approval performs it | Vercel configuration | No (Production scope unchanged) | Medium: Preview login or data broken; auth redirect mismatch | Restore Preview / Development entries to the Production values, redeploy Preview |
 | G5 | Apply hardening H2 (reviewed migration from the repository) to DEVELOP, run postchecks, RLS / RPC tests and the Preview smoke test | Engineer after the GO for that work package | DDL on DEVELOP | No | Low for Production; findings may require migration changes | Reviewed reverse migration on DEVELOP, or reset DEVELOP from snapshot + seed |
@@ -260,8 +262,8 @@ Decided by the owner on 2026-11-17 (recorded as conditions of `DB-ENV-09` in `DB
 4. Production is not kept awake by a ping for now; re-evaluated when more external testers join.
 5. The owner rotates the Production database password himself in the dashboard after the snapshot.
 6. External auth providers on DEVELOP: later, only with the auth features.
-7. Snapshot application (G2b): the owner applies the private schema snapshot to DEVELOP locally; the engineer prepares and verifies read-only with a compact drift fingerprint.
-8. Connector rule (section 12).
+7. Snapshot and application (G2) are done by the engineer: strictly read-only catalog queries of `PRODUCTION`, runnable dependency-ordered schema SQL, applied to `DEVELOP` after the G2 GO, drift fingerprint on both projects (any deviation is a stop); the SQL is a private attachment for the owner and never enters the repository. The owner runs no SQL and no terminal commands. The CLI dump stays a fallback only. *(Corrected 2026-11-17, owner decision: the first version of this entry had the owner apply the snapshot locally.)*
+8. Connector rule (section 12), made precise on 2026-11-17 (owner decision).
 
 Still open (none blocks G1):
 
@@ -271,9 +273,11 @@ Still open (none blocks G1):
 
 ## 12. Connector rule
 
-- Every Supabase connection that an agent uses is scoped to exactly one project (by project reference, configured by the owner outside this repository).
-- The Production connection is read-only (`read_only=true`).
-- Only the DEVELOP connection may write, and only inside a work package that has its GO.
-- No account-wide connection is used for write actions. An account-wide connection is not used at all once the two project-scoped connections exist, so that the two projects cannot be confused.
-- Before every SQL action an agent states which project the connection points to by its name (`Production` or `DEVELOP`), never by posting the project reference or URL into a chat, pull request or document.
-- Setting up the scoped connections is an owner action after G1. This document does not contain references, URLs or keys.
+Owner decision 2026-11-17 (made precise):
+
+- **Target state:** one project-scoped connection per project (configured outside this repository). The `PRODUCTION` connection is read-only (`read_only=true`); the `DEVELOP` connection may write, and only inside a work package that has its GO.
+- **Transition rule until then:** the engineer writes **exclusively** to the project named `DEVELOP`. The project is verified by name before the first write and the target is checked before every write action. `PRODUCTION` is accessed read-only only, in read-only transactions.
+- Every Production mutation remains its own named owner GO (`DB-ENV-04`, `DB-ENV-07`).
+- An account-wide connection is not used for write actions without that target check, so that the two projects cannot be confused.
+- Agents name the project by its name (`PRODUCTION` or `DEVELOP`), never by posting a project reference or URL into a chat, pull request or document. The exact display names are kept in the owner's private archive.
+- This document contains no references, URLs, keys or passwords and makes no statement about integration or dashboard settings of `PRODUCTION`.

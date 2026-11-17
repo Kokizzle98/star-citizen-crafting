@@ -1,7 +1,7 @@
 # VECTOR DB Environment Governance v1.1
 
 **Status:** FROZEN\
-**Version:** 1.1\
+**Version:** 1.1 (revision 2, 2026-11-17: conditions 7 and 8 of `DB-ENV-09` corrected before the first merge; correction base `bcd5333`)\
 **Base Commit:** `e97f88f` (`develop` at the time of this change; merge of PR #89)\
 **Authority Scope:** Supabase database environment identity, data classification, and the read and write gates for the VECTOR Supabase environments\
 **Approved By:** project_owner (owner decision 2026-11-17; binding for development on `develop` from merge of this change set, part of the Production rule set once released to `main`)\
@@ -19,6 +19,8 @@ Amendment of v1.1: **`DB-ENV-09` only.** `DB-ENV-01` to `DB-ENV-08` carry over f
 | `DB-ENV-01` (consequential) | The sentence that a separate Supabase preview or staging environment "remains `DEFERRED` (`DB-ENV-09`)" is replaced by a pointer to the re-evaluated `DB-ENV-09`. The deployment-binding statement itself (Vercel Preview and Vercel Production use the same Production database) is **unchanged and stays valid until G4 of `docs/architecture/DEV_DB_CONCEPT.md` is carried out** | Owner decision 2026-11-17, point 2 |
 | `DB-ENV-01` (editorial) | The identity block (project reference, project name, organization) is not repeated in this document. v1.0 and the owner's private project archive keep it. Mapping, branch and environment lines are unchanged. The owner is asked to confirm this editorial omission when merging | Public-repository rule (`AI_OPERATING_MODEL` §5) |
 | §2 (consequential) | The bullet on `PROPOSED` specifications that assume a staging environment no longer says "`DEFERRED` by `DB-ENV-09`"; it points to the re-evaluated rule | Follows `DB-ENV-09` |
+| `DB-ENV-09`, condition 7 (correction) | Snapshot and application are done by the engineer through strictly read-only catalog queries and, after the G2 GO, applied to `DEVELOP`, verified by a drift fingerprint (any deviation is a stop); the owner runs no SQL and no terminal commands. Replaces the first entry, in which the owner applied the snapshot locally | Owner decision 2026-11-17 (correction) |
+| `DB-ENV-09`, condition 8 (correction) | Target state and transition rule made precise: the engineer writes exclusively to the project named `DEVELOP`, verified by name before every write; `PRODUCTION` read-only | Owner decision 2026-11-17 (correction) |
 | `DB-ENV-02` to `DB-ENV-08` | Unchanged | none |
 
 No Production mutation results from this change. Creating the `DEVELOP` project (G1) is an owner account action and does not mutate Production.
@@ -173,8 +175,8 @@ Owner decisions of 2026-11-17, recorded as the conditions of this rule:
 4. **No keep-alive for Production.** Production is not kept awake by a ping against the Free plan pausing. This is re-evaluated when more external testers join.
 5. **Production database password.** The owner rotates it himself in the dashboard after the schema snapshot. That is a Production configuration change made by the owner.
 6. **External auth providers on `DEVELOP`:** later, only together with the auth features.
-7. **Applying the snapshot (G2b).** The owner applies the private schema snapshot to `DEVELOP` locally himself, so that the dump never passes through a chat or model context. The engineer prepares the commands and the checklist and afterwards verifies read-only with a compact drift fingerprint (a count and a hash per object category).
-8. **Connector rule.** Every Supabase connection used by an agent is scoped to exactly one project. The Production connection is read-only. Only the `DEVELOP` connection may write. No account-wide connection is used for write actions, so that the two projects cannot be confused.
+7. **Snapshot and application (G2) are done by the engineer, not by the owner** (corrected by owner decision 2026-11-17; the first version of this condition had the owner apply the snapshot). The engineer reads the structure of `PRODUCTION` strictly read-only through the Supabase connection (read-only transaction, system catalog queries, method C of `docs/architecture/DEV_DB_CONCEPT.md`) and turns it into runnable, dependency-ordered schema SQL. After the GO for G2 the engineer applies it to `DEVELOP`. Afterwards a drift fingerprint (a count and a hash per object category, including grants and default privileges) is computed on both projects; **any deviation is a stop.** The schema SQL is delivered to the owner as a private attachment (private archive) and never enters the repository, a pull request or a public document. The owner runs no SQL and no terminal commands. The CLI dump method stays a fallback only.
+8. **Connector rule** (made precise by owner decision 2026-11-17). Target state: one project-scoped connection per project; the `PRODUCTION` connection is read-only (`read_only=true`), the `DEVELOP` connection may write. Transition rule until then: the engineer writes **exclusively** to the project named `DEVELOP`; the project is verified by name and the target is checked before every write action. `PRODUCTION` is accessed read-only only (read-only transaction). Every Production mutation remains its own named owner GO (`DB-ENV-04`, `DB-ENV-07`). No account-wide access is used for write actions without that target check, so that the two projects cannot be confused. The exact display names of the projects are kept in the owner's private archive.
 
 Carried over from v1.0 and clarified for the two-project setup:
 
