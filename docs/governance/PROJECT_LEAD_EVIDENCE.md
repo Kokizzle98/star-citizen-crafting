@@ -32,7 +32,7 @@ Roles and engineering contracts are defined in `docs/governance/AI_OPERATING_MOD
 
 - `docs/PROJECT_STATE.md`: compact master state (DONE, ACTIVE, PAUSED, BLOCKED, NEXT, OPEN DECISIONS, RELEVANT CONTRACTS). Maintained by hand with each work package. It is copied byte-identically into the snapshot.
 - `docs/governance/AI_OPERATING_MODEL.md`: repository-native, non-private AI operating model.
-- Governance sources embedded verbatim into `GOVERNANCE_CONTEXT.md` (fixed allowlist in the generator): `AGENTS.md`, `docs/RULE_INDEX.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`, `docs/handover/VECTOR_RESTART_HANDOVER.md`.
+- Governance sources embedded verbatim into `GOVERNANCE_CONTEXT.md` (fixed allowlist in the generator): `AGENTS.md`, `docs/RULE_INDEX.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md`, `docs/handover/VECTOR_RESTART_HANDOVER.md`.
 
 The private Project Lead operating contract stays outside the repository. The snapshot does not contain it and does not depend on it.
 
