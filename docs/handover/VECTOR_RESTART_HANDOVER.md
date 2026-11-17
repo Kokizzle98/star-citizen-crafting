@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v11 (counted up from v10; checkpoint Release 2 done, base commit `9d58d615fecedb093749fb680aba332338990a00`)
+- Document version: v12 (counted up from v11; checkpoint DEV-DB G0 done, base commit `e97f88f9ac5522c4b8eb8d7b53aed5bcaf5809b6`)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -13,7 +13,7 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `DOC-REL-2: checkpoint Release 2 done (documentation only)`. Release 2 `develop` -> `main` is **done** (PR #87, merge commit, `main` = `66c531bd`, tag `release-2026-11-17`; rollback points: tag `pre-release-2026-11-14` on `eb6f108` and the previous `main` `e916f69`). The earlier release was PR #79 (merge commit `e916f69`). The checkpoint anchor and the allowed-scope list below are deliberately not advanced here (a proper checkpoint rotation is a separate step). Before Release 2, these pull requests were merged into `develop` (all included in the release): #80 (login hardening, already in `main` through #79), #81 (UX-7 public start page), #82 (FAB-UX-1 Fabricator basics), #83 (UX-8 visitor navigation), #84 (Rotation-10 documentation), #85 (INV-EMPTY-1 empty states in Inventory) and #86 (REPO-TIDY-1 repository root tidy). The next release is its own session and pull request.
+- Work package: `DEV-DB-G0: governance decision for the DEVELOP Supabase recorded (documentation only)`. DEV-DB G0 done / DEVELOP planned, G1 by the owner. `DB_ENVIRONMENT_GOVERNANCE_V1_1.md` is the FROZEN full-document successor (owner decision 2026-11-17, only `DB-ENV-09` changed), `docs/architecture/DEV_DB_CONCEPT.md` is `ACCEPTED`. The checkpoint anchor and the allowed-scope list below are deliberately not advanced here (a proper checkpoint rotation is a separate step); this change touches `docs/frozen/`, `docs/architecture/` and `docs/RULE_INDEX.md` in addition to the two listed documents. Previous work package: `DOC-REL-2: checkpoint Release 2 done (documentation only)`. Release 2 `develop` -> `main` is **done** (PR #87, merge commit, `main` = `66c531bd`, tag `release-2026-11-17`; rollback points: tag `pre-release-2026-11-14` on `eb6f108` and the previous `main` `e916f69`). The earlier release was PR #79 (merge commit `e916f69`). The checkpoint anchor and the allowed-scope list below are deliberately not advanced here (a proper checkpoint rotation is a separate step). Before Release 2, these pull requests were merged into `develop` (all included in the release): #80 (login hardening, already in `main` through #79), #81 (UX-7 public start page), #82 (FAB-UX-1 Fabricator basics), #83 (UX-8 visitor navigation), #84 (Rotation-10 documentation), #85 (INV-EMPTY-1 empty states in Inventory) and #86 (REPO-TIDY-1 repository root tidy). The next release is its own session and pull request.
 - Branch: `develop` (each work package works on its own feature branch)
 - Base: `develop`
 - Checkpoint date: `2026-11-17`
@@ -111,6 +111,7 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#84` (checkpoint rotation after PR #83, Rotation-10): merged into `develop` as `875f9f5`.
 - PR `#85` (INV-EMPTY-1 explanatory empty states in Inventory, texts and display only): merged into `develop` as `9b882f9`.
 - PR `#86` (REPO-TIDY-1 repository root tidy, no logic change): merged into `develop` as `9d58d61`.
+- PR `#89` (DEV-DB concept, documentation only): merged into `develop` as merge commit `e97f88f`.
 - PR `#87` (Release 2 `develop` -> `main`): merged into `main` as merge commit `66c531bd`; tag `release-2026-11-17` on `66c531bd`; rollback points tag `pre-release-2026-11-14` on `eb6f108` and the previous `main` `e916f69`. No database, data, dependency or environment change.
 
 No earlier PR is active. Do not reopen or modify them.
@@ -122,7 +123,7 @@ These are compact status pointers only. The repository documents themselves must
 - `VECTOR_VERSIONING_V1` = `SUPERSEDED` (file intentionally unchanged for traceability; see `docs/RULE_INDEX.md`)
 - `VECTOR_VERSIONING_V1_1` = `FROZEN`
 - `VECTOR_SOURCE_AUTHORITY_V1` = `FROZEN` (owner decision 2026-11-12; exact CIG UUID is the only cross-source identity, variants are separate items without unlock inheritance, SCMDB stays crafting authority, scunpacked-data is the designated structural source for F4-S, the Star Citizen Wiki API is a verification source, UEX ingame and UEX marketplace are strictly separate observation domains, `NO_EVIDENCE != NEGATIVE_EVIDENCE`, no single source signal excludes; Production-authoritative after merge into `main`)
-- `DB_ENVIRONMENT_GOVERNANCE_V1` = `FROZEN` (owner decision 2026-11-11; `DB-ENV-01` to `DB-ENV-09`; see the owner's private project archive / `main` is Supabase Production holding test data, never "staging"; Production-authoritative after merge into `main`)
+- `DB_ENVIRONMENT_GOVERNANCE_V1_1` = `FROZEN` (owner decision 2026-11-17; full-document successor to v1.0 (`SUPERSEDED`, owner decision 2026-11-11); only `DB-ENV-09` changed: a separate `DEVELOP` project on the Free plan is allowed; `main` stays the Supabase Production holding test data, never "staging"; Production-authoritative after merge into `main`)
 - `DATA_CONTEXT_MODEL_V1` = `PROPOSED`
 - R2 = `IN_PROGRESS`
 - R3 = `RESOLVED`
@@ -234,7 +235,7 @@ Owner-approved reward source-occurrence model for PR 2:
 - `duplicateSourceRows` stays explicitly measurable: stored on the dataset row, recomputed in SQL by the sync and rejected on mismatch, and asserted by a contract test;
 - no reward-row identity is claimed across different dataset revisions; a random UUID alone is not an acceptable identity.
 
-Supabase environment: resolved by the owner on 2026-11-11. see the owner's private project archive / branch `main` is the VECTOR Supabase **Production** environment, currently holding test data without retention value. It must not be called staging. The binding rules are `DB-ENV-01` to `DB-ENV-09` in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`.
+Supabase environment: resolved by the owner on 2026-11-11. see the owner's private project archive / branch `main` is the VECTOR Supabase **Production** environment, currently holding test data without retention value. It must not be called staging. The binding rules are `DB-ENV-01` to `DB-ENV-09` in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md` (v1.0 superseded). A `DEVELOP` project is permitted by `DB-ENV-09` (owner decision 2026-11-17) but is **not created yet** (G1 by the owner); until the Vercel switch G4 is done, Preview and Production share the Production database.
 
 Read-only prechecks A to D for PR 2 (run on 2026-11-11 against Production under `DB-ENV-03`; select statements on `pg_catalog`, `pg_indexes` and `pg_policies` only, no mutation):
 
@@ -267,7 +268,7 @@ Known open items, none of them started:
 - Rule Index items R2, R4 and R5 remain as listed in `docs/RULE_INDEX.md`.
 - open crew authorization and privacy hardening findings, currently rated LOW to MEDIUM. They are not part of the Blueprint work package and are not repaired here. Target: a separate work package `Crew Security Hardening`, to be completed or re-assessed at the latest before the first user outside the current test group. They do not block Blueprint PR 2, because the new crew function must not use the affected helpers as its sole authorization boundary.
 
-OPEN INFRASTRUCTURE WORK (future Spur-B target, owner decision 2026-11-11, not started): separate Supabase contexts for `LIVE` and `PTU` and a separate `DEVELOP` instance for development, preview, automated tests and deployment automation. This is the target picture for its own infrastructure and governance work package only. It is **not** a current DB-environment contract and **not** FROZEN; `DB_ENVIRONMENT_GOVERNANCE_V1` (one Supabase Production environment) stays binding until a governed change replaces it.
+OPEN INFRASTRUCTURE WORK: (1) the `DEVELOP` instance (owner decision 2026-11-17, planned, not created) is governed by `DB-ENV-09` in `DB_ENVIRONMENT_GOVERNANCE_V1_1` and planned in `docs/architecture/DEV_DB_CONCEPT.md` (G1 to G7, one GO per step; G1 is an owner action); (2) separate Supabase contexts for `LIVE` and `PTU` (future Spur-B target, owner decision 2026-11-11, not started) are **not** a current DB-environment contract and **not** FROZEN; the Free plan allows only two active projects.
 
 Completed packages: `Restart Safety + AI Efficiency v1` (PR #10) and `Repository Cleanup and Baseline v1` (PR #34).
 
@@ -459,4 +460,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: Release 2 is done (PR #87, `main` = `66c531bd`, tag `release-2026-11-17`). The owner checks the audit workflow run on `main` and the Vercel Production deployment, then chooses the next small package from the backlog in `docs/PROJECT_STATE.md` (return to the requested page after sign-in, dataset update with an explicit owner GO, onboarding and crew invitation UI, Fabricator / Inventory design according to the mock-ups) or from the open follow-ups of the review of PR #79 (details with the owner). The next release is its own session and pull request with merge method **merge commit** (section 6). The future Supabase `LIVE` / `PTU` / `DEVELOP` separation remains open infrastructure work in its own package and is not a current contract. The licence / redistribution decision for scunpacked-data stays open.
+NEXT STEP: DEV-DB G0 is done (documentation only); the owner's next infrastructure step is G1, creating the Supabase project `DEVELOP` on the Free plan (concept section 10), after which each further step (G2 to G7) needs its own GO. Release 2 is done (PR #87, `main` = `66c531bd`, tag `release-2026-11-17`). The owner checks the audit workflow run on `main` and the Vercel Production deployment, then chooses the next small package from the backlog in `docs/PROJECT_STATE.md` (return to the requested page after sign-in, dataset update with an explicit owner GO, onboarding and crew invitation UI, Fabricator / Inventory design according to the mock-ups) or from the open follow-ups of the review of PR #79 (details with the owner). The next release is its own session and pull request with merge method **merge commit** (section 6). The Supabase `LIVE` / `PTU` separation remains open infrastructure work in its own package and is not a current contract; `DEVELOP` follows `DB_ENVIRONMENT_GOVERNANCE_V1_1`. The licence / redistribution decision for scunpacked-data stays open.

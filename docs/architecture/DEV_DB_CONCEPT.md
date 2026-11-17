@@ -1,8 +1,8 @@
 # VECTOR DEVELOP Database Concept
 
-- **Status:** PROPOSED (concept, non-normative)
-- **Version:** 0.1
-- **Work package:** WP DEV-DB-KONZEPT (read-only analysis and planning; nothing was created or changed)
+- **Status:** ACCEPTED (owner decisions of 2026-11-17 recorded in sections 2, 7 and 11; the binding rule is `DB-ENV-09` in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md`; this document stays a planning document and is not FROZEN)
+- **Version:** 1.0 (counted up from 0.1; base commit `e97f88f`, WP DEV-DB-G0)
+- **Work package:** WP DEV-DB-KONZEPT (read-only analysis and planning), accepted and updated by WP DEV-DB-G0 (documentation only; nothing was created or changed)
 - **Scope:** a second, separate Supabase project `DEVELOP` next to the existing Production project: how to build it, fill it, wire it to Vercel and operate it
 - **Out of scope:** separate Supabase contexts for `LIVE` and `PTU` (still future work, see section 9), Supabase branching, any paid plan, any change to Production
 
@@ -10,7 +10,7 @@ This document is public. It deliberately contains no project references, URLs, k
 
 ## 1. Goal
 
-Today the only Supabase environment is Production (`DB_ENVIRONMENT_GOVERNANCE_V1`, `DB-ENV-01`). It holds test data only, but it is still Production, and Vercel Preview shares it. That means:
+Today the only Supabase environment is Production (`DB_ENVIRONMENT_GOVERNANCE_V1_1`, `DB-ENV-01`; `DEVELOP` does not exist before G1). It holds test data only, but it is still Production, and Vercel Preview shares it. That means:
 
 - every database change is tested for the first time on Production;
 - Preview deployments are not write-safe;
@@ -27,12 +27,12 @@ The goal is a second, ordinary Supabase project `DEVELOP` that
 
 | Rule | Effect on this concept |
 |---|---|
-| `DB-ENV-01` Production identity | Unchanged. Production stays the existing project. The sentence "Vercel Preview and Production use the same database" becomes outdated after G4 and must be updated by a governed change. |
+| `DB-ENV-01` Production identity | Unchanged. Production stays the existing project. The sentence "Vercel Preview and Production use the same database" stays valid until G4 is carried out; updating it after G4 is a governed change of its own. |
 | `DB-ENV-03` Read access | The inventory for this concept used only read-only catalog queries in a read-only transaction. |
 | `DB-ENV-04` Production write gate | Nothing in G1 to G5 touches Production. G6 is a Production mutation and needs its own named owner GO. |
 | `DB-ENV-05` Repository authority | DEVELOP must not become a second, undocumented architecture. The schema snapshot is a bootstrap, not a source of truth; it is replaced by public baseline migrations (G7). |
 | `DB-ENV-07` / `DB-ENV-08` | Stay as they are for Production. This concept adds a DEVELOP step in front of them. |
-| `DB-ENV-09` Separate environment `DEFERRED` | The owner decided to re-evaluate this (free plan, no paid plan, so the "no paid plan" condition stays intact). Before G1 the decision should be recorded as a governed change to `DB_ENVIRONMENT_GOVERNANCE_V1` (gate G0). This concept does not change the FROZEN rule by itself. |
+| `DB-ENV-09` DEVELOP environment | Re-evaluated by the owner on 2026-11-17 and recorded as a governed change: `DB_ENVIRONMENT_GOVERNANCE_V1_1` supersedes v1.0 and changes only this rule. `DEVELOP` on the Free plan is allowed (no branching, no paid plan, no third project). G0 is done with that change; G1 is possible after its merge. |
 | `VECTOR_GOVERNANCE_V1` §7 | Unchanged: Preview = `develop` and other non-production branches, Production = `main`. This concept only decides which database each Vercel environment uses. |
 | `ROLLBACK_POLICY_V1` | Applies unchanged. Every gate below names its fallback; for Production a reviewed forward-fix stays the preferred path. |
 
@@ -47,7 +47,7 @@ Supabase organization (Free plan, exactly 2 active projects)
 Order (each step is a gate in section 8):
 
 ```text
-G0  record the governance decision (DB-ENV-09 re-evaluated)
+G0  record the governance decision (DB-ENV-09 re-evaluated)   <- done: DB_ENVIRONMENT_GOVERNANCE_V1_1
 G1  owner creates the DEVELOP project
 G2  private schema snapshot of Production (structure only) -> applied to DEVELOP,
     plus the non-SQL configuration rebuilt by hand
@@ -82,7 +82,7 @@ Checklist for the snapshot and for the later drift comparison:
 | Area | What to carry over | How |
 |---|---|---|
 | Auth: URLs | Site URL, redirect allow list (localhost, Preview pattern) | Dashboard, DEVELOP-specific values, not copied from Production |
-| Auth: providers | Which sign-in methods are on; external providers stay off unless a feature needs them | Dashboard; provider secrets are new and DEVELOP-only |
+| Auth: providers | Which sign-in methods are on; external providers stay off on DEVELOP until the auth features need them (owner decision 2026-11-17) | Dashboard; provider secrets are new and DEVELOP-only |
 | Auth: email | Templates, SMTP (or the built-in sender with its low rate limit), confirmation setting | Dashboard; templates may be copied as text, SMTP credentials are not shared |
 | Auth: passwords and abuse | Minimum length / complexity, leaked-password protection, rate limits, MFA, session / JWT lifetimes | Dashboard; document the chosen values privately, then compare with Production |
 | API settings | Exposed schemas, max rows | Dashboard |
@@ -111,7 +111,7 @@ The private inventory (owner archive) records which of these areas Production ac
 
 - A gives a complete, runnable and repeatable structure snapshot with Supabase-aware filtering. It is run once by the owner on the owner machine, schema only (no `--data-only`, no `--role-only`), and the file goes straight to the private security folder. It never goes into the repository.
 - C is run before and after: before, to know what must be in the snapshot; after G2, to prove that DEVELOP matches Production (section 7.2).
-- Credential hygiene for A: use the connection string only in the local shell session, not in a file inside the repository; afterwards the owner may rotate the database password (that is a Production configuration change and needs its own owner decision). A dedicated read-only login role would reduce the risk further, but creating it is a Production mutation and is not part of this concept.
+- Credential hygiene for A: use the connection string only in the local shell session, not in a file inside the repository; afterwards the owner rotates the database password himself in the dashboard (owner decision 2026-11-17; a Production configuration change made by the owner). A dedicated read-only login role would reduce the risk further, but creating it is a Production mutation and is not part of this concept.
 
 ## 6. Filling DEVELOP
 
@@ -162,7 +162,7 @@ Rules:
 
 - the byte-identical migration file is applied to both projects, in the same order, with the same mechanism;
 - a migration that fails on DEVELOP never goes to Production; it is fixed in a new PR;
-- owner decision (open): whether a DEVELOP apply needs its own GO each time or a standing GO for DEVELOP-only applies. Production stays per migration in every case;
+- owner decision 2026-11-17: one GO per work package for changes to DEVELOP, no standing GO. Production keeps its own named GO per change in every case;
 - migration history: Production has no platform migration history today. From the baseline (G7) on, both projects should record applied migrations the same way; marking the baseline as applied on Production is a Production mutation and belongs to the G7 package.
 
 ### 7.2 Drift detection
@@ -176,7 +176,7 @@ Rules:
 
 - Free projects are paused after about one week of low activity; this applies to Production as well. A paused project can be resumed from the dashboard for about 90 days with data and configuration intact (per Supabase documentation at the time of writing; re-check before relying on it);
 - DEVELOP pausing is harmless: resume before a work session, then check `ACTIVE_HEALTHY` before running tools;
-- Production pausing is an outage for testers. Options: regular real use, or a scheduled light read request. A scheduled ping needs a key in another system (for example GitHub secrets) and is therefore its own owner decision.
+- Production pausing is an outage for testers. Owner decision 2026-11-17: Production is not kept awake by a ping for now (no extra secret in another system); this is re-evaluated when more external testers join. Until then the owner resumes it from the dashboard if needed.
 
 ### 7.4 Size limit (0.5 GB per project)
 
@@ -241,19 +241,39 @@ The Free plan does not allow separate projects for `LIVE` and `PTU` in addition 
 
 | GO | Step | Who | Change type | Touches Production | Risk | Fallback |
 |---|---|---|---|---|---|---|
-| G0 | Record the decision to re-evaluate `DB-ENV-09` and the DEVELOP role as a governed change of the DB environment governance | Owner decides, engineer drafts the PR | Documentation (FROZEN change process) | No | Low | Revert the PR; DEVELOP stays unbuilt |
+| G0 | Record the decision to re-evaluate `DB-ENV-09` as a governed change (`DB_ENVIRONMENT_GOVERNANCE_V1_1`, v1.0 superseded) | Owner decides, engineer drafted the PR | Documentation (FROZEN change process) | No | Low | Revert the PR; DEVELOP stays unbuilt |
 | G1 | Create the project `DEVELOP` in the same organization: same region and Postgres major version as Production, strong database password stored in the password manager, note platform defaults installed at creation | Owner (account action) | New project | No | Low; uses the second and last Free slot | Pause or delete the project |
-| G2 | (a) Owner runs the schema-only snapshot of Production (method A) into the private folder; (b) engineer verifies the target is DEVELOP, applies the snapshot in one transaction, runs the drift check; (c) owner rebuilds the non-SQL configuration (section 4.2) | Owner (a, c), engineer after GO (b) | Read on Production; DDL on DEVELOP; DEVELOP settings | Read only | Medium: wrong target project, missing objects, duplicates with platform defaults | Reset DEVELOP (drop the project schema and reapply, or recreate the project) |
-| G3 | Load catalog datasets and the synthetic seed into DEVELOP | Engineer after GO (owner provides DEVELOP keys locally) | Data on DEVELOP | No | Low to medium: wrong env file pointing at Production | Target guard in the runner; reset synthetic users and reseed |
+| G2 | (a) Owner runs the schema-only snapshot of Production (method A) into the private folder; (b) **the owner applies the snapshot to DEVELOP locally himself** (psql / Docker), so that the dump never passes through the chat or model context; the engineer prepares the commands and a checklist (target check, single transaction, stop on first error, platform defaults) and, after the owner's GO for the verification, only reads DEVELOP and Production and compares the compact drift fingerprint (count and hash per object category); (c) owner rebuilds the non-SQL configuration (section 4.2) | Owner (a, b, c), engineer prepares and verifies read-only (b) | Read on Production; DDL on DEVELOP by the owner; DEVELOP settings | Read only | Medium: wrong target project, missing objects, duplicates with platform defaults | Reset DEVELOP (drop the project schema and reapply, or recreate the project) |
+| G3 | Load catalog datasets and the synthetic seed into DEVELOP | Engineer after the GO for that work package (owner provides DEVELOP keys locally) | Data on DEVELOP | No | Low to medium: wrong env file pointing at Production | Target guard in the runner; reset synthetic users and reseed |
 | G4 | Switch Vercel Preview / Development and local env to DEVELOP | Owner GO; owner or engineer with explicit approval performs it | Vercel configuration | No (Production scope unchanged) | Medium: Preview login or data broken; auth redirect mismatch | Restore Preview / Development entries to the Production values, redeploy Preview |
-| G5 | Apply hardening H2 (reviewed migration from the repository) to DEVELOP, run postchecks, RLS / RPC tests and the Preview smoke test | Engineer after GO | DDL on DEVELOP | No | Low for Production; findings may require migration changes | Reviewed reverse migration on DEVELOP, or reset DEVELOP from snapshot + seed |
+| G5 | Apply hardening H2 (reviewed migration from the repository) to DEVELOP, run postchecks, RLS / RPC tests and the Preview smoke test | Engineer after the GO for that work package | DDL on DEVELOP | No | Low for Production; findings may require migration changes | Reviewed reverse migration on DEVELOP, or reset DEVELOP from snapshot + seed |
 | G6 | Apply the same H2 migration to Production, then `DB-ENV-08` postchecks and drift check | Owner: separate named Production GO; engineer applies | DDL on Production | **Yes** | Medium: app paths may break on Production | Prepared and reviewed forward-fix or reverse migration (`ROLLBACK_POLICY_V1`); Vercel rollback for app code if needed |
 | G7 | Public baseline migrations in the repository (security-neutral form), DEVELOP rebuilt from Git as proof, baseline marked as applied on Production | Engineer drafts; owner GO for the Production marking | Repository; DEVELOP rebuild; Production migration history | Yes (history only) | Medium: baseline must not reveal unfixed issues, so it follows G6 | Revert the PR; DEVELOP can still be rebuilt from the private snapshot |
 
-## 11. Open owner decisions
+## 11. Owner decisions (2026-11-17) and what is still open
 
-1. G0: form of the governance change (amend `DB_ENVIRONMENT_GOVERNANCE_V1` or a successor version).
-2. DEVELOP apply gate: per-migration GO or a standing GO for DEVELOP-only applies.
-3. Production keep-alive against pausing: real use only, or a scheduled ping (new secret location).
-4. Whether to rotate the Production database password after the snapshot.
-5. Whether DEVELOP enables external auth providers for auth feature work.
+Decided by the owner on 2026-11-17 (recorded as conditions of `DB-ENV-09` in `DB_ENVIRONMENT_GOVERNANCE_V1_1`):
+
+1. One second, ordinary Supabase project `DEVELOP` on the Free plan. Production and DEVELOP are the two active Free projects; no branching, no paid plan, no third project.
+2. `DB-ENV-09` is re-evaluated (from `DEFERRED` to "DEVELOP on the Free plan is allowed"). All other `DB-ENV` rules stay. Production stays the existing project. The deployment-binding sentence of `DB-ENV-01` stays valid until G4.
+3. GO for DEVELOP: one GO per work package, no standing GO. Production: its own named GO per change (`DB-ENV-04`, `DB-ENV-07`).
+4. Production is not kept awake by a ping for now; re-evaluated when more external testers join.
+5. The owner rotates the Production database password himself in the dashboard after the snapshot.
+6. External auth providers on DEVELOP: later, only with the auth features.
+7. Snapshot application (G2b): the owner applies the private schema snapshot to DEVELOP locally; the engineer prepares and verifies read-only with a compact drift fingerprint.
+8. Connector rule (section 12).
+
+Still open (none blocks G1):
+
+- exact format of the drift fingerprint query (own small work package, before the drift check in G2);
+- the missing location catalog runner (section 6.1) and the seed runner (section 6.3), each its own work package under its own GO;
+- registration of this document in `docs/RULE_INDEX.md` as an architecture reference, if the owner wants it there.
+
+## 12. Connector rule
+
+- Every Supabase connection that an agent uses is scoped to exactly one project (by project reference, configured by the owner outside this repository).
+- The Production connection is read-only (`read_only=true`).
+- Only the DEVELOP connection may write, and only inside a work package that has its GO.
+- No account-wide connection is used for write actions. An account-wide connection is not used at all once the two project-scoped connections exist, so that the two projects cannot be confused.
+- Before every SQL action an agent states which project the connection points to by its name (`Production` or `DEVELOP`), never by posting the project reference or URL into a chat, pull request or document.
+- Setting up the scoped connections is an owner action after G1. This document does not contain references, URLs or keys.
