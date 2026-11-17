@@ -2,10 +2,11 @@
 
 | Field | Value |
 |---|---|
-| Version | v1.0 |
+| Version | v1.1 (v1.0 analysed base `1b135de`; `data/scmdb/` is unchanged between the two commits) |
 | Status | PROPOSED (analysis and recommendation only; no exclusion is decided here) |
-| Base commit | `1b135de` (`develop`, merge of PR #92) |
-| Scope | Every file under `data/scmdb/` (23 files, two channels: LIVE `4.10.2-live.12913470`, PTU `4.10.3-ptu.13032516`) |
+| Base commit | `8f504ef` (`develop`, merge of PR #93) |
+| Scope | Every file under `data/scmdb/` (24 files, two channels: LIVE `4.10.2-live.12913470`, PTU `4.10.3-ptu.13032516`) |
+| Changes in v1.1 | File count corrected from 23 to 24. v1.0 followed `totalJsonFiles: 23` in `local-mirror-manifest.json`, which does not count the manifest itself. Section 8 added: reconciliation with `docs/reviews/SCMDB_SCHEMA_CATALOG_PROFILE_V1.md`. Used as evidence input by `DATASET_PIPELINE_V1.md` v1.2. |
 | Method | Read-only. `git log/show`, `grep`, and one-off Python scripts (not committed). Classification is by content, not by name. |
 | Rule applied | OD-DL-04: VECTOR keeps a broad source set. Only demonstrably technical artifacts may be excluded. Uncertain means RETAIN or REVIEW. |
 
@@ -17,7 +18,7 @@ This document contains structure and counts only. No upstream data is copied int
 - **The mirror history is short.** `data/scmdb/` has 7 commits, spanning 2026-10-26 to 2026-10-29 (4 days). Change-rhythm statements describe that window only. They are not a long-term cadence.
 - **Intermediate syncs are only partly comparable.** Of the seven commits, one is a partial first import (`5ded067`), one is the first full import (`c5a7bf9`), and four touched only the manifest. Content comparisons use the first full import (`c5a7bf9`) against the latest sync (`e271759`).
 - **Field meaning is inferred from names and values.** For example, the community-vote fields in `mema-cache.json` are read as upstream site data. No upstream documentation was consulted.
-- **An existing review was not reconciled.** `docs/reviews/SCMDB_SCHEMA_CATALOG_PROFILE_V1.md` exists. It was not used as input and not compared against these findings.
+- **The existing review was not used as input.** v1.1 compares it with these findings afterwards (section 8).
 - **Tests and lint were not run.** The change is a single documentation file.
 
 ## 2. Classification table
@@ -98,4 +99,26 @@ The repository reads the **LIVE channel only** for runtime work (`AGENTS.md`: no
 4. Does `scenario_overrides` in `site-settings.json` matter for contract availability, and who maintains it?
 5. Will loadout planning ever read SCMDB files beyond `latest.json`, and through which join key?
 6. Should `versions.json` and `game-versions.json` stay as two names (the sync workflow requires both), or does upstream plan to retire one?
-7. How should this inventory relate to `docs/reviews/SCMDB_SCHEMA_CATALOG_PROFILE_V1.md`, which was not consulted?
+7. Answered in v1.1 (section 8): the review is a non-normative `REVIEW_RECORD` about catalog structure. This inventory covers file classification. They complement each other.
+
+## 8. Reconciliation with SCMDB_SCHEMA_CATALOG_PROFILE_V1
+
+`docs/reviews/SCMDB_SCHEMA_CATALOG_PROFILE_V1.md` (added in `637730e`, 2026-10-29) is registered in `RULE_INDEX.md` as a non-normative `REVIEW_RECORD`. It profiles catalog-capable fields. This inventory classifies whole files. That file is not edited here.
+
+### Agreements
+
+- **Source families.** All 12 families the review names are present here: the 7 per-build families, the 2 `deltas-*` files, and `latest`, `game-versions` and `versions`.
+- **Known source issues.** The review treats CIG/SCMDB issue annotations as a reason to preserve source classification. This inventory classes `cig_data_issues-*` as `SOURCE_EVIDENCE` and retains it.
+- **Channel and build separation.** Both find clean LIVE/PTU separation by build string.
+- **No whole-tree query surface.** The review recommends bounded read models instead of loading full raw JSON. That matches the finding that `merged-*.json` feeds several domains and needs per-section treatment.
+- **Catalog structure.** Its required changes to `DATASET_PIPELINE_V1` (review §12) were already absorbed in pipeline v1.1. Nothing here contradicts them.
+
+### Differences and conflicts
+
+- **Coverage.** The review does not cover `changelog.json`, `mema-cache.json`, `site-settings.json`, `workflow-state.json` or `local-mirror-manifest.json`, although they were present in the mirror on 2026-10-26. This inventory classifies them. That is a coverage gap, not a contradiction.
+- **Stale PTU build.** The review cites PTU `4.10.3-ptu.12999338`. The mirror moved to `4.10.3-ptu.13032516` in `e271759` on 2026-10-29. The review's counts are therefore a snapshot of the earlier PTU build.
+- **Wipe scope (conflict with current proposals, not with this inventory).** Review §10 describes channel-scoped mutable state tables and a PTU wipe of PTU state. Pipeline v1.1 and later, and FROZEN `VECTOR_VERSIONING_V1_1.md`, define a single Production User State in v1. In those documents, PTU-native state is only a future extension. The review is historical evidence on this point and does not override them.
+- **Naming.** The review writes `mission_history` (the `latest.json` key). The files are named `mission-history-<build>.json`. Same data.
+- **Evidence base.** The review used the V4/V5 audit outputs. The current audit consumer is `vector_item_data_audit_v6_multisource.py`. Not re-checked whether the V4/V5 field observations still hold for the current builds.
+
+No difference requires a change to the classes or recommendations in section 2.
