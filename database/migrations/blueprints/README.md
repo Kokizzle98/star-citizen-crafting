@@ -1,7 +1,5 @@
 # Blueprint migrations
 
-**Base Commit:** `936309c8c14704d62406a3938ef74f95afe50cc5`
-
 Status of `001_blueprint_ownership_foundation.sql`: **applied to VECTOR Supabase Production** on
 2026-11-11 under an explicit, named owner GO (`DB-ENV-04`, `DB-ENV-07` in
 `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md`); the read-only `DB-ENV-08` postchecks recorded on the

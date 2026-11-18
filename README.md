@@ -1,7 +1,5 @@
 # VECTOR
 
-**Base Commit:** `936309c8c14704d62406a3938ef74f95afe50cc5`
-
 VECTOR is a community-driven, hobby project for Star Citizen players focused on crafting, equipment planning, item analysis, loadout comparison, and inventory-related decision support.
 
 The project is intentionally free to use and designed to grow with the community. Monetization is not the primary goal and will only be considered later, if at all, once the project proves useful and sustainable.
