@@ -1,7 +1,7 @@
 # VECTOR Dataset Pipeline v1
 
 **Status:** PROPOSED\
-**Version:** 1.2\
+**Version:** 1.2 (revision 1, 2026-11-18: DB governance reference moved to v1.2 by GOV-2, no content change; revision base `9bf3c7f`)\
 **Base commit:** `8f504ef` (`develop`, merge of PR #93)\
 **Authority Scope:** DATASET_PIPELINE\
 **Approved By:** pending project_owner approval\
@@ -1086,7 +1086,7 @@ Rules:
 
 ### 35.2 Database path
 
-Writing dataset, catalog or activation rows into Supabase Production is a persistent Production mutation under FROZEN `DB_ENVIRONMENT_GOVERNANCE_V1_1.md` `DB-ENV-04`. One precedent is the LIVE blueprint catalog sync recorded in `docs/PROJECT_STATE.md`.
+Writing dataset, catalog or activation rows into Supabase Production is a persistent Production mutation under FROZEN `DB_ENVIRONMENT_GOVERNANCE_V1_2.md` `DB-ENV-04`. One precedent is the LIVE blueprint catalog sync recorded in `docs/PROJECT_STATE.md`.
 
 Rules:
 
