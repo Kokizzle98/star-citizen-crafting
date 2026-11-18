@@ -16,7 +16,7 @@ Amendment of v1.2: **new rules `DB-ENV-10` and `DB-ENV-11`, and condition 8 of `
 | Item | Change | Authority |
 |---|---|---|
 | `DB-ENV-10` (new) | "One-Time Production Execution": Production stays read-only for every agent; an engineer may execute one named, hashed SQL block on Production only with an explicit work package that names the execution **and** a One-Time Production GO written by the owner, under the preconditions, execution, evidence and technical safeguards stated there (owner decisions A.0 to A.11 of 2026-11-18) | Owner decision 2026-11-18 (A) |
-| `DB-ENV-11` (new) | Security-hardening sequence exception: for hardening of an existing exposure only, Production may be changed before the migration pull request is merged, if all conditions stated there hold; the repository migration follows within 7 days. `DB-ENV-05` stays valid | Owner decision 2026-11-18 (C) |
+| `DB-ENV-11` (new) | Security-hardening sequence exception: for hardening of an existing exposure only, Production may be changed before the migration pull request is merged, if all conditions stated there hold; the pull request with the repository migration is opened within 7 days. `DB-ENV-05` stays valid | Owner decision 2026-11-18 (C) |
 | `DB-ENV-09`, condition 8 | "`PRODUCTION` is accessed read-only only" becomes "`PRODUCTION` is accessed read-only, except execution under `DB-ENV-10`". The target-state sentence names the `DB-ENV-10` execution window as the only time the `PRODUCTION` connection may have write capability. All `DEVELOP` rules and the verification by name before every write action stay | Owner decision 2026-11-18 (B), (A.9) |
 | `DB-ENV-09`, carried-over list (consequential) | The bullets on Production mutations and on the migration flow name `DB-ENV-10` (engineer execution) and `DB-ENV-11` (order exception for security hardening) | Follows `DB-ENV-10`, `DB-ENV-11` |
 | §2 (consequential) | One bullet added: the database validation path in §2 is the normal order; `DB-ENV-11` is the only exception to it | Follows `DB-ENV-11` |
@@ -272,7 +272,7 @@ Owner decision 2026-11-18.
 1. `DEVELOP` was changed and verified first;
 2. the exact SQL was reviewed independently;
 3. the owner names this exception in the One-Time Production GO (the GO phrase of `DB-ENV-10` A.10 names `DB-ENV-11`);
-4. the repository migration follows within 7 days of the Production execution, with the postcheck evidence recorded per `DB-ENV-08`.
+4. the pull request with the repository migration is opened within 7 days of the Production execution, with the postcheck evidence recorded per `DB-ENV-08`.
 
 All other requirements of `DB-ENV-10` apply unchanged.
 
