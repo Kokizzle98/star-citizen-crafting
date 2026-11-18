@@ -1,7 +1,7 @@
 # VECTOR Rule Index
 
 **Status:** PROPOSED  
-**Version:** 1.5 (2026-11-17: `DATASET_PIPELINE_V1.md` v1.2 and `SCMDB_SOURCE_INVENTORY.md` registered; base `8f504ef`)\
+**Version:** 1.6 (2026-11-18: `DB_ENVIRONMENT_GOVERNANCE_V1_2.md` registered, v1.1 superseded; base `9bf3c7f0b2010461d77585f720dc253fb8401f91`)\
 **Purpose:** Canonical registry and navigation index for VECTOR rules, specifications, architecture decisions, proposals and retired references.
 
 ## 1. Purpose
@@ -73,7 +73,8 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `GAME_WIPE_MODEL_V1.md` | Star Citizen game-wipe planning/execution semantics | `FROZEN` | LIVE dataset trigger and Production User State target must remain distinct |
 | `PLATFORM_CRITICAL_ACTIONS_V1.md` | Platform-destructive/critical administrative actions | `FROZEN` | Separate from ordinary game wipes |
 | `ROLLBACK_POLICY_V1.md` | Application, database and dataset rollback/recovery | `FROZEN` | Dataset rollback does not imply game-state recovery |
-| `DB_ENVIRONMENT_GOVERNANCE_V1_1.md` | Supabase database environment identity, data classification, Production read and write gates, migration gates, DEVELOP environment | `FROZEN` | Owner decision 2026-11-17; full-document successor to v1.0; changes only `DB-ENV-09` (a separate `DEVELOP` project on the Free plan is allowed, conditions recorded there); `DB-ENV-01` to `DB-ENV-08` carry over; separates technical environment classification from data classification |
+| `DB_ENVIRONMENT_GOVERNANCE_V1_2.md` | Supabase database environment identity, data classification, Production read and write gates, migration gates, DEVELOP environment, engineer execution of Production SQL | `FROZEN` | Owner decision 2026-11-18; full-document successor to v1.1; adds `DB-ENV-10` (One-Time Production Execution: work package plus One-Time Production GO) and `DB-ENV-11` (security-hardening sequence exception), amends condition 8 of `DB-ENV-09`; `DB-ENV-01` to `DB-ENV-08` carry over unchanged |
+| `DB_ENVIRONMENT_GOVERNANCE_V1_1.md` | Historical Supabase database environment identity, data classification, Production gates, DEVELOP environment | `SUPERSEDED` | Superseded in full by `DB_ENVIRONMENT_GOVERNANCE_V1_2.md`; file remains physically unchanged for historical traceability |
 | `DB_ENVIRONMENT_GOVERNANCE_V1.md` | Historical Supabase database environment identity, data classification, Production gates | `SUPERSEDED` | Superseded in full by `DB_ENVIRONMENT_GOVERNANCE_V1_1.md`; file remains physically unchanged for historical traceability |
 | `VECTOR_SOURCE_AUTHORITY_V1.md` | External game-data and observation sources: cross-source item identity (exact CIG UUID), variant identity, per-domain source authority (SCMDB, scunpacked-data, Star Citizen Wiki API, UEX ingame, UEX marketplace), source freshness, evidence discipline, runtime boundary | `FROZEN` | Owner decision 2026-11-12; absorbs the planned `SCMDB_SOURCE_AUTHORITY_V1`; classifies no gameplay relevance (F4-B) and lifts no gate (F4-S stays stopped at the source / distribution gate) |
 
@@ -86,7 +87,7 @@ The following registry reflects the current known VECTOR rule set and must be re
 | `DATASET_PIPELINE_V1.md` | `DATASET_PIPELINE` | `PROPOSED` | Version 1.2 (base `8f504ef`): adds dataset identity and Source Export Revision, channel manifest over domain revisions (compatibility with FROZEN `VECTOR_VERSIONING_V1_1.md` §5 and `ROLLBACK_POLICY_V1.md` §5 and §11 shown in its §34, no FROZEN change), two activation paths under `DB-ENV-04`, VECTOR-required SCMDB source set, two-stage fingerprint precheck, retention classification and state naming reconciliation. Not frozen. Freeze blockers: open decisions in its §43 (owner decisions 19 to 21), implementation and tests; N2 category semantics and N4 identity namespace are reconciled at proposal level; align mutable-state boundaries with applicable FROZEN rules before freeze |
 | `SCMDB_SOURCE_INVENTORY.md` | None (non-normative evidence input to `DATASET_PIPELINE`) | `PROPOSED` | Version 1.1 (base `8f504ef`): per-file classification of `data/scmdb/` (24 files) and reconciliation with `SCMDB_SCHEMA_CATALOG_PROFILE_V1.md`. Analysis and recommendation only; it decides no exclusion and is not intended to be frozen |
 | `CANONICAL_DATA_MODEL_V1.md` | `CANONICAL_DATA_MODEL` | `PROPOSED` | N2 category semantics and N4 identity namespace are reconciled at proposal level; complete remaining cross-spec alignment before freeze |
-| `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile its preview/staging validation (§18) with FROZEN `DB_ENVIRONMENT_GOVERNANCE_V1_1.md` (`DB-ENV-09`: a separate `DEVELOP` environment on the Free plan is allowed, Production gates unchanged); bind paths to actual repository layout |
+| `MIGRATION_TEST_CONTRACT_V1.md` | Database migration risk, tests, gates and evidence | `PROPOSED` | Reconcile its preview/staging validation (§18) with FROZEN `DB_ENVIRONMENT_GOVERNANCE_V1_2.md` (`DB-ENV-09`: a separate `DEVELOP` environment on the Free plan is allowed, Production gates unchanged); bind paths to actual repository layout |
 | `STAT_RESOLVER_POLICY_V1.md` | Stat resolver verification, transformations and productive eligibility | `PROPOSED` | Finalize verification/status model and canonical runtime mapping/gate |
 
 ## 7. PLANNED normative specifications
@@ -115,7 +116,7 @@ Global invariants are cross-domain constraints. Their authoritative definition m
 | No-guess behavior | Distributed across current FROZEN rules; consolidation planned | Missing/uncertain source, location, identity, resolver and channel decisions |
 | Critical-action fail-closed behavior | `PLATFORM_CRITICAL_ACTIONS_V1.md` | Platform-critical destructive actions |
 | Rollback fail-closed behavior | `ROLLBACK_POLICY_V1.md` | Application/database/dataset recovery |
-| Production database write gate | `DB_ENVIRONMENT_GOVERNANCE_V1_1.md` | Every persistent mutation of the VECTOR Supabase Production environment |
+| Production database write gate | `DB_ENVIRONMENT_GOVERNANCE_V1_2.md` | Every persistent mutation of the VECTOR Supabase Production environment |
 | Cross-source item identity (exact CIG UUID, no name join) and `NO_EVIDENCE != NEGATIVE_EVIDENCE` for external sources | `VECTOR_SOURCE_AUTHORITY_V1.md` | Every join or interpretation across external game-data and observation sources |
 
 Until No-Guess has one canonical normative home, this index records it as a global invariant only where an existing FROZEN specification explicitly states the applicable no-guess rule. The index does not create new domain behavior by itself.

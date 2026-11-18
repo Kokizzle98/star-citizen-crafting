@@ -45,7 +45,7 @@ Run typecheck and tests before proposing a change. Pull requests are expected to
 - Every pull request goes to the Project Lead for review before the owner merges. The owner decides and merges; nobody else does.
 - Do not guess missing or uncertain data (locations, identities, resolver values). Keep it visible as an explicit review state.
 - LIVE and PTU datasets are strictly isolated. No cross-channel fallback.
-- Database changes go through reviewed migrations in `database/migrations/`. Two Supabase environments exist: Production (it currently holds test data, which does not make it staging) and a separate `DEVELOP` project for development and preview; there is no staging database. Read-only access is allowed, every Production mutation needs a separate explicit owner GO, and migrations follow the gates in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md`.
+- Database changes go through reviewed migrations in `database/migrations/`. Two Supabase environments exist: Production (it currently holds test data, which does not make it staging) and a separate `DEVELOP` project for development and preview; there is no staging database. Read-only access is allowed, every Production mutation needs a separate explicit owner GO, and migrations follow the gates in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md`.
 - Authorization is enforced in the backend (RLS/RPC). UI state is never the security boundary.
 - Keep changes small and explain them in plain language: the project owner is a system administrator, not a developer, and works in German.
 

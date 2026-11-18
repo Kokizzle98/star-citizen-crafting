@@ -4,7 +4,7 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v15 (counted up from v14; checkpoint rotation ROT-12 after PRs #92–#95, base commit `e6d4e6bac01b3b8b7923111d6371e6cb4eaba9f3`)
+- **Document version:** v16 (counted up from v15; GOV-2 reference update to DB governance v1.2, base commit `9bf3c7f0b2010461d77585f720dc253fb8401f91`; checkpoint not rotated)
 - **State verified through commit:** `e6d4e6bac01b3b8b7923111d6371e6cb4eaba9f3`
 - **Updated by work package:** ROT-12 (checkpoint rotation, documentation only, 2026-11-18). Repository facts and merged PRs were verified with `git` and GitHub against `origin` at the base commit above. Previous update: ROT-11 (checkpoint rotation after PR #90).
 - **Checkpoint date:** 2026-11-18
@@ -86,7 +86,7 @@
 
 ## NEXT
 
-0. **Prepare hardening H2 for Production, then the auth concept.** Applying H2 to Production is its own step and needs its own named owner GO (`DB_ENVIRONMENT_GOVERNANCE_V1_1`). G7 (public baseline) remains a later, separate step.
+0. **Prepare hardening H2 for Production, then the auth concept.** Applying H2 to Production is its own step and needs its own named owner GO (`DB_ENVIRONMENT_GOVERNANCE_V1_2`, One-Time Production GO under `DB-ENV-10`). G7 (public baseline) remains a later, separate step.
 1. **Release 2 is done** (PR #87, `main` = `66c531bd`, tag `release-2026-11-17`; rollback points `pre-release-2026-11-14` on `eb6f108` and `e916f69`). No release is planned. A later release `develop` -> `main` is its own session and pull request with merge method **merge commit** (see `docs/handover/VECTOR_RESTART_HANDOVER.md` section 6). After PR #87, `main` and `develop` have identical file content (`git diff` empty); `main` is ahead only by the two release merge commits `e916f69` (#79) and `66c531b` (#87), which `develop` does not contain. The merge base is the `develop` head `9d58d61`, so the next release merge is clean without merging `main` back into `develop` (no back-merge was done after #79 either). A back-merge is optional and would be its own owner decision. Owner follow-up after the release: check the audit workflow run on `main` (first run with the new paths) and the Vercel Production deployment.
 2. Small follow-ups from the Copilot review of PR #79 (F2, F3 and F5 to F10): already classified as deferred; open, details with the owner. Each is its own small package.
 3. Backlog (each its own small package, only after an owner decision where noted):
@@ -112,14 +112,14 @@
 
 ## OPEN INFRASTRUCTURE WORK
 
-- `DEVELOP` instance (owner decision 2026-11-17): a second, ordinary Supabase project on the Free plan for development, preview and safe write tests; **created**, governed by `DB-ENV-09` in `DB_ENVIRONMENT_GOVERNANCE_V1_1.md`, planned in `docs/architecture/DEV_DB_CONCEPT.md`. Open: hardening H2 on Production (own GO) and the later steps of the concept (each with its own GO). Vercel Preview deployments of the branch `develop` use `DEVELOP`; Vercel Production uses the Production database.
+- `DEVELOP` instance (owner decision 2026-11-17): a second, ordinary Supabase project on the Free plan for development, preview and safe write tests; **created**, governed by `DB-ENV-09` in `DB_ENVIRONMENT_GOVERNANCE_V1_2.md`, planned in `docs/architecture/DEV_DB_CONCEPT.md`. Open: hardening H2 on Production (own GO) and the later steps of the concept (each with its own GO). Vercel Preview deployments of the branch `develop` use `DEVELOP`; Vercel Production uses the Production database.
 - Separate Supabase contexts for `LIVE` and `PTU` (future Spur-B target, owner decision 2026-11-11, not started): **not** a current DB-environment contract and **not** FROZEN. The Free plan does not allow more than two active projects, so this stays a separate future package (concept section 9).
 
 ## RELEVANT CONTRACTS
 
-- FROZEN specifications in `docs/frozen/`, registered in `docs/RULE_INDEX.md` section 5. Most relevant right now: `INVENTORY_UX_V1_2.md` (inventory UX, quality tiers, key set, key help), `VECTOR_SOURCE_AUTHORITY_V1.md` (external source identity and authority), `DB_ENVIRONMENT_GOVERNANCE_V1_1.md` (Production read and write gates, DEVELOP environment), `VECTOR_VERSIONING_V1_1.md` (LIVE/PTU isolation), `VECTOR_GOVERNANCE_V1.md` (global governance).
+- FROZEN specifications in `docs/frozen/`, registered in `docs/RULE_INDEX.md` section 5. Most relevant right now: `INVENTORY_UX_V1_2.md` (inventory UX, quality tiers, key set, key help), `VECTOR_SOURCE_AUTHORITY_V1.md` (external source identity and authority), `DB_ENVIRONMENT_GOVERNANCE_V1_2.md` (Production read and write gates, DEVELOP environment, One-Time Production Execution), `VECTOR_VERSIONING_V1_1.md` (LIVE/PTU isolation), `VECTOR_GOVERNANCE_V1.md` (global governance).
 - Operating contracts: `AGENTS.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`.
 - Recovery: `docs/handover/VECTOR_RESTART_HANDOVER.md` (control block, drift procedure, Blueprint decisions) and `docs/handover/SCMDB_LOCATION_HANDOVER.md` (frozen location contracts).
 - Evidence: `docs/governance/PROJECT_LEAD_EVIDENCE.md` (generator, CURRENT and ARCHIVE contract, Project Lead bootstrap).
 - Security-relevant runtime evidence (database dumps, policy / grant listings, project identifiers) is held privately by the owner and is not stored in this repository.
-- Supabase: two environments exist. Production (project: see the owner's private project archive, branch `main`) currently holds test data and is still Production. `DEVELOP` (Free plan, permitted by `DB-ENV-09`, v1.1) is the development and preview database. Read-only access to Production is allowed; every Production mutation needs an explicit owner GO; target state: one project-scoped connection per project, `PRODUCTION` read-only; until then the engineer writes exclusively to the project named `DEVELOP` (verified by name before every write) and reads `PRODUCTION` read-only only (`DB-ENV-09`, corrected 2026-11-17, owner decision).
+- Supabase: two environments exist. Production (project: see the owner's private project archive, branch `main`) currently holds test data and is still Production. `DEVELOP` (Free plan, permitted by `DB-ENV-09`, since v1.1) is the development and preview database. Read-only access to Production is allowed; every Production mutation needs an explicit owner GO; target state: one project-scoped connection per project, `PRODUCTION` read-only; until then the engineer writes exclusively to the project named `DEVELOP` (verified by name before every write) and reads `PRODUCTION` read-only, except execution under `DB-ENV-10` (`DB-ENV-09` condition 8, amended 2026-11-18, owner decision).

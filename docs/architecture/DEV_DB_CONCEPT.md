@@ -1,7 +1,7 @@
 # VECTOR DEVELOP Database Concept
 
-- **Status:** ACCEPTED (owner decisions of 2026-11-17 recorded in sections 2, 7 and 11; the binding rule is `DB-ENV-09` in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md`; this document stays a planning document and is not FROZEN)
-- **Version:** 1.1 (counted up from 1.0; base commit `e97f88f`, correction base `bcd5333`, WP DEV-DB-G0-FIX: owner decisions 7 and 8 corrected on 2026-11-17)
+- **Status:** ACCEPTED (owner decisions of 2026-11-17 recorded in sections 2, 7 and 11; the binding rule is `DB-ENV-09` in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md`; this document stays a planning document and is not FROZEN)
+- **Version:** 1.2 (counted up from 1.1; base commit `9bf3c7f0b2010461d77585f720dc253fb8401f91`, WP GOV-2: section 12 aligned with condition 8 of `DB-ENV-09` as amended on 2026-11-18)
 - **Work package:** WP DEV-DB-KONZEPT (read-only analysis and planning), accepted and updated by WP DEV-DB-G0 (documentation only; nothing was created or changed)
 - **Scope:** a second, separate Supabase project `DEVELOP` next to the existing Production project: how to build it, fill it, wire it to Vercel and operate it
 - **Out of scope:** separate Supabase contexts for `LIVE` and `PTU` (still future work, see section 9), Supabase branching, any paid plan, any change to Production
@@ -275,9 +275,9 @@ Still open (none blocks G1):
 
 Owner decision 2026-11-17 (made precise):
 
-- **Target state:** one project-scoped connection per project (configured outside this repository). The `PRODUCTION` connection is read-only (`read_only=true`); the `DEVELOP` connection may write, and only inside a work package that has its GO.
-- **Transition rule until then:** the engineer writes **exclusively** to the project named `DEVELOP`. The project is verified by name before the first write and the target is checked before every write action. `PRODUCTION` is accessed read-only only, in read-only transactions.
-- Every Production mutation remains its own named owner GO (`DB-ENV-04`, `DB-ENV-07`).
+- **Target state:** one project-scoped connection per project (configured outside this repository). The `PRODUCTION` connection is read-only (`read_only=true`) by default and receives write capability only for an execution window under `DB-ENV-10` (enabled and disabled by the owner); the `DEVELOP` connection may write, and only inside a work package that has its GO.
+- **Transition rule until then:** the engineer writes **exclusively** to the project named `DEVELOP`. The project is verified by name before the first write and the target is checked before every write action. `PRODUCTION` is accessed read-only, in read-only transactions, except execution under `DB-ENV-10`.
+- Every Production mutation remains its own named owner GO (`DB-ENV-04`, `DB-ENV-07`); for engineer execution that GO is the One-Time Production GO of `DB-ENV-10`.
 - An account-wide connection is not used for write actions without that target check, so that the two projects cannot be confused.
 - Agents name the project by its name (`PRODUCTION` or `DEVELOP`), never by posting a project reference or URL into a chat, pull request or document. The exact display names are kept in the owner's private archive.
 - This document contains no references, URLs, keys or passwords and makes no statement about integration or dashboard settings of `PRODUCTION`.

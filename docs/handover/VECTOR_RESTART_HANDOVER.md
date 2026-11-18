@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v15 (counted up from v14; checkpoint rotation ROT-12 after PRs #92–#95, base commit `e6d4e6bac01b3b8b7923111d6371e6cb4eaba9f3`)
+- Document version: v16 (counted up from v15; GOV-2 reference update to DB governance v1.2, base commit `9bf3c7f0b2010461d77585f720dc253fb8401f91`; checkpoint not rotated)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -132,7 +132,8 @@ These are compact status pointers only. The repository documents themselves must
 - `VECTOR_VERSIONING_V1` = `SUPERSEDED` (file intentionally unchanged for traceability; see `docs/RULE_INDEX.md`)
 - `VECTOR_VERSIONING_V1_1` = `FROZEN`
 - `VECTOR_SOURCE_AUTHORITY_V1` = `FROZEN` (owner decision 2026-11-12; exact CIG UUID is the only cross-source identity, variants are separate items without unlock inheritance, SCMDB stays crafting authority, scunpacked-data is the designated structural source for F4-S, the Star Citizen Wiki API is a verification source, UEX ingame and UEX marketplace are strictly separate observation domains, `NO_EVIDENCE != NEGATIVE_EVIDENCE`, no single source signal excludes; Production-authoritative after merge into `main`)
-- `DB_ENVIRONMENT_GOVERNANCE_V1_1` = `FROZEN` (owner decision 2026-11-17; full-document successor to v1.0 (`SUPERSEDED`, owner decision 2026-11-11); only `DB-ENV-09` changed: a separate `DEVELOP` project on the Free plan is allowed; `main` stays the Supabase Production holding test data, never "staging"; Production-authoritative after merge into `main`)
+- `DB_ENVIRONMENT_GOVERNANCE_V1_2` = `FROZEN` (owner decision 2026-11-18; full-document successor to v1.1 (`SUPERSEDED`); adds `DB-ENV-10` One-Time Production Execution and `DB-ENV-11` security-hardening sequence exception, amends condition 8 of `DB-ENV-09`; `DB-ENV-01` to `DB-ENV-08` unchanged)
+- `DB_ENVIRONMENT_GOVERNANCE_V1_1` = `SUPERSEDED` by v1.2 (owner decision 2026-11-17; full-document successor to v1.0 (`SUPERSEDED`, owner decision 2026-11-11); only `DB-ENV-09` changed: a separate `DEVELOP` project on the Free plan is allowed; `main` stays the Supabase Production holding test data, never "staging"; Production-authoritative after merge into `main`)
 - `DATA_CONTEXT_MODEL_V1` = `PROPOSED`
 - R2 = `IN_PROGRESS`
 - R3 = `RESOLVED`
@@ -244,7 +245,7 @@ Owner-approved reward source-occurrence model for PR 2:
 - `duplicateSourceRows` stays explicitly measurable: stored on the dataset row, recomputed in SQL by the sync and rejected on mismatch, and asserted by a contract test;
 - no reward-row identity is claimed across different dataset revisions; a random UUID alone is not an acceptable identity.
 
-Supabase environment: resolved by the owner on 2026-11-11. see the owner's private project archive / branch `main` is the VECTOR Supabase **Production** environment, currently holding test data without retention value. It must not be called staging. The binding rules are `DB-ENV-01` to `DB-ENV-09` in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md` (v1.0 superseded). A separate `DEVELOP` project (Free plan, permitted by `DB-ENV-09`, owner decision 2026-11-17) now exists; Vercel Preview deployments of the branch `develop` run against it, Production is reached only through `main`.
+Supabase environment: resolved by the owner on 2026-11-11. see the owner's private project archive / branch `main` is the VECTOR Supabase **Production** environment, currently holding test data without retention value. It must not be called staging. The binding rules are `DB-ENV-01` to `DB-ENV-11` in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md` (v1.0 and v1.1 superseded). A separate `DEVELOP` project (Free plan, permitted by `DB-ENV-09`, owner decision 2026-11-17) now exists; Vercel Preview deployments of the branch `develop` run against it, Production is reached only through `main`.
 
 Read-only prechecks A to D for PR 2 (run on 2026-11-11 against Production under `DB-ENV-03`; select statements on `pg_catalog`, `pg_indexes` and `pg_policies` only, no mutation):
 
@@ -277,7 +278,7 @@ Known open items, none of them started:
 - Rule Index items R2, R4 and R5 remain as listed in `docs/RULE_INDEX.md`.
 - open crew authorization and privacy hardening findings, currently rated LOW to MEDIUM. They are not part of the Blueprint work package and are not repaired here. Target: a separate work package `Crew Security Hardening`, to be completed or re-assessed at the latest before the first user outside the current test group. They do not block Blueprint PR 2, because the new crew function must not use the affected helpers as its sole authorization boundary.
 
-OPEN INFRASTRUCTURE WORK: (1) the `DEVELOP` instance (owner decision 2026-11-17) exists and is governed by `DB-ENV-09` in `DB_ENVIRONMENT_GOVERNANCE_V1_1` and planned in `docs/architecture/DEV_DB_CONCEPT.md`; hardening H2 is running on `DEVELOP`, applying it to Production is its own step with its own GO; (2) separate Supabase contexts for `LIVE` and `PTU` (future Spur-B target, owner decision 2026-11-11, not started) are **not** a current DB-environment contract and **not** FROZEN; the Free plan allows only two active projects.
+OPEN INFRASTRUCTURE WORK: (1) the `DEVELOP` instance (owner decision 2026-11-17) exists and is governed by `DB-ENV-09` in `DB_ENVIRONMENT_GOVERNANCE_V1_2` and planned in `docs/architecture/DEV_DB_CONCEPT.md`; hardening H2 is running on `DEVELOP`, applying it to Production is its own step with its own GO; (2) separate Supabase contexts for `LIVE` and `PTU` (future Spur-B target, owner decision 2026-11-11, not started) are **not** a current DB-environment contract and **not** FROZEN; the Free plan allows only two active projects.
 
 Completed packages: `Restart Safety + AI Efficiency v1` (PR #10) and `Repository Cleanup and Baseline v1` (PR #34).
 
@@ -469,4 +470,4 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: prepare hardening H2 for Production (its own step, application only with a separate named owner GO), then the auth concept. No release is planned. A `DEVELOP` database exists and follows `DB_ENVIRONMENT_GOVERNANCE_V1_1`. Dataset pipeline v1.2 owner decisions 19 to 21 in section 43 remain open. Other open follow-ups, each its own small package: backlog in `docs/PROJECT_STATE.md` (return to the requested page after sign-in, dataset update with an explicit owner GO, onboarding and crew invitation UI, Fabricator / Inventory design according to the mock-ups) and the open follow-ups of the review of PR #79 (details with the owner). A later release `develop` -> `main` is its own session and pull request with merge method **merge commit** (section 6). The Supabase `LIVE` / `PTU` separation remains open infrastructure work in its own package and is not a current contract. The licence / redistribution decision for scunpacked-data stays open.
+NEXT STEP: prepare hardening H2 for Production (its own step, application only with a separate named owner GO), then the auth concept. No release is planned. A `DEVELOP` database exists and follows `DB_ENVIRONMENT_GOVERNANCE_V1_2`. Dataset pipeline v1.2 owner decisions 19 to 21 in section 43 remain open. Other open follow-ups, each its own small package: backlog in `docs/PROJECT_STATE.md` (return to the requested page after sign-in, dataset update with an explicit owner GO, onboarding and crew invitation UI, Fabricator / Inventory design according to the mock-ups) and the open follow-ups of the review of PR #79 (details with the owner). A later release `develop` -> `main` is its own session and pull request with merge method **merge commit** (section 6). The Supabase `LIVE` / `PTU` separation remains open infrastructure work in its own package and is not a current contract. The licence / redistribution decision for scunpacked-data stays open.
