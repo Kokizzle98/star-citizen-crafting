@@ -34,7 +34,7 @@ const governanceSources = [
   'AGENTS.md',
   'docs/RULE_INDEX.md',
   'docs/governance/AI_OPERATING_MODEL.md',
-  'docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md',
+  'docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md',
   'docs/handover/VECTOR_RESTART_HANDOVER.md',
 ]
 const excludedMarkers = [
@@ -82,7 +82,7 @@ const fixtureSources = {
   'AGENTS.md': '# Agents\n\nAGENTS_FIXTURE_MARKER\n',
   'docs/RULE_INDEX.md': '# Rule Index\n\nRULE_INDEX_FIXTURE_MARKER\n',
   'docs/governance/AI_OPERATING_MODEL.md': '# Operating Model\n\nOPERATING_MODEL_FIXTURE_MARKER\n',
-  'docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md': '# DB Environment\n\nDB_ENV_FIXTURE_MARKER\n',
+  'docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md': '# DB Environment\n\nDB_ENV_FIXTURE_MARKER\n',
   // The decoy line proves that commit statements inside embedded content are
   // ignored by the consistency check.
   'docs/handover/VECTOR_RESTART_HANDOVER.md':
@@ -588,7 +588,7 @@ test('an altered embedded policy body with a recomputed outer checksum is reject
   assertPass(runGenerator(fixture, ['-ValidateOnly']))
   tamperGovernance(fixture.current, text => text.replace('DB_ENV_FIXTURE_MARKER', 'DB_ENV_FIXTURE_MARKER altered policy text'))
   const run = runGenerator(fixture, ['-ValidateOnly'])
-  assertBlocked(run, /section 'docs\/frozen\/DB_ENVIRONMENT_GOVERNANCE_V1_1\.md': embedded content differs from the repository source at the Snapshot Commit/)
+  assertBlocked(run, /section 'docs\/frozen\/DB_ENVIRONMENT_GOVERNANCE_V1_2\.md': embedded content differs from the repository source at the Snapshot Commit/)
   // Declared metadata was left untouched, so only the commit-bound comparison can catch this.
   assert.doesNotMatch(run.text, /SHA256 differs from the value declared/)
 })
@@ -1218,7 +1218,7 @@ test('governance sources with CRLF, BOM or irregular trailing newlines are embed
     'AGENTS.md': '# Agents\r\n\r\nAGENTS_FIXTURE_MARKER\r\n',
     'docs/RULE_INDEX.md': '\uFEFF# Rule Index\r\n\r\nRULE_INDEX_FIXTURE_MARKER\r\n',
     'docs/governance/AI_OPERATING_MODEL.md': '# Operating Model\n\nOPERATING_MODEL_FIXTURE_MARKER',
-    'docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md': '# DB Environment\n\nDB_ENV_FIXTURE_MARKER\n\n\n',
+    'docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md': '# DB Environment\n\nDB_ENV_FIXTURE_MARKER\n\n\n',
   }
   const fixture = createFixture({ sources, config: [['core.autocrlf', 'false']] })
   const raw = git(fixture.work, ['cat-file', 'blob', 'HEAD:AGENTS.md'], { buffer: true })
@@ -1231,7 +1231,7 @@ test('governance sources with CRLF, BOM or irregular trailing newlines are embed
   assert.ok(context.includes('----- BEGIN CONTENT AGENTS.md -----\n# Agents\n\nAGENTS_FIXTURE_MARKER\n----- END CONTENT AGENTS.md -----'))
   assert.ok(context.includes('----- BEGIN CONTENT docs/RULE_INDEX.md -----\n# Rule Index\n\nRULE_INDEX_FIXTURE_MARKER\n----- END CONTENT docs/RULE_INDEX.md -----'))
   assert.ok(context.includes('OPERATING_MODEL_FIXTURE_MARKER\n----- END CONTENT docs/governance/AI_OPERATING_MODEL.md -----'))
-  assert.ok(context.includes('DB_ENV_FIXTURE_MARKER\n----- END CONTENT docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md -----'))
+  assert.ok(context.includes('DB_ENV_FIXTURE_MARKER\n----- END CONTENT docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md -----'))
   assert.ok(context.includes('HANDOVER_FIXTURE_MARKER\n----- END CONTENT docs/handover/VECTOR_RESTART_HANDOVER.md -----'))
   // Metadata stays bound to the raw blob bytes.
   assert.match(context, new RegExp(`^Repository Path: AGENTS\\.md\\n(?:.*\\n){2}SHA256: ${sha256(raw)}\\nBytes: ${raw.length}$`, 'm'))

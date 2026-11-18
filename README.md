@@ -1,5 +1,7 @@
 # VECTOR
 
+**Base Commit:** `936309c8c14704d62406a3938ef74f95afe50cc5`
+
 VECTOR is a community-driven, hobby project for Star Citizen players focused on crafting, equipment planning, item analysis, loadout comparison, and inventory-related decision support.
 
 The project is intentionally free to use and designed to grow with the community. Monetization is not the primary goal and will only be considered later, if at all, once the project proves useful and sustainable.
@@ -105,7 +107,7 @@ This layer handles:
 - resolver logic for ambiguous or incomplete information
 
 ### 4. Database and Migration Layer
-Security-sensitive workflows are included to support controlled Production database safety (see docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md; there is no staging database, a separate DEVELOP project exists for development and preview):
+Security-sensitive workflows are included to support controlled Production database safety (see docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md; there is no staging database, a separate DEVELOP project exists for development and preview):
 - `database/`
 - `database/migrations/`
 
@@ -152,7 +154,7 @@ This architecture separates:
 ## Safety Rules
 CITIZEN_ID_ENABLED=false is the default
 Never commit .env.local or server secrets
-Database migrations follow docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md: local and PGlite contract tests, review and CI, then an explicit named Production-migration GO and read-only postchecks (there is no staging database)
+Database migrations follow docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md: local and PGlite contract tests, review and CI, then an explicit named Production-migration GO and read-only postchecks (there is no staging database)
 Production promotion is blocked until checks pass
 Missing or unresolved data must remain visible as review states
 

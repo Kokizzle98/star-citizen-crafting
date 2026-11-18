@@ -1,7 +1,8 @@
 # VECTOR Project Lead Evidence v1
 
 - **Status:** OPERATIONAL (non-normative)
-- **Version:** 1.0 (evidence format 1.0)
+- **Version:** 1.1 (evidence format 1.0)
+- **Base Commit:** `936309c8c14704d62406a3938ef74f95afe50cc5`
 - **Scope:** the commit-bound evidence pipeline from a local Git checkout to the private evidence folder of the VECTOR Project Lead (Claude Fleet Commander)
 - **Generator:** `scripts/export-project-lead-evidence.ps1`
 - **Tests:** `tests/project-lead-evidence.test.mjs`
@@ -32,7 +33,7 @@ Roles and engineering contracts are defined in `docs/governance/AI_OPERATING_MOD
 
 - `docs/PROJECT_STATE.md`: compact master state (DONE, ACTIVE, PAUSED, BLOCKED, NEXT, OPEN DECISIONS, RELEVANT CONTRACTS). Maintained by hand with each work package. It is copied byte-identically into the snapshot.
 - `docs/governance/AI_OPERATING_MODEL.md`: repository-native, non-private AI operating model.
-- Governance sources embedded verbatim into `GOVERNANCE_CONTEXT.md` (fixed allowlist in the generator): `AGENTS.md`, `docs/RULE_INDEX.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_1.md`, `docs/handover/VECTOR_RESTART_HANDOVER.md`.
+- Governance sources embedded verbatim into `GOVERNANCE_CONTEXT.md` (fixed allowlist in the generator): `AGENTS.md`, `docs/RULE_INDEX.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md`, `docs/handover/VECTOR_RESTART_HANDOVER.md`.
 
 The private Project Lead operating contract stays outside the repository. The snapshot does not contain it and does not depend on it.
 
