@@ -4,10 +4,10 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v14 (counted up from v13; checkpoint rotation ROT-11 after DEV-DB G0 and the DEVELOP database work, base commit `5a5a333773c724f29a7472d119d31e42b09949c6`)
-- **State verified through commit:** `5a5a333773c724f29a7472d119d31e42b09949c6`
-- **Updated by work package:** ROT-11 (checkpoint rotation, documentation only, 2026-11-17). Repository facts (`main`, tags, merged PRs, ancestry) were re-checked with `git` against `origin` at the base commit above; the statements about `DEVELOP` and Vercel Preview come from the owner-approved work packages and the owner reports. Previous update: DEV-DB-G0-FIX on top of DEV-DB-G0 (documentation only), before that DOC-REL-2 (checkpoint Release 2 done).
-- **Checkpoint date:** 2026-11-17
+- **Document version:** v15 (counted up from v14; checkpoint rotation ROT-12 after PRs #92–#95, base commit `e6d4e6bac01b3b8b7923111d6371e6cb4eaba9f3`)
+- **State verified through commit:** `e6d4e6bac01b3b8b7923111d6371e6cb4eaba9f3`
+- **Updated by work package:** ROT-12 (checkpoint rotation, documentation only, 2026-11-18). Repository facts and merged PRs were verified with `git` and GitHub against `origin` at the base commit above. Previous update: ROT-11 (checkpoint rotation after PR #90).
+- **Checkpoint date:** 2026-11-18
 
 ## How to read this file
 
@@ -68,7 +68,7 @@
 - DEV-DB concept (WP DEV-DB-KONZEPT): **DONE**. PR #89 (merge commit `e97f88f`): `docs/architecture/DEV_DB_CONCEPT.md`, documentation only; the read-only inventory of the current database is kept privately by the owner.
 - DEV-DB G0 (governance decision for the DEVELOP Supabase): **DONE** (#89 concept, #90 governance). `DB_ENVIRONMENT_GOVERNANCE_V1_1.md` FROZEN as full-document successor (owner decision 2026-11-17): only `DB-ENV-09` changes, a separate `DEVELOP` project on the Free plan is allowed; `DB-ENV-01` to `DB-ENV-08` carry over. `DEV_DB_CONCEPT.md` is `ACCEPTED` (v1.0).
 - DEV-DB G1 to G4 (separate `DEVELOP` database): **DONE** (owner-approved steps, each with its own GO). The `DEVELOP` project exists on the Free plan, schema, catalog data and synthetic test data are in place, and Vercel Preview deployments of the branch `develop` run against it. Production stays reachable only through `main`. Other branch previews are not part of this statement. No project identifiers, URLs, keys or accounts are recorded here (public repository).
-- Release 2 and the merged documentation PRs: Release 2 is done (see above). Since then #88 (checkpoint), #89 (DEV-DB concept) and #90 (DEV-DB G0, governance v1.1) are merged into `develop`.
+- Documentation PRs #92–#95: #92 DOC-REF-2 updated DB governance references; #93 introduced SCMDB source inventory v1.0 (analysis only); #94 updated `DATASET_PIPELINE_V1.md` to v1.2, `SCMDB_SOURCE_INVENTORY.md` to v1.1 and `docs/RULE_INDEX.md` to v1.5 (all remain `PROPOSED`; nothing was frozen); #95 GOV-1 updated the AI operating model to v1.4, adding GitHub Copilot as optional Secondary Engineer / Specialist while Claude Code remains the Primary and default Engineer.
 - Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`; #56 (`6586108`) public-repo boundary clarification and checkpoint rotation. Documentation only, no Production mutation.
 
 ## ACTIVE
@@ -101,6 +101,7 @@
 
 - Licence and redistribution of scunpacked-data (no licence file): unresolved. Option B keeps the index local and uncommitted until this is decided; a later move to option A or A′ needs its own owner decision. No other owner decision is pending for the current work package.
 - Later UX work package (not started): compact lot / location display in the Fabricator, grouping by player and location, further progressive disclosure (the collapsible recipe and quality sections are done in UX-6a), and a clear distinction between "available in the crew" and "available at one place".
+- Dataset pipeline v1.2 owner decisions 19 to 21 in section 43 of `docs/proposed/DATASET_PIPELINE_V1.md` remain open.
 - `SCMDB_SOURCE_AUTHORITY_V1` is absorbed by the FROZEN `VECTOR_SOURCE_AUTHORITY_V1`; `PROVIDER_AUTHORITY_V1` (user-state providers) stays PLANNED.
 - Known items that will need a decision later, none started: a later UX / design pass (blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, the narrow app shell / sidebar on small screens); the known crew `active_group` inconsistency (`getCrewContext()` falls back to the first crew while the crew RPCs report `ACTIVE_GROUP_REQUIRED`), deliberately unchanged; the `Crew Security Hardening` work package (LOW to MEDIUM findings, due before the first user outside the current test group); archiving or removing the `data/audit*` folders (separate Cleanup Gate; the unused audit scripts `v2` and `v3` were removed and the V4 to V6 audit scripts moved to `scripts/audit/` in REPO-TIDY-1, V6 still imports V4 and V5); Rule Index remediation items R1, R2, R4 and R5; the later WP-AOM-01 gates (Security Finding Register, Backup Gate, Cleanup Gate), which stay separate future work.
 - Open points found before the release (2026-11-14, none started, none blocks the release):
