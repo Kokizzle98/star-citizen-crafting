@@ -1,9 +1,9 @@
 # VECTOR AI Operating Model v1
 
 - **Status:** OPERATIONAL (non-normative)
-- **Version:** 1.3 (counted up from 1.2; base commit `79f7b30e9b05204d43676f6d0dd59cffdb285980`)
+- **Version:** 1.5 (counted up from 1.4; base commit `9bf3c7f0b2010461d77585f720dc253fb8401f91`; DB governance references moved to v1.2)
 - **Scope:** roles, decision authority and source-of-truth boundaries for the people and AI agents who work on VECTOR
-- **Does not override:** any FROZEN specification in `docs/frozen/`, the authority order in `docs/RULE_INDEX.md`, or the Production write gates in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md`
+- **Does not override:** any FROZEN specification in `docs/frozen/`, the authority order in `docs/RULE_INDEX.md`, or the Production write gates in `docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md`
 
 ## 1. Purpose
 
@@ -16,15 +16,25 @@ VECTOR is built by one owner together with several AI agents. This document is t
 | Owner | the project owner | Final decision authority. Approves work packages, merges, freezes and every Production mutation. |
 | VECTOR Project Lead | Claude (Fleet Commander, Claude project VECTOR – 01 Fleet Commander) | Project leadership, architecture, concepts, governance, decision preparation, work-package definition, evidence evaluation, handoffs to engineering and review agents. |
 | Primary Engineer | Claude (Claude project Vector Terminal - GitHub / Claude Code) | Code-near implementation of approved work packages: code, tests, migrations as reviewed files, documentation, pull requests. |
+| Secondary Engineer / Specialist | GitHub Copilot (optional) | Implements small to medium, clearly bounded, well-testable work packages that the Project Lead explicitly routes to it. Does not replace the Primary Engineer and is not a second Primary Engineer. |
 | Independent Reviewer | GitHub Copilot (optional, punctual) | Optional, punctual independent Stability, Maintainability and Security review of pull requests, plus targeted optimization. |
 
-The Project Lead prepares decisions; it does not take them. The Primary Engineer implements; it does not approve its own work. The Independent Reviewer reviews; it does not merge. The owner decides.
+The Project Lead prepares decisions; it does not take them. Every implementing engineer, including the Secondary Engineer, does not approve its own work. The Independent Reviewer reviews and does not merge. The owner decides.
+
+### Engineering routing
+
+- Claude Code is the Primary and default Engineer; when in doubt, work stays with Claude Code.
+- The Project Lead routes by complexity, risk, required repository context, production or security relevance, testability, sensible parallelization, GitHub proximity and AI, token and credit efficiency.
+- Well suited for GitHub Copilot: bug fixes, regression tests, CI and GitHub Actions, GitHub-native repository tasks, mechanical refactorings, small UI packages, repository and tooling tasks.
+- When Copilot is chosen, the work-package handoff states the routing reason briefly.
+- Work involving the database, Supabase or Vercel, Production or security stays with the Primary Engineer by default, unless the owner explicitly decides otherwise.
+- An implementer is not automatically its own independent reviewer. When an independent review is required, a different instance or harness, and if needed a different model family, can be recommended. Copilot running a Claude model is not automatically an independent model perspective.
 
 ## 3. Source-of-truth boundary
 
 1. **GitHub repository.** The shared, versioned technical knowledge base. Authority inside the repository follows `docs/RULE_INDEX.md` and `AGENTS.md`: FROZEN specifications first, then repository and lifecycle information, then PROPOSED specifications, then reviews and handovers, then chat history.
 2. **Runtime systems.** Supabase and Vercel are authoritative for directly observed runtime state. Directly observed runtime evidence can invalidate a repository assumption. Such an observation is recorded explicitly (precheck, review or pull request) and never reconciled silently.
-3. **OneDrive.** A private supplementary layer for transport, project documents, evidence snapshots, backup, recovery, research and design. It never competes with GitHub as technical truth, is never part of build or deployment, and holds only commit-bound copies of repository state. When a OneDrive snapshot and `origin/develop` disagree, Git wins; the snapshot is stale.
+3. **OneDrive.** A private supplementary layer for transport, project documents, evidence snapshots, backup, recovery, research and design. It never competes with GitHub as technical truth, is never part of build or deployment, and holds only commit-bound copies of repository state. When the verified current repository state and Evidence/CURRENT disagree, the repository state wins; CURRENT is then STALE and must be reconciled. Directly observed runtime evidence remains authoritative for the runtime state of the respective system.
 4. **Chat memory.** Contextual assistance only. It never replaces current Git evidence.
 
 The compact current project state is `docs/PROJECT_STATE.md`. The recovery control block and drift procedure are in `docs/handover/VECTOR_RESTART_HANDOVER.md`. Commit-bound evidence for the Project Lead is produced by the generator described in `docs/governance/PROJECT_LEAD_EVIDENCE.md`.
@@ -33,7 +43,7 @@ The compact current project state is `docs/PROJECT_STATE.md`. The recovery contr
 
 - **Evidence first.** Verify the repository state (branch, HEAD, remote, working tree) before changing it. Report what was observed, not what was expected.
 - **Stop when blocked.** When a precondition fails, a FROZEN rule conflicts with the task, or a critical design contract cannot be derived from the repository or the assignment, stop, report `BLOCKED` with exact evidence and the smallest required decision, and do not improvise around governance.
-- **No Production bypass.** Every mutation of the Supabase Production environment needs a separate explicit owner GO and follows `DB-ENV-01` to `DB-ENV-09`. UI state is never the security boundary.
+- **No Production bypass.** Every mutation of the Supabase Production environment needs a separate explicit owner GO and follows `DB-ENV-01` to `DB-ENV-11`; an engineer executes Production SQL only with a One-Time Production GO (`DB-ENV-10`). UI state is never the security boundary.
 - **One work package per conversation.** The repository, not the chat, is the record. Work on a feature branch, open a pull request against `develop`, never push to `develop` or `main` directly.
 - **Smallest sufficient effort.** Use the smallest model, context and review effort that answers the question; escalate only for architecture, data-model or security decisions (`docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`).
 - **No guessing.** Missing or uncertain data stays visible as an explicit review state. LIVE and PTU datasets stay isolated.

@@ -1,11 +1,35 @@
 # VECTOR Dataset Pipeline v1
 
-**Status:** PROPOSED  
-**Version:** 1.1  
-**Authority Scope:** DATASET_PIPELINE  
-**Approved By:** pending project_owner approval  
-**Supersedes:** DATASET_PIPELINE_V1 v1.0 proposal  
+**Status:** PROPOSED\
+**Version:** 1.2 (revision 1, 2026-11-18: DB governance reference moved to v1.2 by GOV-2, no content change; revision base `9bf3c7f`)\
+**Base commit:** `8f504ef` (`develop`, merge of PR #93)\
+**Authority Scope:** DATASET_PIPELINE\
+**Approved By:** pending project_owner approval\
+**Supersedes:** DATASET_PIPELINE_V1 v1.1 proposal\
 **Scope:** SCMDB upstream detection, validation, completeness filtering, canonical catalog extraction, standardization, LIVE/PTU dataset revisioning, optimized publication and channel-scoped state boundaries
+
+### Changes in v1.2
+
+v1.2 adds the SCMDB dataset lifecycle that the owner accepted as `OD-DL-01` to `OD-DL-10`. Those decisions are recorded in the Project Lead documents `SCMDB_DATASET_LIFECYCLE_REVIEW_2026-11-17.md` and `SCMDB_DATASET_LIFECYCLE_UPDATE_2026-11-17.md`. They live outside this repository. This document restates only the parts it relies on and does not cite individual `OD-DL` numbers other than `OD-DL-04`.
+
+New normative sections:
+
+- §33: dataset identity, Source Export Revision and the Semantic SC Version parse rule;
+- §34: channel dataset manifest over domain revisions, with the compatibility proof against FROZEN `VECTOR_VERSIONING_V1_1.md` §5 and `ROLLBACK_POLICY_V1.md` §5 and §11;
+- §35: two activation paths (file/Git and database);
+- §36: VECTOR-required SCMDB source set;
+- §37: two-stage fingerprint model, domain register and fail-closed precheck;
+- §38: no-material-change behavior;
+- §39: domain-level verification;
+- §40: retention and garbage-collection classification;
+- §41: state naming reconciliation;
+- §42: current-state gaps against this specification.
+
+Edited sections: §5.4, §24, §25, §31 and §32. Former §33 to §35 are now §43 to §45; §43 is updated. No other document references section numbers of this specification (checked at the base commit).
+
+Evidence input: `docs/proposed/SCMDB_SOURCE_INVENTORY.md` v1.1 (non-normative).
+
+This version does not freeze anything. It changes no FROZEN document, code, workflow, script, migration, ruleset or `data/scmdb/` file.
 
 ## 1. Purpose
 
@@ -125,7 +149,7 @@ Ambiguity never becomes a guessed authoritative value.
 A failed candidate never replaces the current active dataset.
 
 ```text
-candidate fails mandatory gate -> REJECTED / BLOCKED
+candidate fails mandatory gate -> REJECTED / BLOCKED   (persisted as FAILED, §41)
 current active revision         -> remains ACTIVE
 ```
 
@@ -689,6 +713,8 @@ PTU 4.10.3
 
 VECTOR app/code version and dataset updates remain decoupled.
 
+The combined identifier names a release context. It does not identify a dataset. Dataset identity is defined in §33. A channel's Dataset Revision is the recorded manifest defined in §34.
+
 ## 25. Dataset states and idempotency
 
 Candidate states may include:
@@ -713,6 +739,10 @@ Only `ACTIVE` is authoritative for normal reference lookups.
 Reprocessing the same upstream revision under unchanged transformation rules must not create a duplicate logical active dataset.
 
 A pipeline-rule, resolver, taxonomy or completeness-rule change may require explicit reprocessing even when the upstream source revision did not change.
+
+Since v1.2 this is binding for the precheck. A changed projector, resolver or rule version of a domain makes that domain `CHANGED` even when its fingerprint is equal (§37.5).
+
+The state names above are pipeline processing names. How they map to persisted database statuses is defined in §41.
 
 ## 26. Mutable Game State
 
@@ -841,6 +871,8 @@ frequent lightweight Update Detection
 
 Git diff may remain useful for mirror/audit purposes but is not authoritative channel revision detection.
 
+The current workflow commits and pushes `data/scmdb/` directly to the checked-out branch. That is incompatible with the protected `develop` and `main` branches (`docs/PROJECT_STATE.md`). A separate later work package replaces it. That replacement must follow §35 (no direct push, no auto-merge, no automatic Production activation), §36 (source set), §37 (precheck) and §38 (observations). v1.2 specifies the target. It does not change the workflow.
+
 ## 32. Acceptance Criteria
 
 DATASET_PIPELINE_V1 is ready to freeze only when VECTOR demonstrates that:
@@ -875,10 +907,463 @@ DATASET_PIPELINE_V1 is ready to freeze only when VECTOR demonstrates that:
 - VECTOR Persistent State survives ordinary game wipes;
 - provenance explains every active resolved classification/value.
 
-## 33. Open implementation decisions before FROZEN
+Added in v1.2:
 
-1. Authoritative upstream fields for latest LIVE and PTU revisions.
-2. Handling additional pre-release channels if SCMDB exposes them.
+- a corrected export of the same CIG build is stored as a distinct, immutable Source Export Revision and never overwrites the earlier one (§33.3);
+- Semantic SC Version parsing fails closed (§33.4);
+- a channel Dataset Revision is a recorded, verified manifest, and rollback re-activates only recorded manifests (§34);
+- neither activation path activates Production automatically; the database path needs a named owner GO under `DB-ENV-04` (§35);
+- no file of the VECTOR-required source set is excluded without a recorded owner decision (§36);
+- every repository consumer of `data/scmdb/` maps to a registered domain (§37.3);
+- a precheck that cannot prove `UNCHANGED` never reports `UNCHANGED` (§37.4);
+- a new build or export in which every registered domain is `UNCHANGED` creates no manifest, no database row and no pull request, and needs no owner action; it only appends to the observation record (§37.5, §38);
+- garbage-collection classification is computed from references, not age (§40).
+
+## 33. Dataset identity and Source Export Revision
+
+### 33.1 Identity
+
+A VECTOR SCMDB dataset is identified by exactly four components:
+
+```text
+Dataset Identity =
+  Semantic SC Version
+  x Channel
+  x exact CIG Source Build
+  x SCMDB Source Export Revision
+```
+
+| Component | Meaning | Example |
+|---|---|---|
+| Semantic SC Version | `MAJOR.MINOR.PATCH`, derived by §33.4 | `4.10.2` |
+| Channel | `LIVE` or `PTU` | `LIVE` |
+| exact CIG Source Build | The CIG build number from the source version string | `12913470` |
+| SCMDB Source Export Revision | §33.2 | upstream commit SHA + per-file SHA-256 map |
+
+The Semantic SC Version is never an identity on its own. At the base commit, the repository's SCMDB files contain 91 distinct build strings. In 16 cases one Semantic SC Version and Channel pair carries more than one CIG build (`deltas-live.json`, `deltas-ptu.json`, `latest.json`).
+
+### 33.2 Source Export Revision
+
+A Source Export Revision records one retrieved upstream export:
+
+```text
+source_system            = SCMDB
+upstream_repository      = KrovaxCode/SCMDB_DATA
+upstream_commit_sha      = full 40-character commit SHA of the retrieved export
+raw_file_hashes          = { relative file path -> SHA-256 of the raw bytes as retrieved }
+retrieved_at             = retrieval timestamp
+```
+
+Rules:
+
+1. Hashes are computed over the raw bytes as retrieved, before any parsing, re-serialization or normalization.
+2. The hash map covers every file of the VECTOR-required source set (§36), including files that are never a change trigger.
+3. A Source Export Revision is immutable once recorded.
+4. If the upstream commit SHA cannot be determined, no Source Export Revision is recorded and the precheck result is `HELD_FOR_REVIEW` (§37.4). A content hash alone does not replace the commit SHA.
+
+### 33.3 Mandatory case: corrected export of the same CIG build
+
+Upstream may publish a corrected export for a CIG build that VECTOR already holds. The build string stays the same, but the upstream commit, the file contents or both differ.
+
+Binding rules:
+
+1. The corrected export is recorded as a new, distinct Source Export Revision.
+2. It never overwrites, updates in place or silently replaces the earlier Source Export Revision, its domain revisions or its manifests.
+3. If the precheck finds a material change (§37.5, §38.1), the result is a new channel Dataset Revision for the same build. This matches FROZEN `VECTOR_VERSIONING_V1_1.md` §4.3: VECTOR version and SC build unchanged, dataset revision incremented.
+4. The earlier revision stays available as a rollback target, subject to §40.
+5. If no registered domain changed, the new Source Export Revision is still recorded, in the append-only observation record (§38, §39). No manifest is created, and the active manifest stays unchanged.
+
+The current database schema cannot hold a second revision of the same build (§42).
+
+### 33.4 Semantic SC Version parse rule
+
+SCMDB version strings have the form:
+
+```text
+<MAJOR>.<MINOR>.<PATCH>-<channel>.<BUILD>
+```
+
+Parse rule:
+
+```text
+^(\d+)\.(\d+)\.(\d+)-(live|ptu)\.(\d+)$
+```
+
+1. Groups 1 to 3 are parsed as non-negative integers. The Semantic SC Version is rendered as `MAJOR.MINOR.PATCH` in decimal, without leading zeros.
+2. Group 4 (lower case in the source) maps to `LIVE` or `PTU`. It must equal the channel under which `latest.json` lists the version, and the channel suffix of every file name that `latest.json` lists for that channel. Any mismatch is a Build / Channel Check failure (§10).
+3. Group 5 is the exact CIG Source Build. It is compared as an exact string. This rule derives no ordering between builds.
+4. Any string that does not match is not parsed partially and not repaired. Examples: a missing component, an extra component, a suffix, or another channel token such as an EPTU or tech-preview channel. The precheck result is `HELD_FOR_REVIEW`. Additional channels stay an open decision (§43, item 2).
+5. Rendered forms:
+   - compact UI label: `<CHANNEL> <MAJOR>.<MINOR>.<PATCH>`, for example `LIVE 4.10.2` (`VECTOR_VERSIONING_V1_1.md` §10);
+   - build component of the canonical identifier: `<MAJOR>.<MINOR>.<PATCH>-<CHANNEL>.<BUILD>`, for example `4.10.2-LIVE.12913470` (`VECTOR_VERSIONING_V1_1.md` §2; LIVE only).
+
+All 91 build strings found in the repository at the base commit match this rule. Existing code applies narrower or broader patterns: `lib/fabricator/fabricator-live-source.ts` accepts LIVE only, and `lib/loadout-source/loadout-source-build.ts` accepts any letter channel. v1.2 does not change code. Alignment belongs to an implementation package.
+
+## 34. Channel dataset manifest and FROZEN compatibility
+
+### 34.1 Definition
+
+A channel Dataset Revision is a recorded, verified manifest over domain revisions:
+
+```text
+Channel Dataset Revision (manifest) =
+  channel
+  semantic_sc_version, cig_source_build
+  source_export_revision                      (exactly one, §33.2)
+  entries: for each registered domain (§37.3)
+    domain
+    domain_revision_id                        (immutable, channel-scoped)
+    canonical_domain_input_fingerprint        (stage 2, §37.2)
+    projector / resolver / rule versions
+    generated_from  (build, source_export_revision)
+  completeness and validation evidence
+  recorded_at, verified_at
+  status                                      (§41)
+```
+
+A domain revision is the immutable, channel-scoped output of one domain projector. It is generated from exactly one Source Export Revision.
+
+A manifest is created only under the conditions in §37.5. A new CIG build or a new Source Export Revision alone does not create one. When a domain revision is later found unchanged against newer builds or exports, that result goes into the append-only observation record (§39). It is never written into a manifest.
+
+### 34.2 Binding conditions
+
+The manifest model is valid only together with all of the following conditions:
+
+- **M1 (one revision per channel).** The manifest is the channel's single Dataset Revision. It carries the one `<channel>_dataset_revision` and the one `<channel>_source_revision` value required by `VECTOR_VERSIONING_V1_1.md` §5. The source revision is the manifest's own Source Export Revision. A later export in which every domain stayed `UNCHANGED` is an observation. It never becomes the source revision of an existing manifest.
+- **M2 (recorded by the pipeline, immutable).** Only the pipeline creates a manifest, at verification time and before any activation. Once recorded, a manifest never changes, apart from its status transitions (§41). Later verification results, including verified-through builds, are not written into it (§39).
+- **M3 (connected to one export).** At the time it is recorded, every referenced domain revision is connected to the manifest's single Source Export Revision. It is either generated from it, or reused from an earlier revision. Reuse is allowed only when the domain's stage-2 fingerprint over the manifest's export equals the reused revision's fingerprint and all projector, resolver and rule versions are identical (§37.5). Any other reuse is prohibited.
+- **M4 (no manual combination).** No person or job assembles a manifest by hand from domain revisions. This also holds for a forward fix. A new combination exists only as the pipeline's output for one Source Export Revision.
+- **M5 (rollback re-activates a recorded manifest).** A dataset rollback selects one previously recorded and verified manifest and restores it with all referenced domain revisions as one unit. It reruns the current validation, the Completeness Filter and the activation gate (`ROLLBACK_POLICY_V1.md` §14). A rollback never re-points a single domain. A rollback does not touch the observation record. The restored manifest keeps its own build and source revision.
+- **M6 (channel scope).** A LIVE manifest references only LIVE domain revisions, and a PTU manifest only PTU domain revisions. This holds even when the content is identical; the inventory shows identical LIVE and PTU content for `mining_*` and `cig_data_issues-*`.
+- **M7 (reference integrity).** No domain revision referenced by a retained manifest may be removed (§40).
+- **M8 (provenance).** A manifest records every field required by `VECTOR_VERSIONING_V1_1.md` §5 and keeps the SCMDB provenance listed in `ROLLBACK_POLICY_V1.md` §15.
+
+### 34.3 Compatibility proof
+
+Question: is "channel dataset = recorded, verified manifest over domain revisions" compatible with FROZEN `VECTOR_VERSIONING_V1_1.md` §5 and `ROLLBACK_POLICY_V1.md` §11, and with the related rule in `ROLLBACK_POLICY_V1.md` §5 against assembling targets from unrelated fragments?
+
+| FROZEN rule | What it requires | How the manifest model satisfies it |
+|---|---|---|
+| `VECTOR_VERSIONING_V1_1.md` §5 | Per channel, one dataset revision and one source revision, with extraction, validation, completeness and activation provenance; storage names may be adapted | M1: the manifest id is the dataset revision; its single Source Export Revision is the source revision. While the manifest is active, that stays its source revision. Newer exports without material change are observations (§38) and do not replace it. M8: all listed fields are recorded. `<channel>_extracted_at` is the retrieval time of the manifest's Source Export Revision; per-domain generation times are kept in addition. |
+| `VECTOR_VERSIONING_V1_1.md` §5 (last paragraph) | A dataset revision identifies a published reference-data state | A manifest identifies exactly one combination of domain revisions. Under M2 that combination never changes. |
+| `VECTOR_VERSIONING_V1_1.md` §4.3 | A same-build correction increments the dataset revision | §33.3: a material same-build correction produces a new manifest. |
+| `VECTOR_VERSIONING_V1_1.md` §6.2 and §8.3 | One Dataset Context per operation, from exactly one channel | One active manifest per channel is the Dataset Context. M6 prevents cross-channel references. |
+| `VECTOR_VERSIONING_V1_1.md` §12 | Change detection, then source retrieval, extraction, build detection, normalization, completeness, dataset revision, activation | Stage-1 and stage-2 prechecks (§37) are change detection. The manifest is the dataset revision, recorded before activation (M2). §12 also states that new source data alone never activates anything. A new build or export in which every domain is `UNCHANGED` is therefore only observed (§38). |
+| `VECTOR_VERSIONING_V1_1.md` §2, §8.3 item 7, §11 | The SC component of the canonical identifier is the *approved* LIVE build | The approved LIVE build is the build of the `ACTIVE` LIVE manifest. A later verified-through build is not approved and is not identity (limit 2 below). |
+| `VECTOR_VERSIONING_V1_1.md` §7.5 | PTU Preview provenance: `sc_build`, `dataset_revision_id` and `upstream_revision` of the selected PTU dataset revision | All three come from the `ACTIVE` PTU manifest that was used: its build, its id and its own Source Export Revision. |
+| `ROLLBACK_POLICY_V1.md` §11 | Restore the manifest/metadata and all referenced content as one coherent revision; never combine a manifest from one revision with data from another; verify hashes; rerun completeness and the activation gate | M5: the rollback unit is the recorded manifest plus exactly the domain revisions it references. M7 guarantees that they still exist. The stage-1 SHA-256 map and the stage-2 fingerprints are the recorded checksums. M5 reruns completeness and the gate. |
+| `ROLLBACK_POLICY_V1.md` §5 | Do not assemble a rollback target manually from unrelated files, manifests or fragments | M2 and M4: only the pipeline creates manifests, never at rollback time and never by hand. M3: every domain revision in a manifest is connected to the manifest's own Source Export Revision, through generation or through a verified fingerprint match. The fragments are therefore not unrelated. |
+| `ROLLBACK_POLICY_V1.md` §13 | Rollback is channel-scoped; no mixed runtime dataset | M6. |
+| `ROLLBACK_POLICY_V1.md` §17 and §32 item 3 | History is preserved; dataset rollback restores one coherent revision | Manifests and Source Export Revisions are immutable (M2, §33.2), and the observation record is append-only (§39). Rollback adds an activation event and rewrites nothing. |
+
+**Result: compatible.** The model can be expressed without changing any FROZEN document, as long as conditions M1 to M8 hold.
+
+Limit 1 (per-domain rollback): an independent rollback of a single domain would create a channel state that was never recorded and verified as a manifest. That violates `ROLLBACK_POLICY_V1.md` §11. v1.2 therefore excludes it (M5). If the owner wants per-domain rollback in the future, that needs a successor of `ROLLBACK_POLICY_V1.md` through the normal governance process. It is not needed for v1.2.
+
+Limit 2 (identity versus provenance): a Dataset Context has one canonical identifier (`VECTOR_VERSIONING_V1_1.md` §2) and one compact label (§10), and both use the build of the `ACTIVE` manifest. A later verified-through build (§39) is provenance, not identity. No FROZEN rule requires the identifier or the label to carry the latest upstream build:
+
+- `VECTOR_VERSIONING_V1_1.md` §2, §8.3 item 7 and §11 require the approved LIVE build;
+- `VECTOR_VERSIONING_V1_1.md` §12 rules out activation merely because new source data exists;
+- `VECTOR_VERSIONING_V1_1.md` §7.5 binds build, revision and source revision to the dataset revision actually used.
+
+Consequence: if a new Semantic SC Version leaves every registered domain `UNCHANGED`, the compact label stays at the active manifest's version, for example `LIVE 4.10.2`, while the game already runs a newer version. The detailed version view (§10) may show the verified-through build next to it as provenance. This needs no FROZEN change and no owner decision.
+
+## 35. Activation paths
+
+Two separate paths can make a dataset effective. Neither activates Production automatically.
+
+### 35.1 File/Git path
+
+Runtime code reads the repository-pinned mirror in `data/scmdb/` directly. At the base commit, this covers the fabricator LIVE source, material units, the loadout version check and the legacy `src/data.js` front end. For these consumers, merging a changed mirror is an activation.
+
+Rules:
+
+1. A mirror change reaches `develop` only through a pull request that the owner reviews and merges. A direct push to `develop` or `main` is prohibited.
+2. GitHub auto-merge is not used for mirror or dataset pull requests.
+3. Production on this path follows the normal `develop -> Preview -> main` flow under the applicable FROZEN Governance and Versioning rules.
+4. Repository rulesets and branch protection stay unchanged. Automation adapts to them, not the reverse.
+5. A mirror pull request states the dataset identity (§33) of each channel it changes and the precheck result per domain (§37).
+
+### 35.2 Database path
+
+Writing dataset, catalog or activation rows into Supabase Production is a persistent Production mutation under FROZEN `DB_ENVIRONMENT_GOVERNANCE_V1_2.md` `DB-ENV-04`. One precedent is the LIVE blueprint catalog sync recorded in `docs/PROJECT_STATE.md`.
+
+Rules:
+
+1. Every Production activation needs a separate, named owner GO. The GO names the channel, the dataset identity (§33) and the target environment.
+2. Merging a pull request or approving a work package is not that GO (`DB-ENV-04`).
+3. No automation activates a dataset in Production on its own, on a schedule, or as a consequence of a merge.
+4. Work in the separate `DEVELOP` project follows `DB-ENV-09` and its conditions. It never replaces the Production GO.
+5. A missing piece of information is never obtained through a Production mutation (`DB-ENV-04`).
+
+### 35.3 Consistency between the paths
+
+The two paths are activated independently. For each channel, the dataset identity effective on each path must be recorded. A divergence, for example the mirror at one build while the database `ACTIVE` dataset is at another, must stay visible. It is never reconciled silently in either direction. Which path is authoritative for which consumer remains an open decision (§43).
+
+## 36. VECTOR-required SCMDB source set
+
+### 36.1 Retention rule (`OD-DL-04`)
+
+VECTOR keeps a broad VECTOR-required SCMDB source set. A file may be excluded only if it is a deterministically technical artifact. All four of these conditions must hold:
+
+1. it contains no game-derived field;
+2. no repository consumer reads it;
+3. its content is upstream-operational only, or fully duplicated in a retained file;
+4. the exclusion is recorded as an owner decision.
+
+If any condition is uncertain, the file is retained or put to review, never excluded. An exclusion is a mirror-filter change. It belongs to the later mirror workflow package, not to this document.
+
+### 36.2 Current classification
+
+Classes and recommendations come from `docs/proposed/SCMDB_SOURCE_INVENTORY.md` v1.1. **No file is excluded at this time.** An owner decision is pending before the mirror workflow package.
+
+| File (per channel where applicable) | Inventory class | v1.2 handling |
+|---|---|---|
+| `merged-<build>.json` | `GAME_DATA` | Retained; trigger by domain section (§37.3) |
+| `crafting_blueprints-<build>.json` | `GAME_DATA` | Retained; trigger by domain |
+| `crafting_items-<build>.json` | `GAME_DATA` | Retained; trigger by domain |
+| `mining_data-<build>.json` | `GAME_DATA` | Retained; no registered domain yet (§37.3) |
+| `mining_equipment-<build>.json` | `GAME_DATA` | Retained; no registered domain yet |
+| `mission-history-<build>.json` | `SOURCE_EVIDENCE` | Retained; evidence |
+| `cig_data_issues-<build>.json` | `SOURCE_EVIDENCE` | Retained; evidence |
+| `deltas-live.json`, `deltas-ptu.json` | `BUILD_DIFF_EVIDENCE` | Retained; evidence and cross-check fixtures for the domain precheck |
+| `changelog.json` | `SOURCE_EVIDENCE` | Retained; evidence |
+| `latest.json` | `IDENTITY_INDEX` | Retained; identity input (§33.4), not a content trigger |
+| `game-versions.json`, `versions.json` | `IDENTITY_INDEX` | Retained; identity input |
+| `local-mirror-manifest.json` | `VECTOR_OWN` | Retained; **never a trigger** (§36.3) |
+| `mema-cache.json` | `VOLATILE_DERIVED_STATISTIC` | Retained; **never a trigger** (§36.3) |
+| `site-settings.json` | mixed, `REVIEW` | Retained; refresh timestamps never a trigger; any other change `HELD_FOR_REVIEW` |
+| `workflow-state.json` | `TECHNICAL_ARTIFACT`, exclusion candidate | Retained until an owner decision; never a trigger |
+
+### 36.3 Non-trigger files
+
+The following are retained, hashed and recorded in the Source Export Revision. A change in them alone is never a change trigger. It never creates a new dataset revision and never starts the domain pipeline:
+
+- `mema-cache.json`: refresh-driven statistics. The configured interval is 12 hours.
+- `local-mirror-manifest.json`: generated by VECTOR. It changed in all 5 syncs after the first full import, and in 4 of them it was the only file touched.
+- The keys `mema_cache_last_refreshed` and `updated_at` in `site-settings.json`, and the whole of `workflow-state.json`.
+
+A run in which only non-trigger content changed is a no-material-change run (§38).
+
+## 37. Two-stage fingerprint model
+
+### 37.1 Stage 1: Raw Source Fingerprint
+
+The stage-1 fingerprint is the SHA-256 map of the Source Export Revision (§33.2). Stage 1 answers one question per registered domain: did any raw byte of that domain's trigger-relevant files change?
+
+The baseline is the raw hashes of the domain's files in the export from which its active domain revision was generated, or in the latest export recorded as verified for that revision (§39).
+
+- If every trigger-relevant file of the domain is byte-equal by logical role, the domain is `UNCHANGED` at stage 1. This holds even if the build string changed. Stage 2 is not needed for that domain.
+- Otherwise stage 2 runs for that domain.
+
+Files are compared by their logical role (the `files` key in `latest.json`, for example `crafting_blueprints`), not by path. A new build renames every per-build file. Per-build files embed the build string in their `version` field, so across builds stage 2 usually decides.
+
+### 37.2 Stage 2: Canonical Domain Input Fingerprint
+
+The stage-2 fingerprint is computed per domain over that domain's canonical input:
+
+1. Select exactly the sections of the source files that the domain register names for the domain.
+2. Leave out identity and provenance fields that change with every build without domain meaning, at minimum `version` and `generated_at`, and summary blocks such as `meta`. Such a block changes whenever content changes, so it is no independent signal.
+3. Serialize canonically: UTF-8, object keys sorted, no insignificant whitespace, array order kept as in the source, number and string values unchanged.
+4. Hash the result with SHA-256.
+
+Array order is kept because reading it as a set could hide a semantic change. Treating an array as a set needs an explicit, versioned projector rule.
+
+### 37.3 Domain register
+
+The domain register lists every domain whose input is fingerprinted, together with its sections and consumers. Initial register, from the inventory and the readers at the base commit:
+
+| Domain | Channel scope | Source role: sections | Consumer at the base commit |
+|---|---|---|---|
+| `BLUEPRINT_CATALOG` | LIVE, PTU | `crafting_blueprints`: `blueprints` | `lib/blueprints/blueprint-extractor.ts`, `scripts/sync-scmdb-blueprint-catalog.mjs` |
+| `REWARD_SOURCES` | LIVE, PTU | `merged`: `contracts`, `blueprintPools`; depends on `BLUEPRINT_CATALOG` | `lib/blueprints/blueprint-reward-extractor.ts`, same script |
+| `LOCATIONS` | LIVE, PTU | `merged`: `locationPools` | `lib/scmdb/location-extractor.ts` |
+| `FABRICATOR` | LIVE | `crafting_blueprints`: `blueprints`, `properties`, `resources`, `items`; `crafting_items`: `items` and every `*Pools` section | `lib/fabricator/fabricator-live-source.ts` |
+| `MATERIAL_UNITS` | LIVE | `crafting_blueprints`: `items`, `resources` | `lib/inventory/material-units.ts` |
+| `LEGACY_FRONTEND` | LIVE, PTU | `crafting_blueprints`, `crafting_items`: whole documents minus §37.2 item 2 | `src/data.js` |
+
+Rules:
+
+1. Every repository consumer of `data/scmdb/` must map to a registered domain before an automated precheck runs. A consumer without a register entry makes the precheck `HELD_FOR_REVIEW`.
+2. The loadout reader uses `latest.json` only for the LIVE build identity. That is identity input (§33.4), not a domain.
+3. The audit script `scripts/audit/vector_item_data_audit_v6_multisource.py` is an evidence consumer. It is not a publication domain and does not trigger.
+4. Retained files without a registered domain (`mining_*`, `mission-history-*`, `cig_data_issues-*`, `deltas-*`, `changelog.json`) are recorded in stage 1 but create no domain revision. A future consumer must first be registered.
+5. The register is versioned. A register change is itself a rule change and forces reprocessing of the affected domains (§37.5).
+
+`merged-<build>.json` feeds at least `REWARD_SOURCES` and `LOCATIONS`, and it has further sections that no domain consumes today. A whole-file fingerprint would fire on every unrelated section change. The per-section selection above is therefore mandatory. The `deltas-*.json` pairs count added, removed and changed entries per section. They serve as cross-check fixtures for a domain precheck implementation.
+
+### 37.4 Fail-closed precheck
+
+The precheck result per channel and domain is exactly one of:
+
+```text
+UNCHANGED
+CHANGED
+HELD_FOR_REVIEW
+```
+
+A precheck that cannot prove `UNCHANGED` never reports `UNCHANGED`. The result is `HELD_FOR_REVIEW` when, among others:
+
+- the upstream commit SHA is unavailable (§33.2);
+- a required file is missing or does not parse;
+- `latest.json` is invalid, or a version string fails §33.4;
+- a channel mismatch is found (§10);
+- a file named in `latest.json` or a consumer has no register entry;
+- a register entry names a section that is absent;
+- a fingerprint cannot be computed;
+- `site-settings.json` changed outside its non-trigger keys (§36.2).
+
+`HELD_FOR_REVIEW` creates no candidate, no dataset revision and no database write. It is reported for review.
+
+### 37.5 Comparison key and forced reprocessing
+
+The comparison key of a domain is:
+
+```text
+(stage-2 fingerprint, projector version, resolver version(s), rule / register version)
+```
+
+- All parts equal: `UNCHANGED` for that domain.
+- Fingerprint differs: `CHANGED`.
+- Fingerprint equal but any version differs: `CHANGED`. This is forced reprocessing (§25).
+
+A new CIG build, a new Semantic SC Version or a new Source Export Revision alone never forces a manifest. A new manifest, and with it a new Dataset Revision, is created only when at least one of these holds for the channel:
+
+- at least one registered domain is `CHANGED`;
+- a `HELD_FOR_REVIEW` result is resolved into a change;
+- a projector, resolver, rule or register version forces reprocessing (this is a `CHANGED` result under the key above).
+
+The new manifest carries the current build and Source Export Revision. Domains that are `UNCHANGED` are reused under M3.
+
+If every registered domain is `UNCHANGED`, the run is observation only (§38), even when the build or the export changed. A `HELD_FOR_REVIEW` result that is resolved into "no change" leads to the same outcome.
+
+Evidence: `deltas-live.json` holds 26 LIVE build pairs. 15 of them keep the Semantic SC Version, and 12 of those report an upstream `total` of 0. A manifest per build would mean, on the database path, a named Production GO per build (§35.2) without any change in content.
+
+## 38. No-material-change behavior
+
+### 38.1 Definition
+
+A run has no material change for a channel when every registered domain is `UNCHANGED`, either by stage-1 byte equality or by the stage-2 comparison key (§37). This explicitly includes runs with a new CIG build, a new Semantic SC Version or a new Source Export Revision.
+
+Typical causes:
+
+- a new CIG build whose registered domain inputs did not change;
+- a `mema-cache.json` refresh;
+- a mirror manifest timestamp;
+- a changelog-only upstream commit;
+- a corrected export that touches no registered section.
+
+A run with an unresolved `HELD_FOR_REVIEW` result is not a no-material-change run until the review resolves it.
+
+### 38.2 Behavior
+
+A no-material-change run is observation only:
+
+- no new dataset revision or manifest is created, and the active manifest stays unchanged;
+- no database write of any kind, in any environment;
+- no Production GO is requested;
+- no owner action is required, and no pull request is opened;
+- the build, the Source Export Revision and the precheck result per domain are appended to the observation record (§39).
+
+### 38.3 Where observations live
+
+Proposed: a single rolling, unprotected sync branch maintained by automation. It holds the latest mirror state and the observation records. It is never merged automatically. A pull request from it is opened only when a material change exists.
+
+**OPEN (owner decision):** where observations are kept permanently. Options: the rolling sync branch only; workflow run artifacts or logs; a VECTOR-own observation file in the mirror. The decision belongs to the mirror workflow package (§43, item 21).
+
+## 39. Domain-level verification
+
+Each domain has two build references, stored in different places:
+
+- **generated from build**: the build and Source Export Revision from which the domain revision was produced. It is stored in the manifest entry (`generated_from`, §34.1) and is immutable.
+- **verified through build**: the latest build and Source Export Revision at which the domain input was confirmed `UNCHANGED` against that domain revision (§37.5). It is stored in the append-only observation record (§38.3).
+
+The observation record holds one entry per run, channel and domain:
+
+```text
+channel, domain
+domain_revision_id compared against
+comparison key (§37.5) and precheck result
+build, source_export_revision
+observed_at
+```
+
+Rules:
+
+1. Every precheck run appends entries, including runs that lead to a new manifest.
+2. Entries are never changed or deleted.
+3. "Verified through" is read from the observation record by `domain_revision_id`. It is never derived from manifests and never written into one (M2).
+4. A rollback leaves the observation record untouched (M5).
+
+Provenance views show, per channel, the `ACTIVE` manifest with its generated-from build X. For each domain they show the latest verified-through build Y from the observation record. Example: `LOCATIONS generated from 4.10.2-live.12913470, verified through <later LIVE build>`. This means the locations input did not change between the two builds. It does not mean the locations were re-extracted.
+
+The verified-through build is provenance, not identity (§34.3, limit 2). It does not replace the channel-level Dataset Revision (§34).
+
+## 40. Retention and garbage-collection classification
+
+### 40.1 Classes
+
+Every manifest and every domain revision has exactly one computed class:
+
+| Class | Condition (computed from references) |
+|---|---|
+| `ACTIVE` | Referenced by the currently `ACTIVE` manifest of its channel, on either activation path (§35) |
+| `RETAINED_RECOVERY` | Not `ACTIVE`, but referenced by a manifest in the recovery set, or by any persistent row, provenance record, audit record or rollback evidence |
+| `HISTORICAL_GC_CANDIDATE` | Referenced by nothing above |
+
+The recovery set is a rule over references and verified rollback targets, not over age. Its exact size per channel is an open decision (§43). Persistent references include, for example, `scmdb_location_mappings.first_dataset_id` and `last_dataset_id`. Catalog rows depend on their dataset row through `ON DELETE CASCADE`, so removing such a dataset row would also remove its catalog.
+
+### 40.2 Rules
+
+1. The class is computed. It is never set by hand and never derived from age alone.
+2. `SUPERSEDED` (§41) is not a garbage-collection class. A superseded revision is usually `RETAINED_RECOVERY`.
+3. `HISTORICAL_GC_CANDIDATE` is only a candidate. Removal needs its own later work package and an owner decision. In Production it is a mutation under `DB-ENV-04`.
+4. No garbage collection runs in Production now.
+5. Garbage collection is not a game wipe (`GAME_WIPE_MODEL_V1.md`, §28) and never touches Production User State or VECTOR Persistent State.
+6. Git history of the public repository, including mirror history, is never rewritten for garbage collection.
+
+## 41. State naming reconciliation
+
+Four different name sets exist at the base commit:
+
+| Name set | Where | Values |
+|---|---|---|
+| Persisted dataset status | `scmdb_location_datasets`, `scmdb_blueprint_datasets` (migrations `scmdb/001`, `blueprints/001`) | `STAGING`, `ACTIVE`, `FAILED`, `SUPERSEDED` |
+| Pipeline processing state | this document §25, §5.4 | `DETECTED` ... `VERIFIED`, `ACTIVE`, `REJECTED`; `BLOCKED` as a gate outcome |
+| Record-level outcome | §9, `VECTOR_VERSIONING_V1_1.md` §9, location catalog classification | `ACCEPT`/`FILTER_OUT`/`QUARANTINE`/`BLOCK_DATASET`; `VALID`/`PARTIAL`/`INCOMPLETE`/`REJECTED`; `VALID`/`QUARANTINED`/`REJECTED_TECHNICAL` |
+| Precheck result | §37.4 | `UNCHANGED`, `CHANGED`, `HELD_FOR_REVIEW` |
+
+Proposed mapping for dataset revisions and manifests. The persisted names stay as they are, because they are deployed in Production migrations:
+
+| Pipeline name | Persisted status | Notes |
+|---|---|---|
+| `DETECTED` to `STANDARDIZED` | none | Transient; no database row exists yet |
+| `STAGED`, `VERIFIED` | `STAGING` | Candidate rows exist and are not authoritative |
+| `ACTIVE` | `ACTIVE` | At most one per channel and domain, enforced by the existing partial unique indexes |
+| `REJECTED`, gate outcome `BLOCKED` | `FAILED` | A reason code separates "rejected by gate" from "technical failure". Its storage is decided in a migration package. |
+| none (new in pipeline vocabulary) | `SUPERSEDED` | A previously `ACTIVE` revision replaced by a newer activation; a valid rollback target |
+
+Rules:
+
+1. Dataset statuses, record outcomes and precheck results are separate namespaces. Record-level `REJECTED` or `REJECTED_TECHNICAL` never means that the dataset is `FAILED`, and the reverse holds too.
+2. `HELD_FOR_REVIEW` creates no dataset row and therefore has no persisted status.
+3. A rollback target that fails the activation gate (`ROLLBACK_POLICY_V1.md` §14, `BLOCKED`) keeps its current status. It does not become `FAILED`, because it was verified before.
+
+## 42. Current-state gaps against this specification
+
+These are observations at the base commit. They are not defects introduced by v1.2. They are inputs for the later implementation, workflow and migration packages:
+
+1. **Same-build revisions cannot be stored.** Both dataset tables enforce `UNIQUE (source, channel, version)` on the build string. §33.3 requires a migration, under the `DB-ENV` gates.
+2. **No Source Export Revision is recorded.** The sync workflow clones upstream with `--depth 1` and records neither the upstream commit SHA nor file hashes. `local-mirror-manifest.json` lists file names only.
+3. **No channel manifest exists.** Locations and blueprints are activated per domain table. The channel state today is the set of per-domain `ACTIVE` rows. These are consistent in practice because both key on the same build string, but no recorded manifest ties them together. This is a transitional single-domain model. §34 is the target.
+4. **No dataset-level provenance columns.** The `VECTOR_VERSIONING_V1_1.md` §5 fields (source revision, extracted, validated and activated timestamps, completeness status) are not stored as such in the dataset tables. The rule allows adapted storage names, but the information must remain available. Reconcile this in the migration package.
+5. **The mirror workflow pushes directly** and fails on the protected branches (§31).
+6. **Version parsing differs across readers** (§33.4).
+
+## 43. Open implementation decisions before FROZEN
+
+1. Authoritative upstream fields for latest LIVE and PTU revisions. Partly closed by v1.2: build identity comes from `latest.json` under §33.4, and the source revision is the upstream commit SHA plus file hashes (§33.2). How the commit SHA is obtained is still open.
+2. Handling additional pre-release channels if SCMDB exposes them. Until decided, they are `HELD_FOR_REVIEW` (§33.4).
 3. Exact Completeness Filter rules by source domain.
 4. Exact canonical entity identity rules across builds when source IDs change.
 5. Exact taxonomy hierarchy and category codes.
@@ -894,11 +1379,22 @@ DATASET_PIPELINE_V1 is ready to freeze only when VECTOR demonstrates that:
 15. Polling interval and fallback behavior.
 16. Availability of a trustworthy upstream event/webhook trigger.
 17. Automation DB role/credential boundaries.
-18. Safe reprocessing policy after resolver/taxonomy/pipeline-rule changes.
+18. Safe reprocessing policy after resolver/taxonomy/pipeline-rule changes. Partly closed by v1.2: a version change forces `CHANGED` (§37.5). How reprocessing is scheduled and approved is still open.
+
+Added in v1.2:
+
+19. **Owner decision:** exclusion of `workflow-state.json`, and whether `scenario_overrides` in `site-settings.json` is relevant (§36). Required before the mirror workflow package.
+20. **Owner decision:** which activation path is authoritative for which consumer, and how divergence between the paths is surfaced (§35.3).
+21. **OPEN (owner decision):** where no-material-change observations are kept (§38.3). The append-only observation record also holds the verified-through builds (§39), so the chosen place must keep entries append-only and retrievable.
+22. Size of the recovery set per channel (§40.1).
+23. Storage of the `FAILED` reason code and of the §5 provenance fields (§41, §42).
+24. Migration that allows several Source Export Revisions per build (§42, item 1). Separate migration package under the `DB-ENV` gates.
+25. Canonical serialization details beyond §37.2, such as number formatting and Unicode normalization, before fingerprint code is written.
+26. Whether `LEGACY_FRONTEND` (`src/data.js`) stays a consumer or is retired, which would remove its register entry.
 
 These decisions must be closed or safely deferred before FROZEN approval.
 
-## 34. R2 remediation classification
+## 44. R2 remediation classification
 
 ```text
 DATASET_PIPELINE_V1.md
@@ -911,9 +1407,9 @@ This specification is the intended normative home for SCMDB update detection, ch
 
 R2 remains open until the other missing/referenced specifications are classified and reconciled.
 
-## 35. Proposed Decision
+## 45. Proposed Decision
 
-VECTOR Dataset Pipeline v1.1 is **PROPOSED**.
+VECTOR Dataset Pipeline v1.2 is **PROPOSED**. It is not frozen by this change.
 
 It becomes eligible for FROZEN only after:
 
@@ -925,6 +1421,8 @@ It becomes eligible for FROZEN only after:
 - candidate publication and rollback are validated;
 - channel-scoped wipe boundaries are verified against the Game Wipe model;
 - the existing SCMDB workflow is migrated to this contract;
+- the manifest model (§34) and the two-stage precheck (§37) are implemented and tested, including the same-build correction case (§33.3) and a rollback to a recorded manifest;
+- the open owner decisions in §43 (items 19 to 21) are recorded;
 - `RULE_INDEX.md` is updated to reflect PROPOSED and later FROZEN status;
 - review on `develop` is complete;
 - approval by `project_owner`;

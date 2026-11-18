@@ -4,10 +4,10 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v10 (counted up from v9; REPO-TIDY-1 path updates only, no state change, base commit `9b882f9c81cb29fc6d1bbd6e07d581b16970a2b8`)
-- **State verified through commit:** `217fa9155a1690fb833479d831cb93186311bd92`
-- **Updated by work package:** Checkpoint rotation after PR #83 (develop `217fa91`, Rotation-10, documentation only): release done (PR #79, `main` `e916f69`), PRs #80 to #83 merged into `develop`, next release deliberately deferred
-- **Checkpoint date:** 2026-11-16
+- **Document version:** v16 (counted up from v15; GOV-2 reference update to DB governance v1.2, base commit `9bf3c7f0b2010461d77585f720dc253fb8401f91`; checkpoint not rotated)
+- **State verified through commit:** `e6d4e6bac01b3b8b7923111d6371e6cb4eaba9f3`
+- **Updated by work package:** ROT-12 (checkpoint rotation, documentation only, 2026-11-18). Repository facts and merged PRs were verified with `git` and GitHub against `origin` at the base commit above. Previous update: ROT-11 (checkpoint rotation after PR #90).
+- **Checkpoint date:** 2026-11-18
 
 ## How to read this file
 
@@ -23,7 +23,7 @@
 - SCMDB location pipeline and its frozen handover contracts (PRs #27 to #33; `docs/handover/SCMDB_LOCATION_HANDOVER.md`).
 - Repository cleanup and baseline, `AGENTS.md` and `CLAUDE.md` as agent entry point (PRs #34, #35; merged 2026-11-10).
 - Blueprint Ownership / Tracking PR 1: SCMDB blueprint catalog and reward readers with tests, no database, no UI (PR #36, squash-merged 2026-11-11 as `895c153`).
-- DB environment governance v1 FROZEN: `DB-ENV-01` to `DB-ENV-09`, single Supabase Production environment holding test data, no staging (PR #37, merged 2026-11-11 as `615a6e9`).
+- DB environment governance v1 FROZEN: `DB-ENV-01` to `DB-ENV-09`, single Supabase Production environment holding test data, no staging (PR #37, merged 2026-11-11 as `615a6e9`). Superseded in full by v1.1 (see DEV-DB G0 below); v1.0 stays unchanged for traceability.
 - WP-AOM-01 Implementation Gate 1: compact project state, AI operating model, commit-bound Project Lead evidence generator (PR #38, merged 2026-11-11 as `0426896`).
 - Blueprint Ownership / Tracking PR 2 — Database Foundation: **PRODUCTION COMPLETE**. Squash-merged as #39 (`debcd4e`); migration `database/migrations/blueprints/001_blueprint_ownership_foundation.sql` applied to Supabase Production on 2026-11-11 under an explicit named owner GO; `DB-ENV-08` postchecks PASS, the five Blueprint tables empty, no unexpected drift (evidence on PR #39).
 - Blueprint Ownership / Tracking PR 3 — LIVE Blueprint Catalog Sync: **PRODUCTION COMPLETE**. Squash-merged as #40 (`b24a2e0`); the first LIVE sync ran once on 2026-11-11 under an explicit named owner GO (`DB-ENV-04`). Active dataset `d5a91245-a5d4-4836-9265-d30cd32527c9`, `LIVE`, `4.10.2-live.12913470`, `ACTIVE`: 1618 blueprints (1610 `VALID`, 8 `REVIEW_REQUIRED`), 7480 reward rows, `duplicateSourceRows = 4`, 0 PTU rows, 0 ownership rows; read-only postchecks PASS (evidence on PR #40).
@@ -61,11 +61,20 @@
 - UX-7 public start page: **DONE**. #81 (`cdd9340`): public start page, fan project notice, link to the official site.
 - FAB-UX-1 Fabricator basics: **DONE**. #82 (`858ddfc`): hint bar, WASD keys, variant panel stays open, hint in the variant area.
 - UX-8 visitor navigation: **DONE**. #83 (`217fa91`): visitors see only Start and Sign in; Inventory redirects to sign-in without a login.
+- Checkpoint rotation after PR #83: **DONE**. #84 (`875f9f5`), documentation only.
+- INV-EMPTY-1 empty states in Inventory: **DONE**. #85 (`9b882f9`): explanatory hints with the next step for empty Mein Inventory / Crew Inventory, the Location view when every lot is in `Unbekannt`, and filters without a match; clearer text for `PLAYER_CONTEXT_REQUIRED`. Texts and display only.
+- REPO-TIDY-1 repository root tidy: **DONE**. #86 (`9d58d61`): audit scripts V4 to V6 and the resolver config to `scripts/audit/`, armor scripts to `scripts/armor-environment/`, notes to `docs/notes/` and `docs/handover/`, unused audit scripts V2 and V3 removed, audit workflow paths adjusted. No logic change.
+- Release 2 `develop` -> `main`: **DONE**. PR #87 (merge commit, `main` = `66c531bd`, tag `release-2026-11-17` on `66c531bd`). Rollback points: tag `pre-release-2026-11-14` on `eb6f108` and the previous `main` `e916f69`. Delta: #81 to #86 (#80 was already in `main` through #79). No database, data, dependency or environment change in the release.
+- DEV-DB concept (WP DEV-DB-KONZEPT): **DONE**. PR #89 (merge commit `e97f88f`): `docs/architecture/DEV_DB_CONCEPT.md`, documentation only; the read-only inventory of the current database is kept privately by the owner.
+- DEV-DB G0 (governance decision for the DEVELOP Supabase): **DONE** (#89 concept, #90 governance). `DB_ENVIRONMENT_GOVERNANCE_V1_1.md` FROZEN as full-document successor (owner decision 2026-11-17): only `DB-ENV-09` changes, a separate `DEVELOP` project on the Free plan is allowed; `DB-ENV-01` to `DB-ENV-08` carry over. `DEV_DB_CONCEPT.md` is `ACCEPTED` (v1.0).
+- DEV-DB G1 to G4 (separate `DEVELOP` database): **DONE** (owner-approved steps, each with its own GO). The `DEVELOP` project exists on the Free plan, schema, catalog data and synthetic test data are in place, and Vercel Preview deployments of the branch `develop` run against it. Production stays reachable only through `main`. Other branch previews are not part of this statement. No project identifiers, URLs, keys or accounts are recorded here (public repository).
+- Documentation PRs #92–#95: #92 DOC-REF-2 updated DB governance references; #93 introduced SCMDB source inventory v1.0 (analysis only); #94 updated `DATASET_PIPELINE_V1.md` to v1.2, `SCMDB_SOURCE_INVENTORY.md` to v1.1 and `docs/RULE_INDEX.md` to v1.5 (all remain `PROPOSED`; nothing was frozen); #95 GOV-1 updated the AI operating model to v1.4, adding GitHub Copilot as optional Secondary Engineer / Specialist while Claude Code remains the Primary and default Engineer.
 - Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`; #56 (`6586108`) public-repo boundary clarification and checkpoint rotation. Documentation only, no Production mutation.
 
 ## ACTIVE
 
 - UX series (owner priority: a usable, good-looking app for the owner and the first outside tester). Design mock-ups approved by the owner on 2026-11-13. Order, one work package per session: UX-1 (quality tiers) **DONE**, UX-2 (shell and branding) **DONE**, UX-3a (Mein Inventory / Crew Inventory split, Crew page read-only) **DONE**, UX-3b (material rows with average and range, depth indicator, KPI strip) **DONE**, UX-4 (Crew Inventory overview) **DONE**, UX-5 (global key set) **DONE**, UX-5b (key help) **DONE**, UX-5c (`B` key) **DONE**, UX-5d (Crew edit symbol with jump and return) **DONE**, UX-6a (Fabricator clarity pass, dataset label) **DONE**, UX-6b (dashboard polish) **DONE**. The series is complete as planned; remaining open points are listed under OPEN DECISIONS. Binding specification: `docs/frozen/INVENTORY_UX_V1_2.md`.
+- Hardening H2: running on `DEVELOP`; applying it to Production follows in its own step (separate named owner GO).
 
 ## PAUSED
 
@@ -77,11 +86,11 @@
 
 ## NEXT
 
-1. **No release for now.** The next release `develop` -> `main` is deliberately deferred (owner decision): little of substance has happened since the test release (PR #79, `main` = `e916f69`). When it is due, it is its own session and pull request with merge method **merge commit** (see `docs/handover/VECTOR_RESTART_HANDOVER.md` section 6).
+0. **Prepare hardening H2 for Production, then the auth concept.** Applying H2 to Production is its own step and needs its own named owner GO (`DB_ENVIRONMENT_GOVERNANCE_V1_2`, One-Time Production GO under `DB-ENV-10`). G7 (public baseline) remains a later, separate step.
+1. **Release 2 is done** (PR #87, `main` = `66c531bd`, tag `release-2026-11-17`; rollback points `pre-release-2026-11-14` on `eb6f108` and `e916f69`). No release is planned. A later release `develop` -> `main` is its own session and pull request with merge method **merge commit** (see `docs/handover/VECTOR_RESTART_HANDOVER.md` section 6). After PR #87, `main` and `develop` have identical file content (`git diff` empty); `main` is ahead only by the two release merge commits `e916f69` (#79) and `66c531b` (#87), which `develop` does not contain. The merge base is the `develop` head `9d58d61`, so the next release merge is clean without merging `main` back into `develop` (no back-merge was done after #79 either). A back-merge is optional and would be its own owner decision. Owner follow-up after the release: check the audit workflow run on `main` (first run with the new paths) and the Vercel Production deployment.
 2. Small follow-ups from the Copilot review of PR #79 (F2, F3 and F5 to F10): already classified as deferred; open, details with the owner. Each is its own small package.
 3. Backlog (each its own small package, only after an owner decision where noted):
    - Return to the requested page after sign-in (`next` target in `requireUser`; auth change).
-   - Empty states in `app/vector/inventory/` (links to the next action).
    - Dataset update (LIVE 4.10.3, PTU separate, workflow sync): only with an explicit owner GO.
    - Onboarding of player name / player account and the crew invitation UI.
    - Fabricator and Inventory design according to the mock-ups.
@@ -92,23 +101,25 @@
 
 - Licence and redistribution of scunpacked-data (no licence file): unresolved. Option B keeps the index local and uncommitted until this is decided; a later move to option A or A′ needs its own owner decision. No other owner decision is pending for the current work package.
 - Later UX work package (not started): compact lot / location display in the Fabricator, grouping by player and location, further progressive disclosure (the collapsible recipe and quality sections are done in UX-6a), and a clear distinction between "available in the crew" and "available at one place".
+- Dataset pipeline v1.2 owner decisions 19 to 21 in section 43 of `docs/proposed/DATASET_PIPELINE_V1.md` remain open.
 - `SCMDB_SOURCE_AUTHORITY_V1` is absorbed by the FROZEN `VECTOR_SOURCE_AUTHORITY_V1`; `PROVIDER_AUTHORITY_V1` (user-state providers) stays PLANNED.
 - Known items that will need a decision later, none started: a later UX / design pass (blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, the narrow app shell / sidebar on small screens); the known crew `active_group` inconsistency (`getCrewContext()` falls back to the first crew while the crew RPCs report `ACTIVE_GROUP_REQUIRED`), deliberately unchanged; the `Crew Security Hardening` work package (LOW to MEDIUM findings, due before the first user outside the current test group); archiving or removing the `data/audit*` folders (separate Cleanup Gate; the unused audit scripts `v2` and `v3` were removed and the V4 to V6 audit scripts moved to `scripts/audit/` in REPO-TIDY-1, V6 still imports V4 and V5); Rule Index remediation items R1, R2, R4 and R5; the later WP-AOM-01 gates (Security Finding Register, Backup Gate, Cleanup Gate), which stay separate future work.
 - Open points found before the release (2026-11-14, none started, none blocks the release):
   - **No crew invitation UI.** The database has `invite_group_member` and `respond_group_invite`, but no page or component calls them (only `set_active_group` and the read RPCs are used). Issuing an invitation (crew owner) and accepting it (invited user) are missing. The dashboard hint "Lass dich von deiner Crew einladen" therefore has no in-app path.
   - **Data sync pushes directly to the default branch and is failing.** `.github/workflows/sync-scmdb-data.yml` (daily, `contents: write`) commits and pushes `data/scmdb` directly to the checked-out default branch (`develop`), outside the pull request flow. It is reported failing since 2026-10-29; the last data commit is from that day. The dataset package (see NEXT) takes this on.
   - **Dashboard milestone text is outdated.** `app/vector/page.tsx` still shows `NÄCHSTER MEILENSTEIN: Fabricator Quality & Stats`, although F3 is done.
-  - **Empty states without a link.** The empty states in `app/vector/inventory/page.tsx` and `app/vector/inventory/crew/page.tsx` give a text only, no link to the next action.
+  - **Empty states without a link.** Addressed in text by INV-EMPTY-1 (#85): the empty states now name the next action. They still contain no clickable link; a link would be a separate small package.
 
 ## OPEN INFRASTRUCTURE WORK
 
-- Future Spur-B target (owner decision 2026-11-11, not started): separate Supabase contexts for `LIVE` and `PTU` and a separate `DEVELOP` instance for development, preview, automated tests and deployment automation, specified and implemented in its own infrastructure and governance work package. This is **not** a current DB-environment contract and **not** FROZEN: `DB_ENVIRONMENT_GOVERNANCE_V1` (one Supabase Production environment) stays binding until a governed change replaces it.
+- `DEVELOP` instance (owner decision 2026-11-17): a second, ordinary Supabase project on the Free plan for development, preview and safe write tests; **created**, governed by `DB-ENV-09` in `DB_ENVIRONMENT_GOVERNANCE_V1_2.md`, planned in `docs/architecture/DEV_DB_CONCEPT.md`. Open: hardening H2 on Production (own GO) and the later steps of the concept (each with its own GO). Vercel Preview deployments of the branch `develop` use `DEVELOP`; Vercel Production uses the Production database.
+- Separate Supabase contexts for `LIVE` and `PTU` (future Spur-B target, owner decision 2026-11-11, not started): **not** a current DB-environment contract and **not** FROZEN. The Free plan does not allow more than two active projects, so this stays a separate future package (concept section 9).
 
 ## RELEVANT CONTRACTS
 
-- FROZEN specifications in `docs/frozen/`, registered in `docs/RULE_INDEX.md` section 5. Most relevant right now: `INVENTORY_UX_V1_2.md` (inventory UX, quality tiers, key set, key help), `VECTOR_SOURCE_AUTHORITY_V1.md` (external source identity and authority), `DB_ENVIRONMENT_GOVERNANCE_V1.md` (Production read and write gates), `VECTOR_VERSIONING_V1_1.md` (LIVE/PTU isolation), `VECTOR_GOVERNANCE_V1.md` (global governance).
+- FROZEN specifications in `docs/frozen/`, registered in `docs/RULE_INDEX.md` section 5. Most relevant right now: `INVENTORY_UX_V1_2.md` (inventory UX, quality tiers, key set, key help), `VECTOR_SOURCE_AUTHORITY_V1.md` (external source identity and authority), `DB_ENVIRONMENT_GOVERNANCE_V1_2.md` (Production read and write gates, DEVELOP environment, One-Time Production Execution), `VECTOR_VERSIONING_V1_1.md` (LIVE/PTU isolation), `VECTOR_GOVERNANCE_V1.md` (global governance).
 - Operating contracts: `AGENTS.md`, `docs/governance/AI_OPERATING_MODEL.md`, `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`.
 - Recovery: `docs/handover/VECTOR_RESTART_HANDOVER.md` (control block, drift procedure, Blueprint decisions) and `docs/handover/SCMDB_LOCATION_HANDOVER.md` (frozen location contracts).
 - Evidence: `docs/governance/PROJECT_LEAD_EVIDENCE.md` (generator, CURRENT and ARCHIVE contract, Project Lead bootstrap).
 - Security-relevant runtime evidence (database dumps, policy / grant listings, project identifiers) is held privately by the owner and is not stored in this repository.
-- Supabase: exactly one environment, Production, project: see the owner's private project archive, branch `main`; it currently holds test data and is still Production. Read-only access is allowed; every mutation needs an explicit owner GO.
+- Supabase: two environments exist. Production (project: see the owner's private project archive, branch `main`) currently holds test data and is still Production. `DEVELOP` (Free plan, permitted by `DB-ENV-09`, since v1.1) is the development and preview database. Read-only access to Production is allowed; every Production mutation needs an explicit owner GO; target state: one project-scoped connection per project, `PRODUCTION` read-only; until then the engineer writes exclusively to the project named `DEVELOP` (verified by name before every write) and reads `PRODUCTION` read-only, except execution under `DB-ENV-10` (`DB-ENV-09` condition 8, amended 2026-11-18, owner decision).

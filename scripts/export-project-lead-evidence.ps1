@@ -109,7 +109,7 @@ $script:GovernanceSources = @(
     'AGENTS.md',
     'docs/RULE_INDEX.md',
     'docs/governance/AI_OPERATING_MODEL.md',
-    'docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1.md',
+    'docs/frozen/DB_ENVIRONMENT_GOVERNANCE_V1_2.md',
     'docs/handover/VECTOR_RESTART_HANDOVER.md'
 )
 $script:FinalFiles = @('VECTOR_EVIDENCE.md', 'PROJECT_STATE.md', 'GOVERNANCE_CONTEXT.md')
