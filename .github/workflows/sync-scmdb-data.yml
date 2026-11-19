@@ -1,46 +1,136 @@
-name: SCMDB Full Data Mirror
+name: SCMDB Mirror Sync V2
+
+# MIRROR-WORKFLOW-V2 (docs/proposed/DATASET_PIPELINE_V1.md sections 31, 35.1, 36 to 39).
+#
+# Never pushes to develop or main, never merges, never activates anything in Production,
+# never writes to a database. It works only on the rolling, unprotected branch
+# automation/scmdb-sync and, on a real change, proposes the mirror through a pull request
+# that the owner reviews and merges by hand.
+#
+# Mode: repository variable SCMDB_SYNC_MODE = "dry-run" (default when unset) or "publish".
+# A dry run computes everything and reports it in the job summary and the artifact, but
+# pushes nothing and opens no pull request. The manual run can force dry-run at any time.
 
 on:
   workflow_dispatch:
+    inputs:
+      force_dry_run:
+        description: "Force a dry run, whatever SCMDB_SYNC_MODE says (nothing is pushed, no pull request)"
+        type: boolean
+        default: true
 
   schedule:
-    # Einmal täglich automatische Aktualisierung
+    # Once a day
     - cron: "17 3 * * *"
 
+# Least privilege: the branch push and the pull request need exactly these two.
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: scmdb-full-data-sync
   cancel-in-progress: false
 
+env:
+  SYNC_BRANCH: automation/scmdb-sync
+  BASE_BRANCH: develop
+  OBSERVATION_FILE: data/scmdb-sync/observations.jsonl
+  UPSTREAM_URL: https://github.com/KrovaxCode/SCMDB_DATA.git
+
 jobs:
   sync:
-    name: SCMDB Full Mirror synchronisieren
+    name: SCMDB mirror sync
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
 
       # ------------------------------------------------------------
-      # 1. Eigenes Repository laden
+      # 1. Own repository (full history: needed to merge develop into the sync branch)
       # ------------------------------------------------------------
 
       - name: Eigenes Repository auschecken
         uses: actions/checkout@v4
-
-
-      # ------------------------------------------------------------
-      # 2. Node.js bereitstellen
-      # ------------------------------------------------------------
+        with:
+          fetch-depth: 0
 
       - name: Node.js einrichten
         uses: actions/setup-node@v4
         with:
           node-version: "22"
 
+      # ------------------------------------------------------------
+      # 2. Tools and mode
+      #    The scripts of this run are copied out of the work tree, so that switching to
+      #    the sync branch cannot change the tools that decide.
+      # ------------------------------------------------------------
+
+      - name: Werkzeuge sichern und Betriebsart bestimmen
+        id: mode
+        shell: bash
+        env:
+          SCMDB_SYNC_MODE: ${{ vars.SCMDB_SYNC_MODE }}
+          FORCE_DRY_RUN: ${{ inputs.force_dry_run }}
+        run: |
+          set -euo pipefail
+
+          TOOLS="$RUNNER_TEMP/tools"
+          SYNC_DIR="$RUNNER_TEMP/scmdb-sync"
+          rm -rf "$TOOLS" "$SYNC_DIR"
+          mkdir -p "$SYNC_DIR/out"
+          cp -R scripts "$TOOLS"
+
+          {
+            echo "TOOLS=$TOOLS"
+            echo "SYNC_DIR=$SYNC_DIR"
+          } >> "$GITHUB_ENV"
+
+          node "$TOOLS/scmdb-sync/decide.mjs" mode \
+            --variable "$SCMDB_SYNC_MODE" \
+            --force-dry-run "$FORCE_DRY_RUN" \
+            | tee -a "$GITHUB_OUTPUT"
+
 
       # ------------------------------------------------------------
-      # 3. SCMDB_DATA Mirror laden
+      # 3. Sync branch: created from develop when missing, develop merged in otherwise.
+      #    Merge only: never a rebase, never a force push. A conflict is reported as BLOCKED
+      #    and nothing is overwritten.
+      # ------------------------------------------------------------
+
+      - name: Sync-Branch vorbereiten
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "SCMDB Sync Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch --no-tags origin
+
+          if git rev-parse --verify --quiet "refs/remotes/origin/$SYNC_BRANCH" > /dev/null; then
+            git checkout -B "$SYNC_BRANCH" "origin/$SYNC_BRANCH"
+
+            if ! git merge --no-edit "origin/$BASE_BRANCH"; then
+              git merge --abort || true
+              {
+                echo "# SCMDB Mirror Sync V2: BLOCKED"
+                echo
+                echo "Merging \`$BASE_BRANCH\` into \`$SYNC_BRANCH\` conflicts. Nothing was overwritten, nothing was pushed."
+                echo "Owner action: resolve the conflict on \`$SYNC_BRANCH\` by hand (merge, no rebase, no force push)."
+              } >> "$GITHUB_STEP_SUMMARY"
+              echo "::error::BLOCKED: merging $BASE_BRANCH into $SYNC_BRANCH conflicts"
+              exit 1
+            fi
+          else
+            git checkout -B "$SYNC_BRANCH" "origin/$BASE_BRANCH"
+          fi
+
+          git log --oneline -3
+
+
+      # ------------------------------------------------------------
+      # 4. SCMDB_DATA laden; Commit-SHA des Klons festhalten (Source Export Revision, 33.2)
       # ------------------------------------------------------------
 
       - name: Öffentlichen SCMDB_DATA Mirror herunterladen
@@ -54,7 +144,7 @@ jobs:
 
           git clone \
             --depth 1 \
-            https://github.com/KrovaxCode/SCMDB_DATA.git \
+            "$UPSTREAM_URL" \
             /tmp/SCMDB_DATA
 
           if [ ! -d "/tmp/SCMDB_DATA/data" ]; then
@@ -62,11 +152,21 @@ jobs:
             exit 1
           fi
 
-          echo "SCMDB_DATA erfolgreich heruntergeladen."
+          # An empty or malformed value is not an error here: the precheck holds the run (HELD_FOR_REVIEW).
+          SOURCE_SHA="$(git -C /tmp/SCMDB_DATA rev-parse HEAD || true)"
+          SOURCE_RETRIEVED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+
+          {
+            echo "SOURCE_SHA=$SOURCE_SHA"
+            echo "SOURCE_RETRIEVED_AT=$SOURCE_RETRIEVED_AT"
+          } >> "$GITHUB_ENV"
+
+          echo "SCMDB_DATA erfolgreich heruntergeladen: ${SOURCE_SHA:-unbekannt}"
 
 
       # ------------------------------------------------------------
-      # 4. Grundlegende Validierung der Quelle
+      # 5. Source validation, mirror, manifest and crafting sanity checks (unchanged).
+      #    A failure here fails the job and nothing is published.
       # ------------------------------------------------------------
 
       - name: SCMDB Quelldaten validieren
@@ -126,10 +226,6 @@ jobs:
           NODE
 
 
-      # ------------------------------------------------------------
-      # 5. Gesamten data-Ordner spiegeln
-      # ------------------------------------------------------------
-
       - name: Vollständigen SCMDB Data Mirror übernehmen
         shell: bash
         run: |
@@ -150,10 +246,6 @@ jobs:
 
           echo "Mirror synchronisiert."
 
-
-      # ------------------------------------------------------------
-      # 6. Eigenes Mirror-Metadata erzeugen
-      # ------------------------------------------------------------
 
       - name: Lokales Mirror-Metadata erzeugen
         shell: bash
@@ -278,10 +370,6 @@ jobs:
 
           NODE
 
-
-      # ------------------------------------------------------------
-      # 7. Crafting-Datensätze prüfen
-      # ------------------------------------------------------------
 
       - name: Crafting-Datensätze prüfen
         shell: bash
@@ -478,82 +566,297 @@ jobs:
 
 
       # ------------------------------------------------------------
-      # 8. Änderungen feststellen
+      # 6. Candidate = data/scmdb after the rsync. Baseline = origin/develop (not the sync
+      #    branch). The CLI uses the complete loader result of both sides (files, fileNames,
+      #    unreadable); this workflow never hands over only the files.
       # ------------------------------------------------------------
 
-      - name: Änderungen prüfen
-        id: changes
+      - name: Domain-Precheck ausführen
         shell: bash
         run: |
           set -euo pipefail
 
-          if git diff --quiet -- data/scmdb && \
-             [ -z "$(git status --porcelain -- data/scmdb)" ]; then
+          OBSERVED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
 
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+          node "$TOOLS/domain-precheck.mjs" \
+            --baseline-ref "origin/$BASE_BRANCH" \
+            --candidate-dir data/scmdb \
+            --candidate-source-sha "$SOURCE_SHA" \
+            --source-retrieved-at "$SOURCE_RETRIEVED_AT" \
+            --observed-at "$OBSERVED_AT" \
+            --emit json \
+            > "$SYNC_DIR/precheck.json"
 
-            echo "Keine Änderungen gefunden."
+          echo "Precheck geschrieben."
 
-          else
 
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+      # ------------------------------------------------------------
+      # 7. Decision (scripts/scmdb-sync/decide.mjs, unit-tested)
+      # ------------------------------------------------------------
 
-            echo "Neue oder geänderte SCMDB-Daten gefunden."
+      - name: Entscheidung treffen
+        id: decide
+        shell: bash
+        env:
+          MODE: ${{ steps.mode.outputs.mode }}
+          MODE_REASON: ${{ steps.mode.outputs.mode_reason }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
 
+          node "$TOOLS/scmdb-sync/decide.mjs" decide \
+            --precheck "$SYNC_DIR/precheck.json" \
+            --mode "$MODE" \
+            --mode-reason "$MODE_REASON" \
+            --run-url "$RUN_URL" \
+            --out-dir "$SYNC_DIR/out" \
+            | tee -a "$GITHUB_OUTPUT"
+
+          cat "$SYNC_DIR/out/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+
+      # ------------------------------------------------------------
+      # 8. Apply the outcome to the sync branch (local commits only; the push is a later step)
+      #    OBSERVE  proven UNCHANGED against develop: drop the work-tree changes (manifest
+      #             timestamp, non-trigger files); data/scmdb goes back to develop, so a
+      #             stale pending proposal is not kept alive.
+      #    HELD     drop the work-tree changes, keep the branch as it is, append observations.
+      #    PUBLISH  commit the mirror change (the manifest alone is never a change) plus
+      #             observations.
+      # ------------------------------------------------------------
+
+      - name: Ergebnis auf den Sync-Branch anwenden
+        shell: bash
+        env:
+          OUTCOME: ${{ steps.decide.outputs.outcome }}
+        run: |
+          set -euo pipefail
+
+          MANIFEST="data/scmdb/local-mirror-manifest.json"
+          MIRROR_COMMIT=false
+
+          case "$OUTCOME" in
+            OBSERVE)
+              git restore --source="origin/$BASE_BRANCH" --staged --worktree -- data/scmdb
+              git clean -fdq -- data/scmdb
+              if ! git diff --cached --quiet; then
+                git commit -q -m "chore(scmdb-sync): restore data/scmdb to $BASE_BRANCH" \
+                  -m "Upstream matches the baseline again; a pending mirror proposal on this branch is withdrawn."
+              fi
+              ;;
+            HELD)
+              git restore --source=HEAD --staged --worktree -- data/scmdb
+              git clean -fdq -- data/scmdb
+              ;;
+            PUBLISH)
+              if [ -z "$(git status --porcelain -- data/scmdb | grep -v "$MANIFEST" || true)" ]; then
+                git restore --source=HEAD --staged --worktree -- "$MANIFEST"
+              else
+                git add -A -- data/scmdb
+                MIRROR_COMMIT=true
+              fi
+              ;;
+            *)
+              echo "::error::Unknown outcome: $OUTCOME"
+              exit 1
+              ;;
+          esac
+
+          node "$TOOLS/scmdb-sync/decide.mjs" append \
+            --file "$OBSERVATION_FILE" \
+            --lines "$SYNC_DIR/out/observation-lines.jsonl"
+          git add -- "$OBSERVATION_FILE"
+
+          # The record only grows: no staged deletion in it.
+          DELETED="$(git diff --cached --numstat -- "$OBSERVATION_FILE" | awk '{print $2}')"
+          if [ "${DELETED:-0}" != "0" ]; then
+            echo "::error::The observation record is not append-only."
+            exit 1
           fi
 
+          if [ "$MIRROR_COMMIT" = "true" ]; then
+            git commit -q -F "$SYNC_DIR/out/commit-message.txt"
+          else
+            git commit -q -F "$SYNC_DIR/out/observation-commit-message.txt"
+          fi
+
+          {
+            echo "## Local result on \`$SYNC_BRANCH\`"
+            echo
+            echo "Commits ahead of \`$BASE_BRANCH\`:"
+            echo
+            echo '```'
+            git log --oneline "origin/$BASE_BRANCH..HEAD"
+            echo '```'
+            echo
+            echo "Changed files against \`$BASE_BRANCH\`:"
+            echo
+            echo '```'
+            git diff --stat --stat-width=100 "origin/$BASE_BRANCH" HEAD | tail -n 25
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
 
       # ------------------------------------------------------------
-      # 9. Nur bei Datenänderung committen
+      # 9. Publish mode only: plain push of the sync branch. Never develop, never main,
+      #    never a force push. The default token cannot create or update workflow files:
+      #    a merge that brings workflow changes from develop is rejected and reported.
       # ------------------------------------------------------------
 
-      - name: SCMDB-Daten committen
-        if: steps.changes.outputs.changed == 'true'
+      - name: Sync-Branch pushen
+        if: steps.mode.outputs.mode == 'publish'
         shell: bash
         run: |
           set -euo pipefail
 
-          git config user.name "SCMDB Sync Bot"
+          if ! git push origin "$SYNC_BRANCH" 2> "$SYNC_DIR/push.err"; then
+            cat "$SYNC_DIR/push.err"
+            {
+              echo "## Push rejected"
+              echo
+              echo "Pushing \`$SYNC_BRANCH\` failed. Nothing else was changed. If the message mentions the \`workflows\` permission,"
+              echo "the merge of \`$BASE_BRANCH\` brought workflow changes that the default token may not push."
+              echo
+              echo '```'
+              cat "$SYNC_DIR/push.err"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::BLOCKED: push of $SYNC_BRANCH was rejected"
+            exit 1
+          fi
 
-          git config \
-            user.email \
-            "github-actions[bot]@users.noreply.github.com"
-
-          git add data/scmdb
-
-          git commit \
-            -m "chore: sync complete SCMDB data mirror"
-
-          git push
+          echo "Pushed $SYNC_BRANCH." | tee -a "$GITHUB_STEP_SUMMARY"
 
 
       # ------------------------------------------------------------
-      # 10. Workflow-Zusammenfassung
+      # 10. Publish mode, real change only: open or update the pull request against develop.
+      #     No auto-merge, no merge of any kind. Fallback when Actions may not create pull
+      #     requests: a ready compare link and the pull request text in the job summary.
       # ------------------------------------------------------------
 
-      - name: Zusammenfassung erstellen
+      - name: Pull Request öffnen oder aktualisieren
+        if: steps.mode.outputs.mode == 'publish' && steps.decide.outputs.outcome == 'PUBLISH'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          TITLE="$(cat "$SYNC_DIR/out/pr-title.txt")"
+          BODY_FILE="$SYNC_DIR/out/pr-body.md"
+          COMPARE_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$BASE_BRANCH...$SYNC_BRANCH?expand=1"
+
+          EXISTING="$(gh pr list --base "$BASE_BRANCH" --head "$SYNC_BRANCH" --state open --json number --jq '.[0].number // empty')"
+
+          if [ -n "$EXISTING" ]; then
+            gh pr edit "$EXISTING" --title "$TITLE" --body-file "$BODY_FILE"
+            {
+              echo "## Pull request updated"
+              echo
+              echo "#$EXISTING was updated. Close and reopen it once to start the checks (pull requests changed by a workflow do not start them)."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          if gh pr create --base "$BASE_BRANCH" --head "$SYNC_BRANCH" --title "$TITLE" --body-file "$BODY_FILE" 2> "$SYNC_DIR/pr.err"; then
+            {
+              echo "## Pull request opened"
+              echo
+              echo "Close and reopen it once to start the checks (pull requests opened by a workflow do not start them)."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          cat "$SYNC_DIR/pr.err"
+          if grep -qi "not permitted to create or approve pull requests" "$SYNC_DIR/pr.err"; then
+            {
+              echo "## Pull request not created automatically"
+              echo
+              echo "GitHub Actions may not create pull requests in this repository (repository setting). The branch is pushed."
+              echo
+              echo "Open it here: $COMPARE_URL"
+              echo
+              echo "Title: $TITLE"
+              echo
+              echo "<details><summary>Pull request text</summary>"
+              echo
+              cat "$BODY_FILE"
+              echo
+              echo "</details>"
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::Actions may not create pull requests here. Compare link and text are in the job summary."
+            exit 0
+          fi
+
+          echo "::error::Creating the pull request failed."
+          exit 1
+
+
+      # ------------------------------------------------------------
+      # 10b. Open pull request of the sync branch, when this run proposes no mirror change.
+      #      Reading is allowed in every mode and only reports in the job summary. A withdrawn
+      #      proposal (OBSERVE) updates title and text of the open pull request in publish mode
+      #      only. It is never closed and never merged. A held run leaves it as it is.
+      # ------------------------------------------------------------
+
+      - name: Offenen Sync-PR abfragen
+        id: openpr
+        if: steps.decide.outputs.outcome != 'PUBLISH'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ steps.mode.outputs.mode }}
+          OUTCOME: ${{ steps.decide.outputs.outcome }}
+        run: |
+          set -euo pipefail
+
+          if ! PR="$(gh pr list --base "$BASE_BRANCH" --head "$SYNC_BRANCH" --state open --json number --jq '.[0].number // empty' 2> "$SYNC_DIR/prlist.err")"; then
+            cat "$SYNC_DIR/prlist.err"
+            echo "::warning::The lookup of open pull requests failed. No pull request is changed."
+            PR="unknown"
+          fi
+
+          echo "number=$PR" >> "$GITHUB_OUTPUT"
+
+          node "$TOOLS/scmdb-sync/decide.mjs" pr-note \
+            --outcome "$OUTCOME" \
+            --mode "$MODE" \
+            --pr "$PR" \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Zurückgenommenen Mirror-Vorschlag im PR vermerken
+        if: steps.mode.outputs.mode == 'publish' && steps.decide.outputs.outcome == 'OBSERVE' && steps.openpr.outputs.number != '' && steps.openpr.outputs.number != 'unknown'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.openpr.outputs.number }}
+        run: |
+          set -euo pipefail
+
+          gh pr edit "$PR_NUMBER" \
+            --title "$(cat "$SYNC_DIR/out/pr-withdrawn-title.txt")" \
+            --body-file "$SYNC_DIR/out/pr-withdrawn-body.md"
+
+          echo "Updated title and text of #$PR_NUMBER (mirror proposal withdrawn). It stays open." | tee -a "$GITHUB_STEP_SUMMARY"
+
+
+      # ------------------------------------------------------------
+      # 11. Report
+      # ------------------------------------------------------------
+
+      - name: Ergebnis als Artefakt sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scmdb-sync-report
+          path: ${{ runner.temp }}/scmdb-sync
+          retention-days: 14
+          if-no-files-found: ignore
+
+      # A held run is visible as a failed job (after observations were recorded).
+      - name: Gehaltenen Lauf sichtbar machen
+        if: steps.decide.outputs.outcome == 'HELD'
         shell: bash
         run: |
-          {
-            echo "# SCMDB Full Data Mirror"
-            echo
-            echo "Quelle:"
-            echo "\`KrovaxCode/SCMDB_DATA\`"
-            echo
-            echo "Gespiegelte JSON-Dateien:"
-            echo
-            echo '```'
-            find data/scmdb \
-              -maxdepth 1 \
-              -type f \
-              -name "*.json" \
-              -printf "%f\n" \
-              | sort
-            echo '```'
-            echo
-            echo "Lokales Manifest:"
-            echo "\`data/scmdb/local-mirror-manifest.json\`"
-            echo
-            echo "Daten geändert:"
-            echo "\`${{ steps.changes.outputs.changed }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::error::HELD_FOR_REVIEW: no mirror commit, no pull request. See the job summary for the reasons."
+          exit 1

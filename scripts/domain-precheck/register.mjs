@@ -154,12 +154,14 @@ export const EVIDENCE_CONSUMERS = Object.freeze([
 ])
 
 /**
- * Workflows that write the mirror or check its files. They are neither domain
- * consumers nor triggers of the domain precheck; today their path filters fire
- * on any change under data/scmdb/ (SCMDB_SOURCE_INVENTORY.md section 5).
+ * Workflows (and the tooling that serves them) that write the mirror or check its
+ * files. They are neither domain consumers nor triggers of the domain precheck;
+ * today their path filters fire on any change under data/scmdb/
+ * (SCMDB_SOURCE_INVENTORY.md section 5).
  */
 export const WORKFLOW_REFERENCES = Object.freeze([
   { path: '.github/workflows/sync-scmdb-data.yml', kind: 'MIRROR_WRITER' },
+  { path: 'scripts/scmdb-sync/decide.mjs', kind: 'MIRROR_TOOLING' },
   { path: '.github/workflows/vector-scmdb-preflight.yml', kind: 'PREFLIGHT' },
   { path: '.github/workflows/vector-release-preflight.yml', kind: 'PREFLIGHT' },
   { path: '.github/workflows/vector-item-data-audit.yml', kind: 'EVIDENCE_AUDIT' },

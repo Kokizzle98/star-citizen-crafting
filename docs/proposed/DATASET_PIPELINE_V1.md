@@ -1,7 +1,7 @@
 # VECTOR Dataset Pipeline v1
 
 **Status:** PROPOSED\
-**Version:** 1.2 (revision 2, 2026-11-19: owner decisions 19 to 22 recorded in §43 and followed up in §35.3, §36.2, §38.3 and §40.1, status unchanged; revision base `80dc6e0`. Revision 1, 2026-11-18: DB governance reference moved to v1.2 by GOV-2, no content change; revision base `9bf3c7f`)\
+**Version:** 1.2 (revision 4, 2026-11-19: owner approval of the observation record path recorded in §31 and §38.3, status unchanged. Revision 3, 2026-11-19: §31 and §42 items 2 and 5 updated for `MIRROR-WORKFLOW-V2`, status unchanged; revision base `161697b`. Revision 2, 2026-11-19: owner decisions 19 to 22 recorded in §43 and followed up in §35.3, §36.2, §38.3 and §40.1, status unchanged; revision base `80dc6e0`. Revision 1, 2026-11-18: DB governance reference moved to v1.2 by GOV-2, no content change; revision base `9bf3c7f`)\
 **Base commit:** `8f504ef` (`develop`, merge of PR #93)\
 **Authority Scope:** DATASET_PIPELINE\
 **Approved By:** pending project_owner approval\
@@ -871,7 +871,14 @@ frequent lightweight Update Detection
 
 Git diff may remain useful for mirror/audit purposes but is not authoritative channel revision detection.
 
-The current workflow commits and pushes `data/scmdb/` directly to the checked-out branch. That is incompatible with the protected `develop` and `main` branches (`docs/PROJECT_STATE.md`). A separate later work package replaces it. That replacement must follow §35 (no direct push, no auto-merge, no automatic Production activation), §36 (source set), §37 (precheck) and §38 (observations). v1.2 specifies the target. It does not change the workflow.
+The former workflow committed and pushed `data/scmdb/` directly to the checked-out branch. That was incompatible with the protected `develop` and `main` branches (`docs/PROJECT_STATE.md`). The work package `MIRROR-WORKFLOW-V2` replaces it and follows §35 (no direct push, no auto-merge, no automatic Production activation), §36 (source set), §37 (precheck) and §38 (observations):
+
+- It never pushes to `develop` or `main`, sets no auto-merge, activates nothing in Production and writes to no database. Its token has `contents: write` and `pull-requests: write` only.
+- The mode comes from the repository variable `SCMDB_SYNC_MODE`. `dry-run` is the default when it is unset. In `dry-run` everything is computed and reported, and nothing is pushed and no pull request is opened. A manual run can always force `dry-run`.
+- It records the commit SHA of the upstream clone (§33.2) and compares the working mirror against `origin/develop` with the domain precheck (§37). The decision is made by a tested script, not inside the workflow file: all domains `UNCHANGED` is an observation, a change without any `HELD_FOR_REVIEW` result is a mirror proposal, any `HELD_FOR_REVIEW` result records the observation, creates no mirror commit and no pull request, and fails the job so that it is visible.
+- Observations are appended to a continuous record on the rolling, unprotected branch `automation/scmdb-sync` (§38.3). That branch is created from `develop`, receives `develop` by merge at the start of each run, and is never rebased and never force-pushed. A real change is proposed as a pull request from that branch to `develop`. The pull request names the dataset identity per changed channel and the precheck result per domain (§35.1 rule 5). The owner reviews and merges it by hand.
+- The record location is `data/scmdb-sync/observations.jsonl`, approved by the owner on 2026-11-19. It lies outside `data/scmdb/`, so no mirror consumer and no `data/scmdb/**` path filter fires on it. The extension of the allowed paths in the restart handover is recorded at the next checkpoint rotation (ROT-14), not in the package that introduces the workflow.
+- Pull requests that a workflow opens with the default token do not start `pull_request` workflows. The pull request text asks the reviewer to close and reopen it once to start the checks. No existing workflow is changed for this.
 
 ## 32. Acceptance Criteria
 
@@ -1269,6 +1276,8 @@ A no-material-change run is observation only:
 
 Owner decision 21 (§43) fixes the place. Observations ("nothing changed") are kept in one continuous, append-only observation record. The record is stored on a single rolling, unprotected sync branch. That branch is never force-pushed and never merged automatically. Each run also writes a summary into the workflow run. When a real change occurs, the pull request carries the earlier observations with it. The details belong to the later mirror workflow package (`MIRROR-WORKFLOW-V2`).
 
+The record path `data/scmdb-sync/observations.jsonl` was approved by the owner on 2026-11-19. The allowed scope of the restart handover is extended at the next checkpoint rotation (ROT-14).
+
 ## 39. Domain-level verification
 
 Each domain has two build references, stored in different places:
@@ -1352,10 +1361,10 @@ Rules:
 These are observations at the base commit. They are not defects introduced by v1.2. They are inputs for the later implementation, workflow and migration packages:
 
 1. **Same-build revisions cannot be stored.** Both dataset tables enforce `UNIQUE (source, channel, version)` on the build string. §33.3 requires a migration, under the `DB-ENV` gates.
-2. **No Source Export Revision is recorded.** The sync workflow clones upstream with `--depth 1` and records neither the upstream commit SHA nor file hashes. `local-mirror-manifest.json` lists file names only.
+2. **No Source Export Revision is recorded.** *Addressed by `MIRROR-WORKFLOW-V2` for the mirror path:* the workflow records the commit SHA of the upstream clone and hands it to the precheck, and every run appends the Source Export Revision and the raw file hashes to the observation record. Before that package, the workflow cloned upstream with `--depth 1` and recorded neither the upstream commit SHA nor file hashes. `local-mirror-manifest.json` lists file names only. Storing a Source Export Revision in the database remains open (§42 item 1).
 3. **No channel manifest exists.** Locations and blueprints are activated per domain table. The channel state today is the set of per-domain `ACTIVE` rows. These are consistent in practice because both key on the same build string, but no recorded manifest ties them together. This is a transitional single-domain model. §34 is the target.
 4. **No dataset-level provenance columns.** The `VECTOR_VERSIONING_V1_1.md` §5 fields (source revision, extracted, validated and activated timestamps, completeness status) are not stored as such in the dataset tables. The rule allows adapted storage names, but the information must remain available. Reconcile this in the migration package.
-5. **The mirror workflow pushes directly** and fails on the protected branches (§31).
+5. **The mirror workflow pushes directly** and fails on the protected branches (§31). *Addressed by `MIRROR-WORKFLOW-V2`:* the workflow pushes only the sync branch and proposes a change through a pull request.
 6. **Version parsing differs across readers** (§33.4).
 
 ## 43. Open implementation decisions before FROZEN
