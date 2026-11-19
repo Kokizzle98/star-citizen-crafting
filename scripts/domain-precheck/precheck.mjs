@@ -253,7 +253,7 @@ function checkSiteSettings(base, cand, register, add) {
 /**
  * @param {object} args
  * @param {object} [args.register]  Domain register (default: the versioned register).
- * @param {{files: Record<string, string|Uint8Array>, versions: object}} args.baseline
+ * @param {{files: Record<string, string|Uint8Array>, versions: object, unreadable?: Array<{name: string, reason?: string}>}} args.baseline
  * @param {{files: Record<string, string|Uint8Array>, versions: object, fileNames?: Record<string,string>,
  *          sourceExport?: {upstreamCommitSha?: string, retrievedAt?: string, rawFileHashes?: Record<string,string>}}} args.candidate
  *   Files are keyed by logical role: static roles by name (`latest`, `site_settings`, ...), per-channel roles as
@@ -266,6 +266,19 @@ export function runDomainPrecheck({ register = DOMAIN_REGISTER, baseline, candid
   }
   const base = makeSide('baseline', baseline)
   const cand = makeSide('candidate', candidate)
+
+  // An entry that could not be read never disappears silently (loaders report it as `unreadable`).
+  for (const [label, input] of [['baseline', baseline], ['candidate', candidate]]) {
+    const list = input?.unreadable
+    if (list === undefined) continue
+    if (!Array.isArray(list)) {
+      add(GLOBAL, 'UNREADABLE_FILE', { side: label, file: null, reason: 'INVALID_UNREADABLE_LIST' })
+      continue
+    }
+    for (const item of list) {
+      add(GLOBAL, 'UNREADABLE_FILE', { side: label, file: typeof item === 'string' ? item : item?.name ?? null, reason: item?.reason ?? 'UNREADABLE' })
+    }
+  }
 
   // Source Export Revision (33.2). No commit SHA, no revision, no UNCHANGED.
   const sha = candidate?.sourceExport?.upstreamCommitSha

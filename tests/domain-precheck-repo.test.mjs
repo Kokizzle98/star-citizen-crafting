@@ -11,7 +11,7 @@ import { buildRoleMap, loadDirectory, loadGitRef } from '../scripts/domain-prech
 import { buildObservation, serializeObservation } from '../scripts/domain-precheck/observation.mjs'
 import { runDomainPrecheck } from '../scripts/domain-precheck/precheck.mjs'
 import { DOMAIN_REGISTER, REGISTER_VERSION } from '../scripts/domain-precheck/register.mjs'
-import { SHA, VERSIONS, candidateOf, domainResult, makeMirror, side } from './domain-precheck-fixture.mjs'
+import { SHA, VERSIONS, candidateOf, domainResult, makeMirror, side, toFiles } from './domain-precheck-fixture.mjs'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
 const MIRROR = path.join(root, 'data', 'scmdb')
@@ -453,3 +453,174 @@ test('the precheck code is read-only: no writes, no network, no database, no clo
   }
 })
 
+
+// --- unreadable entries never disappear (review fix) --------------------------------
+
+const gitIn = (cwd, args, input) => execFileSync('git', ['-c', 'user.name=t', '-c', 'user.email=t@example.invalid', '-c', 'commit.gpgsign=false', ...args], { cwd, input, encoding: 'utf8' }).trim()
+const precheckLoaded = (baseline, candidate) => runDomainPrecheck({
+  baseline: { ...baseline, versions: { ...VERSIONS } },
+  candidate: { ...candidate, versions: { ...VERSIONS }, sourceExport: { upstreamCommitSha: SHA } },
+})
+const unreadableFindings = output => output.findings.filter(finding => finding.code === 'UNREADABLE_FILE')
+
+/** A local repository holding one synthetic mirror commit; `extra` adds tree entries beforehand. */
+async function withMirrorRepo(extra, callback) {
+  await withTempMirrors(async base => {
+    const docs = makeMirror()
+    await writeMirror(path.join(base, 'data', 'scmdb'), docs)
+    await writeFile(path.join(base, 'data', 'scmdb', 'unknown-extra.json'), '{"x":1}')
+    gitIn(base, ['init', '-q'])
+    gitIn(base, ['add', '-A'])
+    await extra?.(base)
+    gitIn(base, ['commit', '-q', '-m', 'mirror'])
+    await callback(base)
+  })
+}
+const blobPath = (base, name) => {
+  const sha = gitIn(base, ['rev-parse', `HEAD:data/scmdb/${name}`])
+  return path.join(base, '.git', 'objects', sha.slice(0, 2), sha.slice(2))
+}
+
+test('git ref: an unreadable blob of an unknown file holds despite unchanged registered files and a valid SHA', async () => {
+  await withMirrorRepo(null, async base => {
+    const control = precheckLoaded(loadGitRef('HEAD', { cwd: base }), loadGitRef('HEAD', { cwd: base }))
+    assert.equal(control.result, 'HELD_FOR_REVIEW', 'the unknown file itself already holds (control)')
+    assert.ok(control.findings.some(finding => finding.code === 'UNREGISTERED_FILE'))
+  })
+  // Without the unknown file the same tree is UNCHANGED; with an unreadable one it must not be.
+  await withTempMirrors(async base => {
+    await writeMirror(path.join(base, 'data', 'scmdb'), makeMirror())
+    await writeFile(path.join(base, 'data', 'scmdb', 'notes.txt'), 'x')
+    gitIn(base, ['init', '-q'])
+    gitIn(base, ['add', '-A'])
+    gitIn(base, ['commit', '-q', '-m', 'mirror'])
+    const blob = blobPath(base, 'notes.txt')
+    await rm(blob, { force: true })
+    const loaded = loadGitRef('HEAD', { cwd: base })
+    assert.deepEqual(loaded.unreadable, [{ name: 'notes.txt', reason: 'OBJECT_UNAVAILABLE' }])
+    assert.equal(Object.keys(loaded.files).some(key => key.includes('notes')), false, 'the unreadable entry is not in the role map')
+    const output = precheckLoaded(loaded, loaded)
+    assert.equal(output.result, 'HELD_FOR_REVIEW')
+    assert.deepEqual(unreadableFindings(output).map(finding => [finding.side, finding.file]), [['baseline', 'notes.txt'], ['candidate', 'notes.txt']])
+    for (const channel of Object.values(output.channels)) assert.ok(channel.domains.every(entry => entry.result === 'HELD_FOR_REVIEW' && entry.comparison_key === null))
+  })
+})
+
+test('git ref: unreadable blob of a listed role or of a static role holds', async () => {
+  for (const name of ['merged-4.10.2-live.1000.json', 'mining_data-4.10.3-ptu.2000.json', 'workflow-state.json', 'latest.json']) {
+    await withTempMirrors(async base => {
+      await writeMirror(path.join(base, 'data', 'scmdb'), makeMirror())
+      gitIn(base, ['init', '-q'])
+      gitIn(base, ['add', '-A'])
+      gitIn(base, ['commit', '-q', '-m', 'mirror'])
+      await rm(blobPath(base, name), { force: true })
+      const loaded = loadGitRef('HEAD', { cwd: base })
+      assert.ok(loaded.unreadable.some(item => item.name === name), name)
+      const output = precheckLoaded(loaded, loaded)
+      assert.equal(output.result, 'HELD_FOR_REVIEW', name)
+      assert.ok(unreadableFindings(output).some(finding => finding.file === name), name)
+      for (const channel of Object.values(output.channels)) assert.ok(channel.domains.every(entry => entry.result === 'HELD_FOR_REVIEW'), name)
+    })
+  }
+})
+
+test('git ref: symlinks and submodules in the tree are held, not skipped', async () => {
+  await withTempMirrors(async base => {
+    await writeMirror(path.join(base, 'data', 'scmdb'), makeMirror())
+    gitIn(base, ['init', '-q'])
+    gitIn(base, ['add', '-A'])
+    const link = gitIn(base, ['hash-object', '-w', '--stdin'], 'latest.json')
+    gitIn(base, ['update-index', '--add', '--cacheinfo', `120000,${link},data/scmdb/linked.json`])
+    gitIn(base, ['update-index', '--add', '--cacheinfo', `160000,${'c'.repeat(40)},data/scmdb/submodule`])
+    gitIn(base, ['commit', '-q', '-m', 'mirror'])
+    const loaded = loadGitRef('HEAD', { cwd: base })
+    assert.deepEqual(loaded.unreadable.map(item => [item.name, item.reason]).sort(), [['linked.json', 'SYMLINK'], ['submodule', 'SUBMODULE']])
+    assert.equal(precheckLoaded(loaded, loaded).result, 'HELD_FOR_REVIEW')
+  })
+})
+
+test('git ref: readable cases are unchanged (regression)', async () => {
+  await withTempMirrors(async base => {
+    await writeMirror(path.join(base, 'data', 'scmdb'), makeMirror())
+    gitIn(base, ['init', '-q'])
+    gitIn(base, ['add', '-A'])
+    gitIn(base, ['commit', '-q', '-m', 'mirror'])
+    const loaded = loadGitRef('HEAD', { cwd: base })
+    assert.deepEqual(loaded.unreadable, [])
+    assert.equal(Object.keys(loaded.files).length, 24)
+    assert.equal(precheckLoaded(loaded, loaded).result, 'UNCHANGED')
+  })
+  // Readable unknown file and absent file keep their existing codes.
+  const docs = makeMirror()
+  const files = toFiles(docs)
+  const unknown = runDomainPrecheck({ baseline: side(docs), candidate: { ...candidateOf(docs), files: { ...files, 'unregistered/x.json': '{}' }, unreadable: [] } })
+  assert.ok(unknown.findings.some(finding => finding.code === 'UNREGISTERED_FILE'))
+  assert.ok(!unknown.findings.some(finding => finding.code === 'UNREADABLE_FILE'))
+  const { 'live/merged': removed, ...rest } = files
+  void removed
+  const missing = runDomainPrecheck({ baseline: side(docs), candidate: { ...candidateOf(docs), files: rest } })
+  assert.ok(missing.findings.some(finding => finding.code === 'MISSING_FILE'))
+  assert.ok(!missing.findings.some(finding => finding.code === 'UNREADABLE_FILE'))
+})
+
+test('buildRoleMap: entries with null bytes are reported for every kind of name', () => {
+  const docs = makeMirror()
+  const entries = [
+    { name: 'latest.json', bytes: Buffer.from(JSON.stringify(docs.static.latest)) },
+    { name: 'merged-4.10.2-live.1000.json', bytes: null },
+    { name: 'workflow-state.json', bytes: null, reason: 'READ_FAILED' },
+    { name: 'never-heard-of-it.bin', bytes: null },
+  ]
+  const map = buildRoleMap(entries)
+  assert.deepEqual(map.unreadable, [
+    { name: 'merged-4.10.2-live.1000.json', reason: 'UNREADABLE' },
+    { name: 'workflow-state.json', reason: 'READ_FAILED' },
+    { name: 'never-heard-of-it.bin', reason: 'UNREADABLE' },
+  ])
+  assert.deepEqual(Object.keys(map.files), ['latest'])
+})
+
+test('precheck: a malformed unreadable list is itself a hold', () => {
+  const docs = makeMirror()
+  const output = runDomainPrecheck({ baseline: side(docs), candidate: { ...candidateOf(docs), unreadable: 'x' } })
+  assert.equal(output.result, 'HELD_FOR_REVIEW')
+  assert.ok(output.findings.some(finding => finding.code === 'UNREADABLE_FILE'))
+})
+
+test('directory: a symlink or a file that cannot be read is held, and a subdirectory stays unregistered', { skip: process.platform === 'win32' && 'symlinks need privileges on Windows' }, async () => {
+  await withTempMirrors(async base => {
+    const dir = path.join(base, 'm')
+    await writeMirror(dir, makeMirror())
+    await (await import('node:fs/promises')).symlink('latest.json', path.join(dir, 'alias.json'))
+    await (await import('node:fs/promises')).mkdir(path.join(dir, 'sub'))
+    const loaded = await loadDirectory(dir)
+    assert.deepEqual(loaded.unreadable, [{ name: 'alias.json', reason: 'NOT_A_REGULAR_FILE' }])
+    assert.ok(Object.hasOwn(loaded.files, 'unregistered/sub/'))
+    const output = precheckLoaded(loaded, loaded)
+    assert.equal(output.result, 'HELD_FOR_REVIEW')
+    assert.ok(unreadableFindings(output).some(finding => finding.file === 'alias.json'))
+
+    // A real read failure (permission) holds too; skipped when the process may read anything.
+    if (process.getuid?.() !== 0) {
+      const dir2 = path.join(base, 'm2')
+      await writeMirror(dir2, makeMirror())
+      await (await import('node:fs/promises')).chmod(path.join(dir2, 'mema-cache.json'), 0o000)
+      const denied = await loadDirectory(dir2)
+      assert.deepEqual(denied.unreadable, [{ name: 'mema-cache.json', reason: 'READ_FAILED' }])
+      assert.equal(precheckLoaded(denied, denied).result, 'HELD_FOR_REVIEW')
+    }
+  })
+})
+
+test('CLI: an unreadable entry yields a HELD result, not UNCHANGED and not a crash', { skip: process.platform === 'win32' && 'symlinks need privileges on Windows' }, async () => {
+  await withTempMirrors(async base => {
+    const dir = path.join(base, 'm')
+    await writeMirror(dir, makeMirror())
+    await (await import('node:fs/promises')).symlink('latest.json', path.join(dir, 'alias.json'))
+    const io = capture()
+    assert.equal(await runCli(['--baseline-dir', dir, '--candidate-dir', dir, '--candidate-source-sha', SHA], io), 0, io.chunks.err)
+    const output = JSON.parse(io.chunks.out)
+    assert.equal(output.result, 'HELD_FOR_REVIEW')
+    assert.ok(output.findings.some(finding => finding.code === 'UNREADABLE_FILE' && finding.file === 'alias.json'))
+  })
+})
