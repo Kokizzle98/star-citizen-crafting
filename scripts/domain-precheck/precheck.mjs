@@ -20,6 +20,9 @@ export const RESULT = Object.freeze({
 })
 
 const GLOBAL = 'GLOBAL'
+const HASH_PATTERN = /^[0-9a-f]{64}$/
+const ABSENT = '(absent)'
+const DISPLAY_LIMIT = 240
 const VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)-(live|ptu)\.(\d+)$/
 const FILE_NAME_PATTERN = /^.+-(\d+\.\d+\.\d+)-(live|ptu)\.(\d+)\.json$/
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{40}$/
@@ -27,6 +30,25 @@ const DECODER = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
 
 const plainObject = value => typeof value === 'object' && value !== null && !Array.isArray(value)
 const has = (object, key) => Object.prototype.hasOwnProperty.call(object, key)
+
+/**
+ * Finding codes that record a decision instead of a problem. They never hold a domain (here) and are the only
+ * codes the sync decision lets through (scripts/scmdb-sync/decide.mjs). Exactly one code: the reviewed
+ * acknowledgement of a site-settings change (section 36.2, owner decision 19).
+ */
+export const INFORMATIONAL_FINDING_CODES = Object.freeze(['SITE_SETTINGS_CHANGE_ACCEPTED'])
+const INFORMATIONAL = new Set(INFORMATIONAL_FINDING_CODES)
+
+/** True for a well-formed change hash: 64 lowercase hex characters. */
+export const isChangeHash = value => typeof value === 'string' && HASH_PATTERN.test(value)
+
+/**
+ * The change hash of a site-settings change: SHA-256 (hex) over the canonical serialization (section 37.2) of the
+ * array of `{key, before, after}`, sorted by key. `before` / `after` are the values of the key on the baseline /
+ * candidate side; a property that is missing on a side is omitted (an absent key is not the same as `null`).
+ * Non-trigger keys never take part. The array is built by `changesOf` in checkSiteSettings.
+ */
+export const siteSettingsChangeHash = changes => sha256Hex(canonicalize(changes))
 
 /** Key of a per-channel role in a file map, for example `live/crafting_blueprints`. */
 export const channelRoleKey = (channel, role) => `${channel.toLowerCase()}/${role}`
@@ -216,7 +238,13 @@ function fingerprintOf(canonicalInput, label) {
 
 // --- site-settings guard (owner decision 19) ---------------------------------
 
-function checkSiteSettings(base, cand, register, add) {
+const display = (doc, key) => {
+  if (!has(doc, key)) return ABSENT
+  const text = canonicalize(doc[key])
+  return text.length > DISPLAY_LIMIT ? `${text.slice(0, DISPLAY_LIMIT)}...[truncated, ${text.length} characters]` : text
+}
+
+function checkSiteSettings(base, cand, register, add, accept) {
   const spec = register.static_roles.site_settings
   const docs = []
   for (const side of [base, cand]) {
@@ -235,17 +263,32 @@ function checkSiteSettings(base, cand, register, add) {
   const ignored = new Set(spec.non_trigger_keys)
   const keys = new Set([...Object.keys(before), ...Object.keys(after)])
   const changed = []
+  const changes = []
+  const shown = []
   try {
     for (const key of [...keys].sort()) {
       if (ignored.has(key)) continue
-      if (!has(before, key) || !has(after, key) || canonicalize(before[key]) !== canonicalize(after[key])) changed.push(key)
+      if (!has(before, key) || !has(after, key) || canonicalize(before[key]) !== canonicalize(after[key])) {
+        changed.push(key)
+        changes.push({ key, ...(has(before, key) ? { before: before[key] } : {}), ...(has(after, key) ? { after: after[key] } : {}) })
+        shown.push({ key, before: display(before, key), after: display(after, key) })
+      }
     }
   } catch (error) {
     if (!(error instanceof FingerprintError)) throw error
     add(GLOBAL, 'FINGERPRINT_NOT_COMPUTABLE', { role: 'site_settings', error: error.message })
     return
   }
-  if (changed.length > 0) add(GLOBAL, 'SITE_SETTINGS_CHANGED', { keys: changed })
+  const changeHash = changes.length > 0 ? siteSettingsChangeHash(changes) : null
+  if (accept !== undefined && accept !== null && accept !== '') {
+    // Hash binding: valid only for exactly this change. Anything else keeps the hold and says what was expected.
+    if (changeHash !== null && accept === changeHash) {
+      add(GLOBAL, 'SITE_SETTINGS_CHANGE_ACCEPTED', { keys: changed, change_hash: changeHash })
+      return
+    }
+    add(GLOBAL, 'SITE_SETTINGS_ACK_MISMATCH', { expected: changeHash, provided: typeof accept === 'string' ? accept : null })
+  }
+  if (changed.length > 0) add(GLOBAL, 'SITE_SETTINGS_CHANGED', { keys: changed, changes: shown, change_hash: changeHash })
 }
 
 // --- main -------------------------------------------------------------------
@@ -259,7 +302,7 @@ function checkSiteSettings(base, cand, register, add) {
  *   Files are keyed by logical role: static roles by name (`latest`, `site_settings`, ...), per-channel roles as
  *   `live/crafting_blueprints`. `fileNames` (role -> relative file name) only labels the recorded hash map.
  */
-export function runDomainPrecheck({ register = DOMAIN_REGISTER, baseline, candidate }) {
+export function runDomainPrecheck({ register = DOMAIN_REGISTER, baseline, candidate, acceptSiteSettingsChange }) {
   const findings = []
   const add = (scope, code, detail = {}, domain = null) => {
     findings.push({ scope, code, ...(domain ? { domain } : {}), ...detail })
@@ -325,7 +368,7 @@ export function runDomainPrecheck({ register = DOMAIN_REGISTER, baseline, candid
 
   const baseLatest = readLatest(base, register, add)
   const candLatest = readLatest(cand, register, add)
-  checkSiteSettings(base, cand, register, add)
+  checkSiteSettings(base, cand, register, add, acceptSiteSettingsChange)
 
   // Channels: compared when present on at least one side.
   const channelResults = {}
@@ -352,7 +395,7 @@ export function runDomainPrecheck({ register = DOMAIN_REGISTER, baseline, candid
   }
 
   const scopeFindings = (channel, domainId) => findings.filter(
-    finding => finding.scope === GLOBAL || finding.scope === channel || finding.scope === `${channel}/${domainId}`,
+    finding => !INFORMATIONAL.has(finding.code) && (finding.scope === GLOBAL || finding.scope === channel || finding.scope === `${channel}/${domainId}`),
   )
 
   for (const [channel, { before, after }] of channelStates) {
@@ -469,6 +512,9 @@ export function runDomainPrecheck({ register = DOMAIN_REGISTER, baseline, candid
         raw_file_hashes: sourceExportRevision.raw_file_hashes,
       })),
     findings,
+    acknowledgements: findings
+      .filter(finding => finding.code === 'SITE_SETTINGS_CHANGE_ACCEPTED')
+      .map(({ code, keys, change_hash }) => ({ code, change_hash, keys })),
     channels: channelResults,
   }
 }
