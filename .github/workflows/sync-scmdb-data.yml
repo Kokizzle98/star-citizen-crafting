@@ -18,6 +18,11 @@ on:
         description: "Force a dry run, whatever SCMDB_SYNC_MODE says (nothing is pushed, no pull request)"
         type: boolean
         default: true
+      accept_site_settings_change:
+        description: "Reviewed acknowledgement of a site-settings change: the change_hash (64 hex) from the job summary of a held run. Leave empty normally. Valid for exactly that change and this one run."
+        type: string
+        required: false
+        default: ""
 
   schedule:
     # Once a day
@@ -59,6 +64,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
+
+      - name: Freigabe-Eingabe prüfen
+        shell: bash
+        env:
+          ACCEPT_SITE_SETTINGS_CHANGE: ${{ github.event_name == 'workflow_dispatch' && inputs.accept_site_settings_change || '' }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$ACCEPT_SITE_SETTINGS_CHANGE" ] && ! [[ "$ACCEPT_SITE_SETTINGS_CHANGE" =~ ^[0-9a-f]{64}$ ]]; then
+            echo "accept_site_settings_change must be exactly 64 lowercase hex characters (the change_hash from the job summary)." >&2
+            exit 1
+          fi
+
 
       # ------------------------------------------------------------
       # 2. Tools and mode
@@ -573,10 +591,23 @@ jobs:
 
       - name: Domain-Precheck ausführen
         shell: bash
+        env:
+          # Reviewed acknowledgement (DATASET_PIPELINE_V1.md 36.2): only a manual run can carry one; the schedule
+          # never does. The value is read from the environment, never interpolated into the shell text.
+          ACCEPT_SITE_SETTINGS_CHANGE: ${{ github.event_name == 'workflow_dispatch' && inputs.accept_site_settings_change || '' }}
         run: |
           set -euo pipefail
 
           OBSERVED_AT="$(date -u +%Y-%m-%dT%H:%M:%S.000Z)"
+
+          ACK_ARGS=()
+          if [ -n "$ACCEPT_SITE_SETTINGS_CHANGE" ]; then
+            if ! [[ "$ACCEPT_SITE_SETTINGS_CHANGE" =~ ^[0-9a-f]{64}$ ]]; then
+              echo "accept_site_settings_change must be exactly 64 lowercase hex characters (the change_hash from the job summary)." >&2
+              exit 1
+            fi
+            ACK_ARGS=(--accept-site-settings-change "$ACCEPT_SITE_SETTINGS_CHANGE")
+          fi
 
           node "$TOOLS/domain-precheck.mjs" \
             --baseline-ref "origin/$BASE_BRANCH" \
@@ -584,6 +615,7 @@ jobs:
             --candidate-source-sha "$SOURCE_SHA" \
             --source-retrieved-at "$SOURCE_RETRIEVED_AT" \
             --observed-at "$OBSERVED_AT" \
+            "${ACK_ARGS[@]}" \
             --emit json \
             > "$SYNC_DIR/precheck.json"
 

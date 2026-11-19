@@ -291,3 +291,51 @@ test('no other workflow runs on a push to the sync branch', () => {
     }
   }
 })
+
+// --- reviewed acknowledgement of a site-settings change (DATASET_PIPELINE_V1.md 36.2) ---------
+
+test('acknowledgement input: a string input of the manual run only, empty by default, nothing for the schedule', () => {
+  const triggers = topLevelBlock(code, 'on').join('\n')
+  const dispatch = triggers.slice(triggers.indexOf('workflow_dispatch:'), triggers.indexOf('schedule:'))
+  assert.match(dispatch, /accept_site_settings_change:/)
+  const input = dispatch.slice(dispatch.indexOf('accept_site_settings_change:'))
+  assert.match(input, /type: string/)
+  assert.match(input, /default: ""/)
+  assert.match(input, /required: false/)
+  const schedule = triggers.slice(triggers.indexOf('schedule:'))
+  assert.doesNotMatch(schedule, /accept_site_settings_change|inputs/)
+  // Every use of the input is restricted to the manual run, so the schedule passes an empty value.
+  const uses = [...code.matchAll(/^.*inputs\.accept_site_settings_change.*$/gm)].map(match => match[0].trim())
+  assert.equal(uses.length, 2)
+  for (const line of uses) assert.match(line, /^ACCEPT_SITE_SETTINGS_CHANGE: \$\{\{ github\.event_name == 'workflow_dispatch' && inputs\.accept_site_settings_change \|\| '' \}\}$/)
+})
+
+test('acknowledgement input: reaches the precheck through the environment only, never interpolated into the shell', () => {
+  for (const name of ['Freigabe-Eingabe prüfen', 'Domain-Precheck ausführen']) {
+    const entry = step(name)
+    const run = entry.text.slice(entry.text.indexOf('run: |'))
+    assert.doesNotMatch(run, /\$\{\{/, `${name}: no expression inside the shell text`)
+    assert.match(entry.text, /env:\n(?:.*\n)*? {10}ACCEPT_SITE_SETTINGS_CHANGE: \$\{\{/)
+  }
+  assert.equal([...code.matchAll(/inputs\.accept_site_settings_change/g)].length, 2, 'the input is read nowhere else')
+  assert.equal(code.split('\n').filter(line => /^ {10}ACCEPT_SITE_SETTINGS_CHANGE: /.test(line)).length, 2)
+})
+
+test('acknowledgement input: format check (64 lowercase hex) before use; a bad value aborts; the hash is handed over as one argument', () => {
+  const early = step('Freigabe-Eingabe prüfen')
+  assert.match(early.text, /\[\[ "\$ACCEPT_SITE_SETTINGS_CHANGE" =~ \^\[0-9a-f\]\{64\}\$ \]\]/)
+  assert.match(early.text, /exit 1/)
+  assert.ok(indexOfStep('Freigabe-Eingabe prüfen') < indexOfStep('Werkzeuge sichern und Betriebsart bestimmen'), 'checked before anything runs')
+  const precheck = step('Domain-Precheck ausführen')
+  assert.match(precheck.text, /\[\[ "\$ACCEPT_SITE_SETTINGS_CHANGE" =~ \^\[0-9a-f\]\{64\}\$ \]\]/)
+  assert.match(precheck.text, /ACK_ARGS=\(--accept-site-settings-change "\$ACCEPT_SITE_SETTINGS_CHANGE"\)/)
+  assert.match(precheck.joined, /"\$\{ACK_ARGS\[@\]\}" --emit json/)
+  assert.ok(precheck.text.indexOf('exit 1') < precheck.text.indexOf('node "$TOOLS/domain-precheck.mjs"'), 'format check before the precheck call')
+})
+
+test('acknowledgement: no new permission, no secret, dry-run stays the default, no auto-merge', () => {
+  assert.deepEqual(topLevelBlock(code, 'permissions').map(line => line.trim()), ['contents: write', 'pull-requests: write'])
+  assert.doesNotMatch(code, /secrets\.(?!GITHUB_TOKEN)/)
+  assert.match(code, /force_dry_run:\n(?:.*\n)*? {8}default: true/)
+  assert.doesNotMatch(code, /gh pr merge|--auto|auto-merge:\s*true/)
+})

@@ -21,6 +21,7 @@ const HELP = `Usage:
                                    [--candidate-source-sha <40-hex>] [--source-retrieved-at <iso>]
                                    [--versions-file <json>] [--observed-at <iso>]
                                    [--domain-revision-ids <json>] [--emit json|jsonl]
+                                   [--accept-site-settings-change <64-hex change_hash>]
 
 Compares two states of data/scmdb/ per channel and domain: UNCHANGED, CHANGED or
 HELD_FOR_REVIEW. Reads only. Writes nothing, uses no network and no database.
@@ -37,6 +38,12 @@ HELD_FOR_REVIEW. Reads only. Writes nothing, uses no network and no database.
   --observed-at  timestamp for the observation entries (default: now)
   --domain-revision-ids
                  JSON {"LIVE/BLUEPRINT_CATALOG": "<domain_revision_id>", ...}
+  --accept-site-settings-change
+                 change_hash (64 lowercase hex) of a reviewed site-settings change, taken from the
+                 SITE_SETTINGS_CHANGED finding of an earlier held run. Valid only for exactly that change
+                 and only for this run: a matching hash turns SITE_SETTINGS_CHANGED into the informational
+                 SITE_SETTINGS_CHANGE_ACCEPTED, any other value keeps the hold and adds
+                 SITE_SETTINGS_ACK_MISMATCH. Empty or absent: the hold stays (section 36.2).
   --emit         json (default): result plus observation. jsonl: only the observation lines to append.
 
 Exit codes: 0 the precheck ran (read the result), 2 usage or read error.
@@ -46,7 +53,7 @@ function parseArgs(argv) {
   const options = {}
   const known = new Set([
     'baseline-dir', 'baseline-ref', 'candidate-dir', 'candidate-ref', 'candidate-source-sha',
-    'source-retrieved-at', 'versions-file', 'observed-at', 'domain-revision-ids', 'emit',
+    'source-retrieved-at', 'versions-file', 'observed-at', 'domain-revision-ids', 'emit', 'accept-site-settings-change',
   ])
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]
@@ -115,6 +122,7 @@ export async function run(argv, { stdout = process.stdout, stderr = process.stde
           retrievedAt: options['source-retrieved-at'],
         },
       },
+      acceptSiteSettingsChange: options['accept-site-settings-change'] === '' ? undefined : options['accept-site-settings-change'],
     })
     const domainRevisionIds = options['domain-revision-ids'] ? await readJsonFile(options['domain-revision-ids']) : {}
     const observation = buildObservation(result, {

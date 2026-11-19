@@ -1,7 +1,7 @@
 # VECTOR Dataset Pipeline v1
 
 **Status:** PROPOSED\
-**Version:** 1.2 (revision 4, 2026-11-19: owner approval of the observation record path recorded in §31 and §38.3, status unchanged. Revision 3, 2026-11-19: §31 and §42 items 2 and 5 updated for `MIRROR-WORKFLOW-V2`, status unchanged; revision base `161697b`. Revision 2, 2026-11-19: owner decisions 19 to 22 recorded in §43 and followed up in §35.3, §36.2, §38.3 and §40.1, status unchanged; revision base `80dc6e0`. Revision 1, 2026-11-18: DB governance reference moved to v1.2 by GOV-2, no content change; revision base `9bf3c7f`)\
+**Version:** 1.2 (revision 5, 2026-11-19: reviewed acknowledgement of a `site-settings.json` hold added to §36.2 and §37.4 for `mirror-review-ack`, status unchanged; revision base `9f49c5d`. Revision 4, 2026-11-19: owner approval of the observation record path recorded in §31 and §38.3, status unchanged. Revision 3, 2026-11-19: §31 and §42 items 2 and 5 updated for `MIRROR-WORKFLOW-V2`, status unchanged; revision base `161697b`. Revision 2, 2026-11-19: owner decisions 19 to 22 recorded in §43 and followed up in §35.3, §36.2, §38.3 and §40.1, status unchanged; revision base `80dc6e0`. Revision 1, 2026-11-18: DB governance reference moved to v1.2 by GOV-2, no content change; revision base `9bf3c7f`)\
 **Base commit:** `8f504ef` (`develop`, merge of PR #93)\
 **Authority Scope:** DATASET_PIPELINE\
 **Approved By:** pending project_owner approval\
@@ -1142,6 +1142,8 @@ Classes and recommendations come from `docs/proposed/SCMDB_SOURCE_INVENTORY.md` 
 | `site-settings.json` | mixed, `REVIEW` | Retained; refresh timestamps never a trigger; a change of any other key, including `scenario_overrides`, is `HELD_FOR_REVIEW` (owner decision 19) |
 | `workflow-state.json` | `TECHNICAL_ARTIFACT` | Retained (owner decision 19); never a trigger |
 
+**Reviewed acknowledgement (the only way to resolve a `site-settings.json` hold).** The `SITE_SETTINGS_CHANGED` finding lists the changed keys with their before and after values (canonical JSON, shortened for display) and a `change_hash`: SHA-256 over the canonical serialization (§37.2) of the array of `{key, before, after}` for every changed key, sorted by key; a side on which a key is absent omits the property, and the non-trigger keys never take part. After the owner has reviewed the change, a manual run of the sync workflow with `accept_site_settings_change = <change_hash>` replaces that finding by the informational `SITE_SETTINGS_CHANGE_ACCEPTED`, which does not hold. The hash is bound to exactly that change: any other hash, or a hash while no site-settings change exists, keeps the hold and adds `SITE_SETTINGS_ACK_MISMATCH`. The acknowledgement applies to that one run only. It is not stored, so the next run holds again if the change is still pending on the baseline. It is never passed by the schedule, needs no new permission and no secret, and releases no other hold. It is recorded in the job summary, in the observation lines (`acknowledgements`) and in the text of the pull request. The change itself reaches `develop` only through the mirror pull request of a PUBLISH run; a run that ends in OBSERVE mirrors nothing, so the hold would return on the next run. Owner decision 19 is unchanged: the hold remains the default.
+
 ### 36.3 Non-trigger files
 
 The following are retained, hashed and recorded in the Source Export Revision. A change in them alone is never a change trigger. It never creates a new dataset revision and never starts the domain pipeline:
@@ -1218,7 +1220,7 @@ A precheck that cannot prove `UNCHANGED` never reports `UNCHANGED`. The result i
 - a file named in `latest.json` or a consumer has no register entry;
 - a register entry names a section that is absent;
 - a fingerprint cannot be computed;
-- `site-settings.json` changed outside its non-trigger keys (§36.2).
+- `site-settings.json` changed outside its non-trigger keys (§36.2), unless exactly that change was acknowledged by a matching `change_hash` for this run (§36.2, reviewed acknowledgement).
 
 `HELD_FOR_REVIEW` creates no candidate, no dataset revision and no database write. It is reported for review.
 

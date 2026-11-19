@@ -289,8 +289,9 @@ test('observation entries carry the fields of section 39 and serialize append-on
   assert.equal(observation.entries.length, 10)
   const entry = observation.entries.find(item => item.channel === 'LIVE' && item.domain === 'LOCATIONS')
   assert.deepEqual(Object.keys(entry).sort(), [
-    'build', 'channel', 'comparison_key', 'domain', 'domain_revision_id', 'observed_at', 'reason_codes', 'record_type', 'result', 'schema', 'source_export_revision',
+    'acknowledgements', 'build', 'channel', 'comparison_key', 'domain', 'domain_revision_id', 'observed_at', 'reason_codes', 'record_type', 'result', 'schema', 'source_export_revision',
   ])
+  assert.deepEqual(entry.acknowledgements, [])
   assert.equal(entry.domain_revision_id, 'rev-1')
   assert.equal(entry.result, 'UNCHANGED')
   assert.equal(entry.build, '4.10.2-live.1000')

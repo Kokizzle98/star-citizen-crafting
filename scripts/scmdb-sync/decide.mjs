@@ -16,7 +16,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { serializeObservation } from '../domain-precheck/observation.mjs'
-import { RESULT, aggregate } from '../domain-precheck/precheck.mjs'
+import { INFORMATIONAL_FINDING_CODES, RESULT, aggregate, isChangeHash } from '../domain-precheck/precheck.mjs'
 import { DOMAIN_REGISTER } from '../domain-precheck/register.mjs'
 
 export const SYNC_BRANCH = 'automation/scmdb-sync'
@@ -34,6 +34,7 @@ export const MODE = Object.freeze({ DRY_RUN: 'dry-run', PUBLISH: 'publish' })
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{40}$/
 const BUILD_PATTERN = /^(\d+)\.(\d+)\.(\d+)-(live|ptu)\.(\d+)$/
 const RESULTS = new Set(Object.values(RESULT))
+const ACCEPTED_CODE = 'SITE_SETTINGS_CHANGE_ACCEPTED'
 const isObject = value => typeof value === 'object' && value !== null && !Array.isArray(value)
 
 /** Semantic version and CIG build of a build string such as `4.10.2-live.12913470`; null when it does not parse. */
@@ -58,6 +59,19 @@ export function resolveMode({ variable, forceDryRun } = {}) {
 }
 
 // --- decision -----------------------------------------------------------------------------------
+
+/**
+ * A well-formed reviewed acknowledgement finding. Only this exact code, once, with a well-formed hash and keys,
+ * is allowed to pass; everything else (including a malformed or duplicated ACCEPTED finding) holds.
+ */
+const isAcceptance = finding => isObject(finding) && finding.code === ACCEPTED_CODE && finding.scope === 'GLOBAL'
+  && isChangeHash(finding.change_hash) && Array.isArray(finding.keys) && finding.keys.length > 0 && finding.keys.every(key => typeof key === 'string')
+
+/** The acknowledgements of a precheck result: `[{change_hash, keys}]` from valid acceptance findings. */
+export function acknowledgementsOf(precheck) {
+  if (!Array.isArray(precheck?.findings)) return []
+  return precheck.findings.filter(isAcceptance).map(finding => ({ change_hash: finding.change_hash, keys: [...finding.keys] }))
+}
 
 /**
  * @param {object} precheck Output of scripts/domain-precheck.mjs (--emit json).
@@ -156,21 +170,28 @@ export function decide(precheck) {
   }
   const sha = precheck.source_export_revision?.upstream_commit_sha
   if (typeof sha !== 'string' || !COMMIT_SHA_PATTERN.test(sha)) reasons.push({ code: 'SOURCE_SHA_MISSING' })
-  if (Array.isArray(precheck.findings) && precheck.findings.length > 0) {
-    reasons.push({ code: 'PRECHECK_FINDINGS', count: precheck.findings.length, finding_codes: [...new Set(precheck.findings.map(finding => finding?.code ?? null))].sort() })
+  if (Array.isArray(precheck.findings)) {
+    // The one informational code (a valid, single acceptance) does not hold; every other finding does.
+    const accepted = precheck.findings.filter(isAcceptance)
+    const allowedOnce = INFORMATIONAL_FINDING_CODES.includes(ACCEPTED_CODE) && accepted.length === 1 ? accepted[0] : null
+    const holding = precheck.findings.filter(finding => finding !== allowedOnce)
+    if (holding.length > 0) {
+      reasons.push({ code: 'PRECHECK_FINDINGS', count: holding.length, finding_codes: [...new Set(holding.map(finding => finding?.code ?? null))].sort() })
+    }
   } else if (!Array.isArray(precheck.findings)) {
     reasons.push({ code: 'FINDINGS_MISSING' })
   }
 
-  if (reasons.length > 0) return finish(OUTCOME.HELD, reasons, domains, changedChannels)
-  if (domains.some(entry => entry.result === RESULT.CHANGED)) return finish(OUTCOME.PUBLISH, [], domains, changedChannels)
-  return finish(OUTCOME.OBSERVE, [], domains, changedChannels)
+  const acknowledgements = acknowledgementsOf(precheck)
+  if (reasons.length > 0) return finish(OUTCOME.HELD, reasons, domains, changedChannels, acknowledgements)
+  if (domains.some(entry => entry.result === RESULT.CHANGED)) return finish(OUTCOME.PUBLISH, [], domains, changedChannels, acknowledgements)
+  return finish(OUTCOME.OBSERVE, [], domains, changedChannels, acknowledgements)
 }
 
-function finish(outcome, reasons, domains, changedChannels) {
+function finish(outcome, reasons, domains, changedChannels, acknowledgements = []) {
   const counts = { UNCHANGED: 0, CHANGED: 0, HELD_FOR_REVIEW: 0 }
   for (const entry of domains) counts[entry.result] += 1
-  return { outcome, reasons, changed_channels: outcome === OUTCOME.PUBLISH ? changedChannels : [], domains, counts }
+  return { outcome, reasons, changed_channels: outcome === OUTCOME.PUBLISH ? changedChannels : [], domains, counts, acknowledgements }
 }
 
 // --- observation record -------------------------------------------------------------------------
@@ -283,6 +304,17 @@ function identityTable(channels, sha) {
   return rows
 }
 
+/** PR text lines of an acknowledged site-settings change; empty when there is none. */
+function acknowledgementLines(decision) {
+  if (!decision.acknowledgements?.length) return []
+  return [
+    '### Acknowledged site settings change',
+    '',
+    ...decision.acknowledgements.map(ack => `- site settings change acknowledged by owner, hash \`${ack.change_hash}\` (keys: ${ack.keys.map(key => `\`${cell(key)}\``).join(', ')})`),
+    '',
+  ]
+}
+
 /** Pull request text (English, neutral). Section 35.1 rules 1, 2 and 5. */
 export function buildPrBody(decision, precheck, { runUrl = null, observationFile = OBSERVATION_FILE } = {}) {
   if (decision.outcome !== OUTCOME.PUBLISH) throw new Error('PR_BODY_ONLY_FOR_PUBLISH')
@@ -311,6 +343,7 @@ export function buildPrBody(decision, precheck, { runUrl = null, observationFile
     `- \`${MIRROR_PATH}\`: the mirror change proposed above.`,
     `- \`${observationFile}\`: the append-only observation record. The entries collected on the sync branch since the last merge ride along.`,
     '',
+    ...acknowledgementLines(decision),
     '### Reviewer notes',
     '',
     '- Review and merge by hand. Prefer a merge commit over a squash so that the rolling sync branch fast-forwards to `develop` afterwards.',
@@ -379,6 +412,44 @@ export function buildOpenPrNote({ outcome, mode, prNumber }) {
   return ''
 }
 
+function acknowledgementSummary(decision) {
+  if (!decision.acknowledgements?.length) return []
+  return [
+    '## Acknowledged site settings change',
+    '',
+    ...decision.acknowledgements.map(ack => `- Site settings change acknowledged by owner, hash \`${ack.change_hash}\` (keys: ${ack.keys.map(key => `\`${cell(key)}\``).join(', ')}). Valid for this run only.`),
+    '',
+  ]
+}
+
+const shorten = (value, limit = 120) => {
+  const text = cell(value)
+  return text.length > limit ? `${text.slice(0, limit)}...` : text
+}
+
+/** Held because of site settings: what changed (shortened before/after), the change hash and how to release it. */
+function siteSettingsHoldSummary(precheck) {
+  if (!Array.isArray(precheck?.findings)) return []
+  const changed = precheck.findings.find(finding => isObject(finding) && finding.code === 'SITE_SETTINGS_CHANGED')
+  const mismatch = precheck.findings.find(finding => isObject(finding) && finding.code === 'SITE_SETTINGS_ACK_MISMATCH')
+  if (!changed && !mismatch) return []
+  const lines = ['## Site settings change (held)', '']
+  if (changed) {
+    lines.push('| Key | Before | After |', '| --- | --- | --- |')
+    const rows = Array.isArray(changed.changes) ? changed.changes : []
+    if (rows.length === 0) for (const key of Array.isArray(changed.keys) ? changed.keys : []) lines.push(`| \`${cell(key)}\` | n/a | n/a |`)
+    for (const row of rows) lines.push(`| \`${cell(row?.key)}\` | \`${shorten(row?.before)}\` | \`${shorten(row?.after)}\` |`)
+    lines.push('', `change_hash: \`${cell(changed.change_hash)}\``, '')
+    if (isChangeHash(changed.change_hash)) {
+      lines.push(`Review the change, then run the workflow manually with accept_site_settings_change = \`${changed.change_hash}\`. The hash is valid only for exactly this change and only for that one run; the schedule never accepts one.`, '')
+    }
+  }
+  if (mismatch) {
+    lines.push(`The provided acknowledgement did not match: expected \`${cell(mismatch.expected)}\`, provided \`${cell(mismatch.provided)}\`. The run stays held.`, '')
+  }
+  return lines
+}
+
 /**
  * Markdown for the job summary.
  * @param {object} context
@@ -403,6 +474,8 @@ export function buildSummary(decision, precheck, { mode, modeReason = null, obse
   if (decision.outcome === OUTCOME.PUBLISH) {
     lines.push('## Changed channels', '', ...identityTable(decision.changed_channels, revision.upstream_commit_sha), '')
   }
+  lines.push(...acknowledgementSummary(decision))
+  lines.push(...siteSettingsHoldSummary(precheck))
   if (decision.reasons.length > 0) {
     lines.push('## Why this run is held', '', ...decision.reasons.map(reason => `- \`${cell(reason.code)}\`${reason.channel ? ` ${cell(reason.channel)}` : ''}${reason.domain ? `/${cell(reason.domain)}` : ''}`), '')
   }

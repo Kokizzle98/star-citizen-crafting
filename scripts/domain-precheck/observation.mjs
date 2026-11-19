@@ -49,6 +49,8 @@ export function buildObservation(precheck, { observedAt, domainRevisionIds = {} 
         reason_codes: domain.reasons.map(reason => reason.code),
         build: channel.build,
         source_export_revision: reference,
+        // Reviewed acknowledgements that applied to this run (hash-bound, one run only); empty in the normal case.
+        acknowledgements: precheck.acknowledgements ?? [],
         observed_at: observedAt,
       })
     }
