@@ -793,6 +793,54 @@ jobs:
 
 
       # ------------------------------------------------------------
+      # 10b. Open pull request of the sync branch, when this run proposes no mirror change.
+      #      Reading is allowed in every mode and only reports in the job summary. A withdrawn
+      #      proposal (OBSERVE) updates title and text of the open pull request in publish mode
+      #      only. It is never closed and never merged. A held run leaves it as it is.
+      # ------------------------------------------------------------
+
+      - name: Offenen Sync-PR abfragen
+        id: openpr
+        if: steps.decide.outputs.outcome != 'PUBLISH'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MODE: ${{ steps.mode.outputs.mode }}
+          OUTCOME: ${{ steps.decide.outputs.outcome }}
+        run: |
+          set -euo pipefail
+
+          if ! PR="$(gh pr list --base "$BASE_BRANCH" --head "$SYNC_BRANCH" --state open --json number --jq '.[0].number // empty' 2> "$SYNC_DIR/prlist.err")"; then
+            cat "$SYNC_DIR/prlist.err"
+            echo "::warning::The lookup of open pull requests failed. No pull request is changed."
+            PR="unknown"
+          fi
+
+          echo "number=$PR" >> "$GITHUB_OUTPUT"
+
+          node "$TOOLS/scmdb-sync/decide.mjs" pr-note \
+            --outcome "$OUTCOME" \
+            --mode "$MODE" \
+            --pr "$PR" \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Zurückgenommenen Mirror-Vorschlag im PR vermerken
+        if: steps.mode.outputs.mode == 'publish' && steps.decide.outputs.outcome == 'OBSERVE' && steps.openpr.outputs.number != '' && steps.openpr.outputs.number != 'unknown'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ steps.openpr.outputs.number }}
+        run: |
+          set -euo pipefail
+
+          gh pr edit "$PR_NUMBER" \
+            --title "$(cat "$SYNC_DIR/out/pr-withdrawn-title.txt")" \
+            --body-file "$SYNC_DIR/out/pr-withdrawn-body.md"
+
+          echo "Updated title and text of #$PR_NUMBER (mirror proposal withdrawn). It stays open." | tee -a "$GITHUB_STEP_SUMMARY"
+
+
+      # ------------------------------------------------------------
       # 11. Report
       # ------------------------------------------------------------
 

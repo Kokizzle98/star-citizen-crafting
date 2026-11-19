@@ -7,8 +7,9 @@ import { run as runPrecheckCli } from '../scripts/domain-precheck.mjs'
 import { buildObservation } from '../scripts/domain-precheck/observation.mjs'
 import { runDomainPrecheck } from '../scripts/domain-precheck/precheck.mjs'
 import {
-  MODE, OBSERVATION_FILE, OUTCOME, SYNC_BRANCH, appendObservation, buildCommitMessage, buildPrBody, buildPrTitle,
-  buildObservationCommitMessage, buildSummary, decide, isAppendOnly, observationLines, resolveMode, run as runDecideCli,
+  MODE, OBSERVATION_FILE, OUTCOME, SYNC_BRANCH, appendObservation, buildCommitMessage, buildObservationCommitMessage,
+  buildOpenPrNote, buildPrBody, buildPrTitle, buildSummary, buildWithdrawalPr, decide, isAppendOnly, observationLines,
+  parseBuild, resolveMode, run as runDecideCli,
 } from '../scripts/scmdb-sync/decide.mjs'
 import { SHA, candidateOf, clone, makeMirror, rebuild, side } from './domain-precheck-fixture.mjs'
 
@@ -202,10 +203,8 @@ test('pull request text: identity per changed channel, result per domain, review
   const decision = decide(output)
   const body = buildPrBody(decision, output, { runUrl: 'https://github.com/example/repo/actions/runs/1' })
   const live = output.channels.LIVE
-  assert.ok(body.includes(`| LIVE | ${live.semantic_version} | ${live.cig_build} | ${live.build} | 4.10.2-live.1000 |`))
-  assert.ok(body.includes(`\`${SHA}\``), 'full upstream commit SHA')
+  assert.ok(body.includes(`| LIVE | domain change | 4.10.2 (unchanged) | 1000 -> 2000 | 4.10.2-live.1000 -> ${live.build} | \`${SHA}\` |`))
   assert.ok(body.includes('KrovaxCode/SCMDB_DATA'))
-  assert.ok(!body.includes('| PTU | 4.10.3 |'), 'the unchanged channel is not listed as changed')
   for (const channel of Object.values(output.channels)) {
     for (const entry of channel.domains) assert.ok(body.includes(`| ${channel.channel} | ${entry.domain} | ${entry.result} |`), `${channel.channel}/${entry.domain}`)
   }
@@ -215,6 +214,102 @@ test('pull request text: identity per changed channel, result per domain, review
   assert.ok(body.includes('actions/runs/1'))
   assert.doesNotMatch(body, /gh pr merge|--auto|automerge/i)
   assert.equal(body.includes(RETRIEVED_AT), true)
+})
+
+// --- which channels count as changed (section 35.1 rule 5) -----------------------------------------
+
+/** LIVE: content change plus new build. PTU: new build only, same content. */
+function liveChangedPtuBuildOnly() {
+  const before = makeMirror()
+  const after = rebuild(rebuild(before, 'live', 2000), 'ptu', 3000)
+  after.channels.live.crafting_blueprints.resources.reverse()
+  return precheckOutput(before, after)
+}
+
+test('a channel with a new build but only UNCHANGED domains is listed as a build-only update next to a CHANGED channel', () => {
+  const output = liveChangedPtuBuildOnly()
+  const decision = decide(output)
+  assert.equal(decision.outcome, OUTCOME.PUBLISH)
+  assert.deepEqual(decision.changed_channels.map(channel => [channel.channel, channel.kind]), [['LIVE', 'DOMAIN_CHANGE'], ['PTU', 'BUILD_ONLY']])
+  assert.ok(output.channels.PTU.domains.every(entry => entry.result === 'UNCHANGED'), 'PTU has no changed domain')
+  const body = buildPrBody(decision, output)
+  assert.ok(body.includes(`| LIVE | domain change | 4.10.2 (unchanged) | 1000 -> 2000 | 4.10.2-live.1000 -> 4.10.2-live.2000 | \`${SHA}\` |`))
+  assert.ok(body.includes(`| PTU | build-only update, no domain change | 4.10.3 (unchanged) | 2000 -> 3000 | 4.10.3-ptu.2000 -> 4.10.3-ptu.3000 | \`${SHA}\` |`))
+  for (const entry of output.channels.PTU.domains) assert.ok(body.includes(`| PTU | ${entry.domain} | UNCHANGED |`), `PTU/${entry.domain} result is stated`)
+  assert.match(buildPrTitle(decision), /\(LIVE 4\.10\.2-live\.2000, PTU 4\.10\.3-ptu\.3000\)$/)
+  assert.match(buildCommitMessage(decision, output).split('\n')[0], /\(LIVE 4\.10\.2-live\.2000, PTU 4\.10\.3-ptu\.3000\)$/)
+})
+
+test('a channel with an unchanged build and unchanged domains is never listed as changed', () => {
+  const output = liveChanged() // PTU untouched
+  const decision = decide(output)
+  assert.deepEqual(decision.changed_channels.map(channel => channel.channel), ['LIVE'])
+  const body = buildPrBody(decision, output)
+  const identityRows = body.split('\n').filter(line => /\| (domain change|build-only update)/.test(line))
+  assert.equal(identityRows.length, 1)
+  assert.ok(!identityRows.some(line => line.startsWith('| PTU |')))
+  assert.ok(!body.includes('4.10.3-ptu.2000 ->'), 'no baseline -> candidate arrow for the untouched channel')
+  assert.ok(!buildPrTitle(decision).includes('PTU'))
+  assert.ok(!buildCommitMessage(decision, output).split('\n')[0].includes('PTU'))
+})
+
+test('a new build without any CHANGED domain stays OBSERVE (38.1); the build-only channel only counts next to a change', () => {
+  const before = makeMirror()
+  const decision = decide(precheckOutput(before, rebuild(before, 'ptu', 3000)))
+  assert.equal(decision.outcome, OUTCOME.OBSERVE)
+  assert.deepEqual(decision.changed_channels, [])
+})
+
+test('versions read baseline -> candidate; a semantic version change shows both values; an unparsable baseline build shows n/a', () => {
+  const output = liveChanged()
+  output.channels.LIVE.semantic_version = '4.11.0'
+  output.channels.LIVE.baseline_build = '4.10.2-live.1000'
+  output.channels.LIVE.build = '4.11.0-live.2000'
+  const body = buildPrBody(decide(output), output)
+  assert.ok(body.includes('| LIVE | domain change | 4.10.2 -> 4.11.0 | 1000 -> 2000 | 4.10.2-live.1000 -> 4.11.0-live.2000 |'))
+  assert.deepEqual(parseBuild('4.10.2-live.12913470'), { semantic_version: '4.10.2', cig_build: '12913470' })
+  assert.equal(parseBuild('garbled'), null)
+  assert.equal(parseBuild(null), null)
+  const odd = liveChanged()
+  odd.channels.LIVE.baseline_build = 'garbled'
+  assert.deepEqual(decide(odd).changed_channels[0].baseline_semantic_version, null)
+  assert.ok(buildPrBody(decide(odd), odd).includes('| LIVE | domain change | n/a -> 4.10.2 |'))
+})
+
+// --- withdrawn proposal: open pull request after an OBSERVE run ----------------------------------
+
+test('withdrawal text: states that the mirror proposal is withdrawn, names build and SHA of the run, closes and merges nothing', () => {
+  const output = unchanged()
+  const { title, body } = buildWithdrawalPr(decide(output), output, { runUrl: 'https://github.com/example/repo/actions/runs/7' })
+  assert.equal(title, 'chore(scmdb-sync): mirror proposal withdrawn, observation records only')
+  assert.ok(body.includes('Mirror proposal withdrawn: upstream matches `develop` again; this pull request now carries observation records only.'))
+  assert.ok(body.includes(`\`${SHA}\``))
+  assert.ok(body.includes('| LIVE | 4.10.2-live.1000 | 4.10.2-live.1000 |'))
+  assert.ok(body.includes(RETRIEVED_AT))
+  assert.ok(body.includes(OBSERVATION_FILE))
+  assert.match(body, /close this pull request, or merge it/)
+  assert.match(body, /not closed and not merged automatically/)
+  assert.ok(body.includes('actions/runs/7'))
+  assert.doesNotMatch(`${title}\n${body}`, /No auto-merge|Owner review required|domain change/, 'no claim of a mirror change')
+  for (const other of [liveChanged(), held()]) {
+    assert.throws(() => buildWithdrawalPr(decide(other), other), /WITHDRAWAL_ONLY_FOR_OBSERVE/)
+  }
+})
+
+test('open pull request note: withdrawn, dry-run wording, held, nothing to say', () => {
+  assert.match(buildOpenPrNote({ outcome: 'OBSERVE', mode: 'publish', prNumber: '12' }), /#12[\s\S]*mirror proposal is withdrawn[\s\S]*not closed and not merged/)
+  const dry = buildOpenPrNote({ outcome: 'OBSERVE', mode: 'dry-run', prNumber: '12' })
+  assert.match(dry, /DRY-RUN: a publish run would update its title and text/)
+  assert.match(dry, /Nothing is written now/)
+  assert.match(buildOpenPrNote({ outcome: 'HELD', mode: 'publish', prNumber: '12' }), /#12[\s\S]*still shows the last PUBLISH state[\s\S]*does not change it/)
+  assert.match(buildOpenPrNote({ outcome: 'HELD', mode: 'dry-run', prNumber: '12' }), /still shows the last PUBLISH state/)
+  for (const outcome of ['OBSERVE', 'HELD', 'PUBLISH']) {
+    assert.equal(buildOpenPrNote({ outcome, mode: 'publish', prNumber: '' }), '', `no open pull request: nothing (${outcome})`)
+    assert.equal(buildOpenPrNote({ outcome, mode: 'publish', prNumber: undefined }), '')
+  }
+  assert.equal(buildOpenPrNote({ outcome: 'PUBLISH', mode: 'publish', prNumber: '12' }), '', 'PUBLISH updates the pull request through its own step')
+  assert.match(buildOpenPrNote({ outcome: 'HELD', mode: 'publish', prNumber: 'unknown' }), /lookup of open pull requests failed/)
+  assert.equal(buildOpenPrNote({ outcome: 'PUBLISH', mode: 'publish', prNumber: 'unknown' }), '')
 })
 
 test('pull request text is built for PUBLISH only', () => {
@@ -292,13 +387,13 @@ const decideCli = async (file, base, mode = 'dry-run') => {
   return { code, out: io.chunks.out, err: io.chunks.err }
 }
 
-test('CLI: OBSERVE writes the decision, observation lines, summary and commit message, no pull request files', async () => {
+test('CLI: OBSERVE writes the decision, observation lines, summary, commit message and the withdrawal text, no proposal files', async () => {
   await withTemp(async base => {
     const docs = makeMirror()
     const result = await decideCli(await precheckViaCli(base, docs, docs), base)
     assert.equal(result.code, 0, result.err)
     assert.equal(result.out, 'outcome=OBSERVE\n')
-    assert.deepEqual((await readdir(path.join(base, 'out'))).sort(), ['commit-message.txt', 'decision.json', 'observation-commit-message.txt', 'observation-lines.jsonl', 'summary.md'])
+    assert.deepEqual((await readdir(path.join(base, 'out'))).sort(), ['commit-message.txt', 'decision.json', 'observation-commit-message.txt', 'observation-lines.jsonl', 'pr-withdrawn-body.md', 'pr-withdrawn-title.txt', 'summary.md'])
     const lines = (await readFile(path.join(base, 'out', 'observation-lines.jsonl'), 'utf8')).trimEnd().split('\n').map(line => JSON.parse(line))
     assert.equal(lines[0].record_type, 'source_export_revision')
     assert.equal(lines[0].upstream_commit_sha, SHA)
@@ -313,7 +408,9 @@ test('CLI: PUBLISH adds the pull request title and body', async () => {
     after.channels.live.crafting_blueprints.resources.reverse()
     const result = await decideCli(await precheckViaCli(base, before, after), base, 'publish')
     assert.equal(result.out, 'outcome=PUBLISH\n')
-    assert.ok((await readdir(path.join(base, 'out'))).includes('pr-body.md'))
+    const files = await readdir(path.join(base, 'out'))
+    assert.ok(files.includes('pr-body.md'))
+    assert.ok(!files.some(name => name.startsWith('pr-withdrawn')), 'no withdrawal text for a proposal')
     assert.match(await readFile(path.join(base, 'out', 'pr-body.md'), 'utf8'), /No auto-merge\. Owner review required\./)
     assert.match(await readFile(path.join(base, 'out', 'pr-title.txt'), 'utf8'), /LIVE 4\.10\.2-live\.2000/)
   })
@@ -325,6 +422,7 @@ test('CLI: without a commit SHA the run is HELD and still produces observation l
     const result = await decideCli(await precheckViaCli(base, docs, docs, { sha: null }), base)
     assert.equal(result.code, 0, 'HELD is a result, the workflow fails the job afterwards')
     assert.equal(result.out, 'outcome=HELD\n')
+    assert.ok(!(await readdir(path.join(base, 'out'))).some(name => name.startsWith('pr-withdrawn') || name.startsWith('pr-body')), 'a held run writes no pull request text')
     const lines = (await readFile(path.join(base, 'out', 'observation-lines.jsonl'), 'utf8')).trimEnd().split('\n').map(line => JSON.parse(line))
     assert.ok(lines.every(line => line.result === 'HELD_FOR_REVIEW'))
   })
@@ -371,4 +469,17 @@ test('CLI append: creates the record, keeps existing text, refuses a record that
     assert.equal(await readFile(record, 'utf8'), '{"record_type":"x"}', 'a refused append leaves the record untouched')
     assert.equal(await runDecideCli(['append', '--file', record], capture()), 2)
   })
+})
+
+test('CLI pr-note: prints the note, prints nothing without an open pull request, rejects bad input', async () => {
+  const io = capture()
+  assert.equal(await runDecideCli(['pr-note', '--outcome', 'OBSERVE', '--mode', 'dry-run', '--pr', '12'], io), 0)
+  assert.match(io.chunks.out, /## Open pull request #12/)
+  assert.match(io.chunks.out, /DRY-RUN/)
+  const none = capture()
+  assert.equal(await runDecideCli(['pr-note', '--outcome', 'HELD', '--mode', 'publish', '--pr', ''], none), 0)
+  assert.equal(none.chunks.out, '')
+  for (const argv of [['pr-note', '--outcome', 'NOPE', '--mode', 'publish', '--pr', '1'], ['pr-note', '--outcome', 'HELD', '--mode', 'push', '--pr', '1'], ['pr-note', '--outcome', 'HELD', '--mode', 'publish']]) {
+    assert.equal(await runDecideCli(argv, capture()), 2, JSON.stringify(argv))
+  }
 })

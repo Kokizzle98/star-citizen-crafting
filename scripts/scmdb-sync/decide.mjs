@@ -29,8 +29,15 @@ export const OUTCOME = Object.freeze({ OBSERVE: 'OBSERVE', PUBLISH: 'PUBLISH', H
 export const MODE = Object.freeze({ DRY_RUN: 'dry-run', PUBLISH: 'publish' })
 
 const COMMIT_SHA_PATTERN = /^[0-9a-f]{40}$/
+const BUILD_PATTERN = /^(\d+)\.(\d+)\.(\d+)-(live|ptu)\.(\d+)$/
 const RESULTS = new Set(Object.values(RESULT))
 const isObject = value => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+/** Semantic version and CIG build of a build string such as `4.10.2-live.12913470`; null when it does not parse. */
+export function parseBuild(build) {
+  const match = typeof build === 'string' ? BUILD_PATTERN.exec(build) : null
+  return match ? { semantic_version: `${Number(match[1])}.${Number(match[2])}.${Number(match[3])}`, cig_build: match[5] } : null
+}
 
 // --- mode ---------------------------------------------------------------------------------------
 
@@ -69,7 +76,7 @@ export function decide(precheck) {
       reasons.push({ code: 'CHANNEL_WITHOUT_DOMAINS', channel: isObject(channel) ? channel.channel ?? null : null })
       continue
     }
-    let channelChanged = false
+    let domainChanged = false
     for (const entry of channel.domains) {
       const result = isObject(entry) ? entry.result : undefined
       if (!RESULTS.has(result)) {
@@ -82,16 +89,24 @@ export function decide(precheck) {
         result,
         reason_codes: Array.isArray(entry.reasons) ? entry.reasons.map(reason => reason?.code ?? null) : [],
       })
-      if (result === RESULT.CHANGED) channelChanged = true
+      if (result === RESULT.CHANGED) domainChanged = true
       if (result === RESULT.HELD_FOR_REVIEW) reasons.push({ code: 'DOMAIN_HELD', channel: channel.channel, domain: entry.domain })
     }
-    if (channelChanged) {
+    // A channel changed when its build differs from the baseline build or at least one of its domains is CHANGED
+    // (section 35.1 rule 5). A new build with only UNCHANGED domains is a build-only update; an equal build with
+    // only UNCHANGED domains is not listed at all.
+    const buildChanged = (channel.build ?? null) !== (channel.baseline_build ?? null)
+    if (domainChanged || buildChanged) {
+      const baseline = parseBuild(channel.baseline_build)
       changedChannels.push({
         channel: channel.channel,
+        kind: domainChanged ? 'DOMAIN_CHANGE' : 'BUILD_ONLY',
         build: channel.build ?? null,
         semantic_version: channel.semantic_version ?? null,
         cig_build: channel.cig_build ?? null,
         baseline_build: channel.baseline_build ?? null,
+        baseline_semantic_version: baseline?.semantic_version ?? null,
+        baseline_cig_build: baseline?.cig_build ?? null,
       })
     }
   }
@@ -204,10 +219,25 @@ function domainTable(precheck) {
   return rows
 }
 
-function identityTable(channels) {
-  const rows = ['| Channel | Semantic version | CIG build | Build string | Previous build on `develop` |', '| --- | --- | --- | --- | --- |']
+const arrow = (before, after) => (before === after ? `${cell(after)} (unchanged)` : `${cell(before)} -> ${cell(after)}`)
+const CHANGE_LABEL = { DOMAIN_CHANGE: 'domain change', BUILD_ONLY: 'build-only update, no domain change' }
+
+/** One row per changed channel: baseline -> candidate for the versions, plus the upstream commit (section 35.1 rule 5). */
+function identityTable(channels, sha) {
+  const rows = [
+    '| Channel | Change | Semantic version | CIG build | Build string | Upstream commit |',
+    '| --- | --- | --- | --- | --- | --- |',
+  ]
   for (const channel of channels) {
-    rows.push(`| ${cell(channel.channel)} | ${cell(channel.semantic_version)} | ${cell(channel.cig_build)} | ${cell(channel.build)} | ${cell(channel.baseline_build)} |`)
+    const cells = [
+      cell(channel.channel),
+      CHANGE_LABEL[channel.kind] ?? cell(channel.kind),
+      arrow(channel.baseline_semantic_version, channel.semantic_version),
+      arrow(channel.baseline_cig_build, channel.cig_build),
+      arrow(channel.baseline_build, channel.build),
+      sha ? `\`${sha}\`` : 'n/a',
+    ]
+    rows.push(`| ${cells.join(' | ')} |`)
   }
   return rows
 }
@@ -223,7 +253,9 @@ export function buildPrBody(decision, precheck, { runUrl = null, observationFile
     '',
     '### Dataset identity of the changed channels',
     '',
-    ...identityTable(decision.changed_channels),
+    'A channel is listed when its build differs from the build on `develop` or when at least one of its domains is `CHANGED`. Versions read baseline -> candidate. A channel listed as a build-only update has a new build but no changed domain input.',
+    '',
+    ...identityTable(decision.changed_channels, revision.upstream_commit_sha),
     '',
     `Upstream: \`${UPSTREAM_REPOSITORY}\` at commit \`${revision.upstream_commit_sha}\`, retrieved ${cell(revision.retrieved_at)}.`,
     '',
@@ -248,6 +280,64 @@ export function buildPrBody(decision, precheck, { runUrl = null, observationFile
 }
 
 /**
+ * Title and text for an open pull request whose mirror proposal no longer holds (outcome OBSERVE while a
+ * pull request from the sync branch is open). Neutral; the pull request is neither closed nor merged.
+ */
+export function buildWithdrawalPr(decision, precheck, { runUrl = null, observationFile = OBSERVATION_FILE } = {}) {
+  if (decision?.outcome !== OUTCOME.OBSERVE) throw new Error('WITHDRAWAL_ONLY_FOR_OBSERVE')
+  const revision = precheck.source_export_revision
+  const rows = ['| Channel | Build on `develop` | Upstream build at this run |', '| --- | --- | --- |']
+  for (const channel of Object.values(precheck.channels)) rows.push(`| ${cell(channel.channel)} | ${cell(channel.baseline_build)} | ${cell(channel.build)} |`)
+  const lines = [
+    '## Mirror proposal withdrawn',
+    '',
+    '**Mirror proposal withdrawn: upstream matches `develop` again; this pull request now carries observation records only.**',
+    '',
+    `The mirror files on \`${SYNC_BRANCH}\` were set back to \`${BASE_BRANCH}\`. The owner can close this pull request, or merge it to bring the observation records (\`${observationFile}\`) into \`${BASE_BRANCH}\`. It is not closed and not merged automatically.`,
+    '',
+    '### Latest run',
+    '',
+    ...rows,
+    '',
+    `Upstream: \`${UPSTREAM_REPOSITORY}\` at commit \`${revision.upstream_commit_sha}\`, retrieved ${cell(revision.retrieved_at)}. All ${decision.counts.UNCHANGED} domain results are \`UNCHANGED\`.`,
+  ]
+  if (runUrl) lines.push('', `Workflow run: ${runUrl}`)
+  lines.push('')
+  return { title: 'chore(scmdb-sync): mirror proposal withdrawn, observation records only', body: lines.join('\n') }
+}
+
+/**
+ * Job summary note about an already open pull request from the sync branch. Empty when there is none.
+ * `prNumber` is the number, an empty value for none, or `unknown` when the lookup failed.
+ */
+export function buildOpenPrNote({ outcome, mode, prNumber }) {
+  const number = String(prNumber ?? '').trim()
+  if (number === '') return ''
+  if (number === 'unknown') {
+    return outcome === OUTCOME.PUBLISH ? '' : '## Open pull request\n\nThe lookup of open pull requests failed. No pull request was changed.\n'
+  }
+  if (outcome === OUTCOME.OBSERVE) {
+    return [
+      `## Open pull request #${number}`,
+      '',
+      mode === MODE.PUBLISH
+        ? 'Upstream matches `develop` again. Its title and text are updated to say that the mirror proposal is withdrawn and that it now carries observation records only. It is not closed and not merged.'
+        : 'Upstream matches `develop` again. DRY-RUN: a publish run would update its title and text to say that the mirror proposal is withdrawn and that it now carries observation records only. Nothing is written now. It would not be closed and not merged.',
+      '',
+    ].join('\n')
+  }
+  if (outcome === OUTCOME.HELD) {
+    return [
+      `## Open pull request #${number}`,
+      '',
+      'It still shows the last PUBLISH state. This held run does not change it.',
+      '',
+    ].join('\n')
+  }
+  return ''
+}
+
+/**
  * Markdown for the job summary.
  * @param {object} context
  * @param {string} context.mode            `dry-run` or `publish`
@@ -269,7 +359,7 @@ export function buildSummary(decision, precheck, { mode, modeReason = null, obse
     lines.push('## Result per channel and domain', '', ...domainTable(precheck), '')
   }
   if (decision.outcome === OUTCOME.PUBLISH) {
-    lines.push('## Changed channels', '', ...identityTable(decision.changed_channels), '')
+    lines.push('## Changed channels', '', ...identityTable(decision.changed_channels, revision.upstream_commit_sha), '')
   }
   if (decision.reasons.length > 0) {
     lines.push('## Why this run is held', '', ...decision.reasons.map(reason => `- \`${cell(reason.code)}\`${reason.channel ? ` ${cell(reason.channel)}` : ''}${reason.domain ? `/${cell(reason.domain)}` : ''}`), '')
@@ -291,18 +381,20 @@ const HELP = `Usage:
   node scripts/scmdb-sync/decide.mjs decide --precheck <file> --mode <dry-run|publish> --out-dir <dir>
                                             [--mode-reason <text>] [--run-url <url>]
   node scripts/scmdb-sync/decide.mjs append --file <record> --lines <file>
+  node scripts/scmdb-sync/decide.mjs pr-note --outcome <OBSERVE|HELD|PUBLISH> --mode <dry-run|publish> --pr <number|''|unknown>
 
 mode:   prints mode=<dry-run|publish> and mode_reason=<code>
 decide: reads the precheck JSON and writes decision.json, observation-lines.jsonl, summary.md,
-        commit-message.txt, observation-commit-message.txt and (PUBLISH only) pr-title.txt and pr-body.md
-        into --out-dir; prints outcome=<...>.
+        commit-message.txt, observation-commit-message.txt, (PUBLISH only) pr-title.txt and pr-body.md,
+        (OBSERVE only) pr-withdrawn-title.txt and pr-withdrawn-body.md into --out-dir; prints outcome=<...>.
+pr-note: prints the job summary note about an open pull request (nothing when there is none).
 append: appends the lines to the observation record (created when missing); existing text is never changed.
 Exit codes: 0 done, 2 usage or read error. A HELD outcome is a result, not an error.
 `
 
 function parseOptions(argv) {
   const options = {}
-  const known = new Set(['variable', 'force-dry-run', 'precheck', 'mode', 'out-dir', 'mode-reason', 'run-url', 'file', 'lines'])
+  const known = new Set(['variable', 'force-dry-run', 'precheck', 'mode', 'out-dir', 'mode-reason', 'run-url', 'file', 'lines', 'outcome', 'pr'])
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]
     if (!arg.startsWith('--')) throw new Error(`USAGE: unexpected argument ${JSON.stringify(arg)}`)
@@ -345,7 +437,19 @@ export async function run(argv, { stdout = process.stdout, stderr = process.stde
         await write('pr-title.txt', `${buildPrTitle(decision)}\n`)
         await write('pr-body.md', buildPrBody(decision, precheck, { runUrl: options['run-url'] ?? null }))
       }
+      if (decision.outcome === OUTCOME.OBSERVE) {
+        const withdrawal = buildWithdrawalPr(decision, precheck, { runUrl: options['run-url'] ?? null })
+        await write('pr-withdrawn-title.txt', `${withdrawal.title}\n`)
+        await write('pr-withdrawn-body.md', withdrawal.body)
+      }
       stdout.write(`outcome=${decision.outcome}\n`)
+      return 0
+    }
+    if (command === 'pr-note') {
+      if (!Object.values(OUTCOME).includes(options.outcome) || !Object.values(MODE).includes(options.mode) || options.pr === undefined) {
+        throw new Error('USAGE: pr-note needs --outcome, --mode and --pr')
+      }
+      stdout.write(buildOpenPrNote({ outcome: options.outcome, mode: options.mode, prNumber: options.pr }))
       return 0
     }
     if (command === 'append') {

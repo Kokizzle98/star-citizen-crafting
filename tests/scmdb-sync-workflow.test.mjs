@@ -103,7 +103,13 @@ test('no rebase, no reset, no history rewrite, no merge other than develop into 
 test('no auto-merge and no merge of any pull request', () => {
   assert.doesNotMatch(joined, /gh pr merge|--auto\b|auto-merge|automerge|enable-auto|--admin|mergePullRequest|enablePullRequestAutoMerge/i)
   assert.doesNotMatch(joined, /gh api[^\n]*(merge|reviews|approve)/i)
-  assert.doesNotMatch(joined, /gh pr (review|ready|close|reopen)/)
+  assert.doesNotMatch(joined, /gh pr (review|ready|close|reopen|merge|comment|lock|checkout)/)
+  // Only list (read), create (new proposal) and edit (title and text) are ever used.
+  const subcommands = [...joined.matchAll(/\bgh pr (\S+)/g)].map(match => match[1])
+  assert.deepEqual([...new Set(subcommands)].sort(), ['create', 'edit', 'list'])
+  assert.doesNotMatch(joined, /gh pr edit[^\n]*--(add|remove)-|gh pr edit[^\n]*--(state|base|reviewer|assignee|label|milestone)/, 'edit changes title and text only')
+  assert.deepEqual(steps.filter(entry => /gh pr edit/.test(entry.joined)).map(entry => entry.name), ['Pull Request öffnen oder aktualisieren', 'Zurückgenommenen Mirror-Vorschlag im PR vermerken'])
+  assert.deepEqual(steps.filter(entry => /gh pr create/.test(entry.joined)).map(entry => entry.name), ['Pull Request öffnen oder aktualisieren'])
   const pr = step('Pull Request öffnen oder aktualisieren').joined
   assert.match(pr, /gh pr create --base "\$BASE_BRANCH" --head "\$SYNC_BRANCH"/)
   assert.match(pr, /gh pr edit "\$EXISTING"/)
@@ -142,13 +148,26 @@ test('mode: read from the repository variable and the input, decided by the scri
   assert.doesNotMatch(code, /github\.event_name == 'schedule'/, 'the schedule gets no special path to publication')
 })
 
-test('every step that pushes or talks to pull requests runs in publish mode only', () => {
-  const touching = steps.filter(entry => /\bgit push\b|\bgh (pr|api)\b/.test(entry.joined))
-  assert.deepEqual(touching.map(entry => entry.name), ['Sync-Branch pushen', 'Pull Request öffnen oder aktualisieren'])
-  for (const entry of touching) assert.match(entry.text, /if: steps\.mode\.outputs\.mode == 'publish'/, entry.name)
+test('every step that pushes or writes to a pull request runs in publish mode only; reading is allowed in every mode', () => {
+  const writing = steps.filter(entry => /\bgit push\b|\bgh pr (create|edit)\b|\bgh api\b/.test(entry.joined))
+  assert.deepEqual(writing.map(entry => entry.name), ['Sync-Branch pushen', 'Pull Request öffnen oder aktualisieren', 'Zurückgenommenen Mirror-Vorschlag im PR vermerken'])
+  for (const entry of writing) assert.match(entry.text, /if: steps\.mode\.outputs\.mode == 'publish'/, entry.name)
   assert.match(step('Pull Request öffnen oder aktualisieren').text, /if: steps\.mode\.outputs\.mode == 'publish' && steps\.decide\.outputs\.outcome == 'PUBLISH'/)
+  // The withdrawal only touches an existing pull request, only after an OBSERVE run.
+  const withdrawal = step('Zurückgenommenen Mirror-Vorschlag im PR vermerken')
+  assert.match(withdrawal.text, /steps\.decide\.outputs\.outcome == 'OBSERVE'/)
+  assert.match(withdrawal.text, /steps\.openpr\.outputs\.number != ''/)
+  assert.match(withdrawal.text, /steps\.openpr\.outputs\.number != 'unknown'/)
+  assert.match(withdrawal.joined, /gh pr edit "\$PR_NUMBER" --title "\$\(cat "\$SYNC_DIR\/out\/pr-withdrawn-title\.txt"\)" --body-file "\$SYNC_DIR\/out\/pr-withdrawn-body\.md"/)
+  // The lookup is read-only: list of open pull requests, summary note, no write command.
+  const lookup = step('Offenen Sync-PR abfragen')
+  assert.match(lookup.text, /if: steps\.decide\.outputs\.outcome != 'PUBLISH'/)
+  assert.match(lookup.joined, /gh pr list --base "\$BASE_BRANCH" --head "\$SYNC_BRANCH" --state open/)
+  assert.doesNotMatch(lookup.joined, /gh pr (create|edit)|git push|gh api/)
+  assert.doesNotMatch(lookup.text, /mode == 'publish'/, 'the report also runs in a dry run')
+  assert.match(lookup.joined, /pr-note --outcome "\$OUTCOME" --mode "\$MODE" --pr "\$PR" >> "\$GITHUB_STEP_SUMMARY"/)
   for (const entry of steps) {
-    if (!touching.includes(entry)) assert.doesNotMatch(entry.joined, /\bgit push\b|\bgh pr\b|GH_TOKEN/, `${entry.name} is read-only toward GitHub`)
+    if (![...writing, lookup].includes(entry)) assert.doesNotMatch(entry.joined, /\bgit push\b|\bgh pr\b|GH_TOKEN/, `${entry.name} does not talk to GitHub`)
   }
 })
 
@@ -157,7 +176,8 @@ test('order: sanity checks and the precheck run before anything is committed or 
     'Werkzeuge sichern und Betriebsart bestimmen', 'Sync-Branch vorbereiten', 'Öffentlichen SCMDB_DATA Mirror herunterladen',
     'SCMDB Quelldaten validieren', 'Vollständigen SCMDB Data Mirror übernehmen', 'Lokales Mirror-Metadata erzeugen', 'Crafting-Datensätze prüfen',
     'Domain-Precheck ausführen', 'Entscheidung treffen', 'Ergebnis auf den Sync-Branch anwenden', 'Sync-Branch pushen',
-    'Pull Request öffnen oder aktualisieren', 'Ergebnis als Artefakt sichern', 'Gehaltenen Lauf sichtbar machen',
+    'Pull Request öffnen oder aktualisieren', 'Offenen Sync-PR abfragen', 'Zurückgenommenen Mirror-Vorschlag im PR vermerken',
+    'Ergebnis als Artefakt sichern', 'Gehaltenen Lauf sichtbar machen',
   ].map(indexOfStep)
   assert.ok(order.every(index => index >= 0))
   assert.deepEqual([...order].sort((a, b) => a - b), order, 'steps are in the documented order')
