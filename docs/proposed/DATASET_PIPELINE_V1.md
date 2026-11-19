@@ -1,7 +1,7 @@
 # VECTOR Dataset Pipeline v1
 
 **Status:** PROPOSED\
-**Version:** 1.2 (revision 1, 2026-11-18: DB governance reference moved to v1.2 by GOV-2, no content change; revision base `9bf3c7f`)\
+**Version:** 1.2 (revision 2, 2026-11-19: owner decisions 19 to 22 recorded in §43 and followed up in §35.3, §36.2, §38.3 and §40.1, status unchanged; revision base `80dc6e0`. Revision 1, 2026-11-18: DB governance reference moved to v1.2 by GOV-2, no content change; revision base `9bf3c7f`)\
 **Base commit:** `8f504ef` (`develop`, merge of PR #93)\
 **Authority Scope:** DATASET_PIPELINE\
 **Approved By:** pending project_owner approval\
@@ -1098,7 +1098,7 @@ Rules:
 
 ### 35.3 Consistency between the paths
 
-The two paths are activated independently. For each channel, the dataset identity effective on each path must be recorded. A divergence, for example the mirror at one build while the database `ACTIVE` dataset is at another, must stay visible. It is never reconciled silently in either direction. Which path is authoritative for which consumer remains an open decision (§43).
+The two paths are activated independently. For each channel, the dataset identity effective on each path must be recorded. A divergence, for example the mirror at one build while the database `ACTIVE` dataset is at another, must stay visible. It is never reconciled silently in either direction. Owner decision 20 (§43) fixes which path is authoritative: every consumer is assigned to exactly one activation path, `FILE_GIT` or `DATABASE`, in the domain register (§37.3). A consumer that reads `data/scmdb/` directly is `FILE_GIT`. A database-backed consumer, such as the blueprint catalog or the crew status, is `DATABASE`. A divergence between the two paths stays visible and is never aligned silently.
 
 ## 36. VECTOR-required SCMDB source set
 
@@ -1115,7 +1115,7 @@ If any condition is uncertain, the file is retained or put to review, never excl
 
 ### 36.2 Current classification
 
-Classes and recommendations come from `docs/proposed/SCMDB_SOURCE_INVENTORY.md` v1.1. **No file is excluded at this time.** An owner decision is pending before the mirror workflow package.
+Classes and recommendations come from `docs/proposed/SCMDB_SOURCE_INVENTORY.md` v1.1. **No file is excluded.** Owner decision 19 (§43): no file is excluded from the mirror.
 
 | File (per channel where applicable) | Inventory class | v1.2 handling |
 |---|---|---|
@@ -1132,8 +1132,8 @@ Classes and recommendations come from `docs/proposed/SCMDB_SOURCE_INVENTORY.md` 
 | `game-versions.json`, `versions.json` | `IDENTITY_INDEX` | Retained; identity input |
 | `local-mirror-manifest.json` | `VECTOR_OWN` | Retained; **never a trigger** (§36.3) |
 | `mema-cache.json` | `VOLATILE_DERIVED_STATISTIC` | Retained; **never a trigger** (§36.3) |
-| `site-settings.json` | mixed, `REVIEW` | Retained; refresh timestamps never a trigger; any other change `HELD_FOR_REVIEW` |
-| `workflow-state.json` | `TECHNICAL_ARTIFACT`, exclusion candidate | Retained until an owner decision; never a trigger |
+| `site-settings.json` | mixed, `REVIEW` | Retained; refresh timestamps never a trigger; a change of any other key, including `scenario_overrides`, is `HELD_FOR_REVIEW` (owner decision 19) |
+| `workflow-state.json` | `TECHNICAL_ARTIFACT` | Retained (owner decision 19); never a trigger |
 
 ### 36.3 Non-trigger files
 
@@ -1267,9 +1267,7 @@ A no-material-change run is observation only:
 
 ### 38.3 Where observations live
 
-Proposed: a single rolling, unprotected sync branch maintained by automation. It holds the latest mirror state and the observation records. It is never merged automatically. A pull request from it is opened only when a material change exists.
-
-**OPEN (owner decision):** where observations are kept permanently. Options: the rolling sync branch only; workflow run artifacts or logs; a VECTOR-own observation file in the mirror. The decision belongs to the mirror workflow package (§43, item 21).
+Owner decision 21 (§43) fixes the place. Observations ("nothing changed") are kept in one continuous, append-only observation record. The record is stored on a single rolling, unprotected sync branch. That branch is never force-pushed and never merged automatically. Each run also writes a summary into the workflow run. When a real change occurs, the pull request carries the earlier observations with it. The details belong to the later mirror workflow package (`MIRROR-WORKFLOW-V2`).
 
 ## 39. Domain-level verification
 
@@ -1311,7 +1309,7 @@ Every manifest and every domain revision has exactly one computed class:
 | `RETAINED_RECOVERY` | Not `ACTIVE`, but referenced by a manifest in the recovery set, or by any persistent row, provenance record, audit record or rollback evidence |
 | `HISTORICAL_GC_CANDIDATE` | Referenced by nothing above |
 
-The recovery set is a rule over references and verified rollback targets, not over age. Its exact size per channel is an open decision (§43). Persistent references include, for example, `scmdb_location_mappings.first_dataset_id` and `last_dataset_id`. Catalog rows depend on their dataset row through `ON DELETE CASCADE`, so removing such a dataset row would also remove its catalog.
+The recovery set is a rule over references and verified rollback targets, not over age. Owner decision 22 (§43) fixes the recovery set per channel: the `ACTIVE` manifest, plus the last 2 `SUPERSEDED`, verified rollback targets, plus everything that persistent rows, provenance records, audit records or rollback evidence reference. Everything else is `HISTORICAL_GC_CANDIDATE`. A dry-run report comes first. Deleting needs its own work package and its own one-time GO. Persistent references include, for example, `scmdb_location_mappings.first_dataset_id` and `last_dataset_id`. Catalog rows depend on their dataset row through `ON DELETE CASCADE`, so removing such a dataset row would also remove its catalog.
 
 ### 40.2 Rules
 
@@ -1383,10 +1381,10 @@ These are observations at the base commit. They are not defects introduced by v1
 
 Added in v1.2:
 
-19. **Owner decision:** exclusion of `workflow-state.json`, and whether `scenario_overrides` in `site-settings.json` is relevant (§36). Required before the mirror workflow package.
-20. **Owner decision:** which activation path is authoritative for which consumer, and how divergence between the paths is surfaced (§35.3).
-21. **OPEN (owner decision):** where no-material-change observations are kept (§38.3). The append-only observation record also holds the verified-through builds (§39), so the chosen place must keep entries append-only and retrievable.
-22. Size of the recovery set per channel (§40.1).
+19. **Owner decision recorded 2026-11-19:** no file is excluded from the mirror. `workflow-state.json` is retained and is a non-trigger file. In `site-settings.json`, a change of `scenario_overrides` or of any key other than `mema_cache_last_refreshed` and `updated_at` is `HELD_FOR_REVIEW` (§36).
+20. **Owner decision recorded 2026-11-19:** every consumer is assigned to exactly one activation path in the domain register: `FILE_GIT` or `DATABASE`. Everything that reads directly from `data/scmdb/` is `FILE_GIT`. Database-backed consumers (blueprint catalog, crew status) are `DATABASE`. A divergence between the two paths stays visible and is never aligned silently (§35.3).
+21. **Owner decision recorded 2026-11-19:** observations ("nothing changed") are kept in a continuous, append-only observation record on a rolling, unprotected sync branch (never force-pushed, never merged automatically). A summary is also written into the workflow run. When a real change occurs, the pull request carries the earlier observations. Details belong to the later `MIRROR-WORKFLOW-V2` package (§38.3, §39).
+22. **Owner decision recorded 2026-11-19:** the recovery set per channel is the `ACTIVE` manifest, plus the last 2 `SUPERSEDED`, verified rollback targets, plus everything that persistent rows, provenance records, audit records or rollback evidence reference. Everything else is `HISTORICAL_GC_CANDIDATE`. A dry-run report comes first. Deleting needs its own work package and its own one-time GO (§40.1).
 23. Storage of the `FAILED` reason code and of the §5 provenance fields (§41, §42).
 24. Migration that allows several Source Export Revisions per build (§42, item 1). Separate migration package under the `DB-ENV` gates.
 25. Canonical serialization details beyond §37.2, such as number formatting and Unicode normalization, before fingerprint code is written.
