@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v16 (counted up from v15; GOV-2 reference update to DB governance v1.2, base commit `9bf3c7f0b2010461d77585f720dc253fb8401f91`; checkpoint not rotated)
+- Document version: v17 (counted up from v16; ROT-13 checkpoint rotation, base commit `a95dc9c47318f57da210b0e80ad8cf1feaa9f893`)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -13,17 +13,17 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `ROT-12: checkpoint rotation (documentation only)`. The anchor is advanced to the verified `develop` head after PR #95. Since PR #90, #92 DOC-REF-2 updated DB governance references; #93 introduced SCMDB source inventory v1.0 (analysis only); #94 updated the dataset pipeline to v1.2, source inventory to v1.1 and Rule Index to v1.5 (all remain `PROPOSED`; nothing was frozen); and #95 GOV-1 updated the AI operating model to v1.4, making GitHub Copilot an optional Secondary Engineer / Specialist while Claude Code remains the Primary and default Engineer. Release 2 `develop` -> `main` is done (PR #87, merge commit, `main` = `66c531bd`, tag `release-2026-11-17`; rollback points: tag `pre-release-2026-11-14` on `eb6f108` and the previous `main` `e916f69`). Merged since the release checkpoint: #88 (documentation), #89 (DEV-DB concept) and #90 (DEV-DB G0, `DB_ENVIRONMENT_GOVERNANCE_V1_1`). A separate `DEVELOP` database (Free plan) exists: schema, catalog data and synthetic test data are in place, and Vercel Preview deployments of the branch `develop` run against it. Production is reached only through `main`. Hardening H2 is running on `DEVELOP`; applying it to Production follows in its own step with its own owner GO. No release is planned.
-- Branch: `develop` (each work package works on its own feature branch)
+- Work package: `ROT-13: checkpoint rotation (documentation only)`. The anchor is the verified `origin/develop` head after PR #101. Since ROT-12, PR #97 made `DB_ENVIRONMENT_GOVERNANCE_V1_2` FROZEN with DB-ENV-10 and DB-ENV-11; #98 updated Project Lead evidence governance to v1.2; #99 completed Release 3 to `main`; and #101 recorded the privilege hardening migration as already applied. The migration reaches `main` only with a separate next release. `DATASET_PIPELINE_V1.md` v1.2 and `SCMDB_SOURCE_INVENTORY.md` v1.1 remain `PROPOSED`. Claude Code is Primary and default Engineer; GitHub Copilot is optional Secondary Engineer / Specialist and Independent Reviewer. ROT-12 described hardening as still pending; the newer PR #101 repository record supersedes that status. The next packages are listed under `NEXT STEP`.
+- Branch: `docs/checkpoint-rotation-13`
 - Base: `develop`
-- Checkpoint date: `2026-11-18`
-- Work-package base (historical): `e6d4e6bac01b3b8b7923111d6371e6cb4eaba9f3`
-- Active checkpoint anchor: `e6d4e6bac01b3b8b7923111d6371e6cb4eaba9f3`
+- Checkpoint date: `2026-11-19`
+- Work-package base (historical): `a95dc9c47318f57da210b0e80ad8cf1feaa9f893`
+- Active checkpoint anchor: `a95dc9c47318f57da210b0e80ad8cf1feaa9f893`
 - Working-tree expectation: `CLEAN`
 - Active PR: none at rotation time (the rotation pull request itself is documentation only); every work package opens its own pull request against `develop`
 - PR base: `develop`
 
-The active anchor is the verified `develop` head after PR #95. The allowed scope below authorizes this documentation rotation, new or updated proposal documents, `database/migrations/blueprints/README.md`, and the paths of the UX series and its follow-ups; no migration, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #101. The allowed scope below authorizes this documentation rotation, new or updated proposal documents, `database/migrations/blueprints/README.md`, and the paths of the UX series and its follow-ups; no migration change or execution, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
@@ -121,6 +121,11 @@ The anchor is intentionally not an exact expected HEAD. The current committed HE
 - PR `#93` (SCMDB source inventory v1.0, analysis only): merged into `develop` as `8f504ef`.
 - PR `#94` (dataset pipeline v1.2, source inventory v1.1 and Rule Index v1.5; all `PROPOSED`, no freeze): merged into `develop` as `7d50b57`.
 - PR `#95` (GOV-1, Engineering Routing Extension; AI operating model v1.4): merged into `develop` as `e6d4e6b`.
+- PR `#96` (ROT-12 checkpoint rotation): merged into `develop` on 2026-11-18 as `9bf3c7f`.
+- PR `#97` (GOV-2, `DB_ENVIRONMENT_GOVERNANCE_V1_2` FROZEN; DB-ENV-10 and DB-ENV-11): merged into `develop` on 2026-11-18 as `936309c`.
+- PR `#98` (GOV-3, Project Lead evidence governance references v1.2): merged into `develop` on 2026-11-18 as `9dc753c`.
+- PR `#99` (Release 3 `develop` -> `main`, governance documentation only): merged into `main` as merge commit `9cc4b2a`; tag `release-2026-11-18` points to that commit.
+- PR `#101` (privilege hardening migration and contract test): merged into `develop` on 2026-11-18 as `a95dc9c`; migration is recorded and already applied. It reaches `main` only with a separate next release.
 - PR `#87` (Release 2 `develop` -> `main`): merged into `main` as merge commit `66c531bd`; tag `release-2026-11-17` on `66c531bd`; rollback points tag `pre-release-2026-11-14` on `eb6f108` and the previous `main` `e916f69`. No database, data, dependency or environment change.
 
 No earlier PR is active. Do not reopen or modify them.
@@ -167,7 +172,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`ROT-12` (2026-11-18, documentation only, checkpoint rotation). No feature work package is active. PRs #92–#95 are merged into `develop` (see section 1); the dataset pipeline v1.2 owner decisions 19 to 21 in section 43 remain open. Release 2 `develop` -> `main` is done (PR #87, merge commit, `main` = `66c531bd`, tag `release-2026-11-17`; rollback points: tag `pre-release-2026-11-14` on `eb6f108` and the previous `main` `e916f69`). Merged since the release checkpoint: #88 (documentation), #89 (DEV-DB concept) and #90 (DEV-DB G0, `DB_ENVIRONMENT_GOVERNANCE_V1_1`). A separate `DEVELOP` database (Free plan) exists: schema, catalog data and synthetic test data are in place, and Vercel Preview deployments of the branch `develop` run against it. Production is reached only through `main`. Hardening H2 is running on `DEVELOP`; applying it to Production follows in its own step with its own owner GO. No release is planned. After PR #87, `main` and `develop` had identical file content; `main` is ahead only by the release merge commits `e916f69` (#79) and `66c531b` (#87), which `develop` does not contain, so `main` is **not** an ancestor of `develop`. The back-merge was deliberately not done (optional, its own owner decision). The merge base is the `develop` head `9d58d61`, so a later release merge stays clean.
+`ROT-13` (2026-11-19, documentation only, checkpoint rotation). No feature work package is active. PRs #97, #98 and #101 are merged into `develop`; PR #99 completed Release 3 to `main` (merge commit `9cc4b2a`, tag `release-2026-11-18`). `DB_ENVIRONMENT_GOVERNANCE_V1_2` is FROZEN; the dataset pipeline v1.2 owner decisions 19 to 21 in section 43 remain open, and the pipeline and source inventory remain `PROPOSED`. The privilege hardening migration is recorded and already applied; its release from `develop` to `main` is a separate owner decision. `main` is not an ancestor of `develop`; it is ahead by the three release merge commits `e916f69` (#79), `66c531b` (#87) and `9cc4b2a` (#99). The back-merge was deliberately not done (optional, its own owner decision). The current merge base is `9dc753c`, so the next release merge retains the merge-commit lineage.
 
 Open, details with the owner: small follow-ups from the Copilot review of PR #79 (F2, F3 and F5 to F10, already classified as deferred). Backlog (each its own small package): return to the requested page after sign-in (`next` target in `requireUser`, auth change); dataset update (LIVE 4.10.3, PTU separate, workflow sync, only with an explicit owner GO); onboarding of player name / player account and the crew invitation UI; Fabricator / Inventory design according to the mock-ups. More details in `docs/PROJECT_STATE.md`.
 
@@ -278,7 +283,7 @@ Known open items, none of them started:
 - Rule Index items R2, R4 and R5 remain as listed in `docs/RULE_INDEX.md`.
 - open crew authorization and privacy hardening findings, currently rated LOW to MEDIUM. They are not part of the Blueprint work package and are not repaired here. Target: a separate work package `Crew Security Hardening`, to be completed or re-assessed at the latest before the first user outside the current test group. They do not block Blueprint PR 2, because the new crew function must not use the affected helpers as its sole authorization boundary.
 
-OPEN INFRASTRUCTURE WORK: (1) the `DEVELOP` instance (owner decision 2026-11-17) exists and is governed by `DB-ENV-09` in `DB_ENVIRONMENT_GOVERNANCE_V1_2` and planned in `docs/architecture/DEV_DB_CONCEPT.md`; hardening H2 is running on `DEVELOP`, applying it to Production is its own step with its own GO; (2) separate Supabase contexts for `LIVE` and `PTU` (future Spur-B target, owner decision 2026-11-11, not started) are **not** a current DB-environment contract and **not** FROZEN; the Free plan allows only two active projects.
+OPEN INFRASTRUCTURE WORK: (1) the `DEVELOP` instance (owner decision 2026-11-17) exists and is governed by `DB-ENV-09` in `DB_ENVIRONMENT_GOVERNANCE_V1_2` and planned in `docs/architecture/DEV_DB_CONCEPT.md`. The privilege hardening migration is recorded and already applied; its release to `main` is a separate owner decision. Later steps of the concept remain separate work; (2) separate Supabase contexts for `LIVE` and `PTU` (future Spur-B target, owner decision 2026-11-11, not started) are **not** a current DB-environment contract and **not** FROZEN; the Free plan allows only two active projects.
 
 Completed packages: `Restart Safety + AI Efficiency v1` (PR #10) and `Repository Cleanup and Baseline v1` (PR #34).
 
@@ -292,7 +297,7 @@ Completed packages: `Restart Safety + AI Efficiency v1` (PR #10) and `Repository
 - Do not create recursive review-evidence commits.
 - Do not run repository-wide AI audits when a bounded check can answer the question.
 - Do not use Max review by default.
-- Do not squash or rebase-merge the release pull request `develop` -> `main`; use a **merge commit**. Reason: a merge commit keeps the full history of `develop` inside `main`, so the merge base moves forward with each release and the next release merge stays clean; a squash or rebase would rewrite the content as new commits on `main` that `develop` does not contain and make the next release conflict-prone. `main` is currently **not** an ancestor of `develop` (it is ahead by the release merge commits `e916f69` and `66c531b`); a back-merge was deliberately not done and would be its own owner decision. Release 2 (#87) was merged this way. This is an operational rule that follows `VECTOR_GOVERNANCE_V1` section 3.3 (merge into `main` is the release boundary) and does not change it. The merge itself applies no migration (`DB-ENV-07`).
+- Do not squash or rebase-merge the release pull request `develop` -> `main`; use a **merge commit**. Reason: a merge commit keeps the full history of `develop` inside `main`, so the merge base moves forward with each release and the next release merge stays clean; a squash or rebase would rewrite the content as new commits on `main` that `develop` does not contain and make the next release conflict-prone. `main` is currently **not** an ancestor of `develop` (it is ahead by the release merge commits `e916f69`, `66c531b` and `9cc4b2a`); a back-merge was deliberately not done and would be its own owner decision. The current merge base is `9dc753c`. Releases 2 and 3 (#87 and #99) were merged this way. This is an operational rule that follows `VECTOR_GOVERNANCE_V1` section 3.3 (merge into `main` is the release boundary) and does not change it. The merge itself applies no migration (`DB-ENV-07`).
 
 ## 7. RECOVERY PROCEDURE
 
@@ -470,4 +475,6 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-NEXT STEP: prepare hardening H2 for Production (its own step, application only with a separate named owner GO), then the auth concept. No release is planned. A `DEVELOP` database exists and follows `DB_ENVIRONMENT_GOVERNANCE_V1_2`. Dataset pipeline v1.2 owner decisions 19 to 21 in section 43 remain open. Other open follow-ups, each its own small package: backlog in `docs/PROJECT_STATE.md` (return to the requested page after sign-in, dataset update with an explicit owner GO, onboarding and crew invitation UI, Fabricator / Inventory design according to the mock-ups) and the open follow-ups of the review of PR #79 (details with the owner). A later release `develop` -> `main` is its own session and pull request with merge method **merge commit** (section 6). The Supabase `LIVE` / `PTU` separation remains open infrastructure work in its own package and is not a current contract. The licence / redistribution decision for scunpacked-data stays open.
+- `DOMAIN-PRECHECK-V1`.
+- `MIRROR-WORKFLOW-V2` (depends on owner decisions 19 to 21 in `docs/proposed/DATASET_PIPELINE_V1.md` §43).
+- Release `develop` -> `main` for the recorded privilege hardening migration (separate owner decision).

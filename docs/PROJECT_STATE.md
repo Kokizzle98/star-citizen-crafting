@@ -4,10 +4,10 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v16 (counted up from v15; GOV-2 reference update to DB governance v1.2, base commit `9bf3c7f0b2010461d77585f720dc253fb8401f91`; checkpoint not rotated)
-- **State verified through commit:** `e6d4e6bac01b3b8b7923111d6371e6cb4eaba9f3`
-- **Updated by work package:** ROT-12 (checkpoint rotation, documentation only, 2026-11-18). Repository facts and merged PRs were verified with `git` and GitHub against `origin` at the base commit above. Previous update: ROT-11 (checkpoint rotation after PR #90).
-- **Checkpoint date:** 2026-11-18
+- **Document version:** v17 (counted up from v16; ROT-13 checkpoint rotation, base commit `a95dc9c47318f57da210b0e80ad8cf1feaa9f893`)
+- **State verified through commit:** `a95dc9c47318f57da210b0e80ad8cf1feaa9f893`
+- **Updated by work package:** ROT-13 (checkpoint rotation, documentation only, 2026-11-19). Repository facts and merged PRs were verified with `git` and GitHub against `origin` at the base commit above. Previous update: ROT-12 (checkpoint rotation after PR #95).
+- **Checkpoint date:** 2026-11-19
 
 ## How to read this file
 
@@ -68,13 +68,16 @@
 - DEV-DB concept (WP DEV-DB-KONZEPT): **DONE**. PR #89 (merge commit `e97f88f`): `docs/architecture/DEV_DB_CONCEPT.md`, documentation only; the read-only inventory of the current database is kept privately by the owner.
 - DEV-DB G0 (governance decision for the DEVELOP Supabase): **DONE** (#89 concept, #90 governance). `DB_ENVIRONMENT_GOVERNANCE_V1_1.md` FROZEN as full-document successor (owner decision 2026-11-17): only `DB-ENV-09` changes, a separate `DEVELOP` project on the Free plan is allowed; `DB-ENV-01` to `DB-ENV-08` carry over. `DEV_DB_CONCEPT.md` is `ACCEPTED` (v1.0).
 - DEV-DB G1 to G4 (separate `DEVELOP` database): **DONE** (owner-approved steps, each with its own GO). The `DEVELOP` project exists on the Free plan, schema, catalog data and synthetic test data are in place, and Vercel Preview deployments of the branch `develop` run against it. Production stays reachable only through `main`. Other branch previews are not part of this statement. No project identifiers, URLs, keys or accounts are recorded here (public repository).
-- Documentation PRs #92–#95: #92 DOC-REF-2 updated DB governance references; #93 introduced SCMDB source inventory v1.0 (analysis only); #94 updated `DATASET_PIPELINE_V1.md` to v1.2, `SCMDB_SOURCE_INVENTORY.md` to v1.1 and `docs/RULE_INDEX.md` to v1.5 (all remain `PROPOSED`; nothing was frozen); #95 GOV-1 updated the AI operating model to v1.4, adding GitHub Copilot as optional Secondary Engineer / Specialist while Claude Code remains the Primary and default Engineer.
+- Documentation PRs #92–#95: #92 DOC-REF-2 updated DB governance references; #93 introduced SCMDB source inventory v1.0 (analysis only); #94 updated `DATASET_PIPELINE_V1.md` to v1.2, `SCMDB_SOURCE_INVENTORY.md` to v1.1 and `docs/RULE_INDEX.md` to v1.5 (all remain `PROPOSED`; nothing was frozen); #95 GOV-1 added GitHub Copilot as optional Secondary Engineer / Specialist while Claude Code remains Primary and default Engineer. The current AI operating model is v1.5 and also lists Copilot as optional Independent Reviewer.
+- Governance and evidence PRs #97–#98: `DB_ENVIRONMENT_GOVERNANCE_V1_2.md` became FROZEN, including DB-ENV-10 One-Time Production Execution and DB-ENV-11 security-hardening sequence exception; GOV-3 updated Project Lead evidence governance references to v1.2.
+- Release 3 `develop` -> `main`: **DONE**. PR #99 (merge commit, `main` = `9cc4b2a`, tag `release-2026-11-18`); governance documentation only.
+- Privilege hardening: **RECORDED** by PR #101 in `database/migrations/security/002_security_hardening_h2.sql`, with a contract test. The migration is already applied; it reaches `main` only with a separate next release.
 - Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`; #56 (`6586108`) public-repo boundary clarification and checkpoint rotation. Documentation only, no Production mutation.
 
 ## ACTIVE
 
 - UX series (owner priority: a usable, good-looking app for the owner and the first outside tester). Design mock-ups approved by the owner on 2026-11-13. Order, one work package per session: UX-1 (quality tiers) **DONE**, UX-2 (shell and branding) **DONE**, UX-3a (Mein Inventory / Crew Inventory split, Crew page read-only) **DONE**, UX-3b (material rows with average and range, depth indicator, KPI strip) **DONE**, UX-4 (Crew Inventory overview) **DONE**, UX-5 (global key set) **DONE**, UX-5b (key help) **DONE**, UX-5c (`B` key) **DONE**, UX-5d (Crew edit symbol with jump and return) **DONE**, UX-6a (Fabricator clarity pass, dataset label) **DONE**, UX-6b (dashboard polish) **DONE**. The series is complete as planned; remaining open points are listed under OPEN DECISIONS. Binding specification: `docs/frozen/INVENTORY_UX_V1_2.md`.
-- Hardening H2: running on `DEVELOP`; applying it to Production follows in its own step (separate named owner GO).
+- Privilege hardening is recorded in the repository and already applied. Its release from `develop` to `main` is a separate package.
 
 ## PAUSED
 
@@ -86,16 +89,9 @@
 
 ## NEXT
 
-0. **Prepare hardening H2 for Production, then the auth concept.** Applying H2 to Production is its own step and needs its own named owner GO (`DB_ENVIRONMENT_GOVERNANCE_V1_2`, One-Time Production GO under `DB-ENV-10`). G7 (public baseline) remains a later, separate step.
-1. **Release 2 is done** (PR #87, `main` = `66c531bd`, tag `release-2026-11-17`; rollback points `pre-release-2026-11-14` on `eb6f108` and `e916f69`). No release is planned. A later release `develop` -> `main` is its own session and pull request with merge method **merge commit** (see `docs/handover/VECTOR_RESTART_HANDOVER.md` section 6). After PR #87, `main` and `develop` have identical file content (`git diff` empty); `main` is ahead only by the two release merge commits `e916f69` (#79) and `66c531b` (#87), which `develop` does not contain. The merge base is the `develop` head `9d58d61`, so the next release merge is clean without merging `main` back into `develop` (no back-merge was done after #79 either). A back-merge is optional and would be its own owner decision. Owner follow-up after the release: check the audit workflow run on `main` (first run with the new paths) and the Vercel Production deployment.
-2. Small follow-ups from the Copilot review of PR #79 (F2, F3 and F5 to F10): already classified as deferred; open, details with the owner. Each is its own small package.
-3. Backlog (each its own small package, only after an owner decision where noted):
-   - Return to the requested page after sign-in (`next` target in `requireUser`; auth change).
-   - Dataset update (LIVE 4.10.3, PTU separate, workflow sync): only with an explicit owner GO.
-   - Onboarding of player name / player account and the crew invitation UI.
-   - Fabricator and Inventory design according to the mock-ups.
-4. After that the owner chooses the next package (candidates: F4-B and a UEX source foundation, each as its own package, only after an explicit owner decision). The licence / redistribution decision for scunpacked-data stays open and is tracked below. Open owner wishes (not commissioned): background image for Crew Inventory, material image. Image source and rights are unresolved.
-5. Later and not part of Fabricator Phase 1: reliable product / variant visuals (D5).
+- `DOMAIN-PRECHECK-V1`.
+- `MIRROR-WORKFLOW-V2` (depends on owner decisions 19 to 21 in `docs/proposed/DATASET_PIPELINE_V1.md` §43).
+- Release `develop` -> `main` for the recorded privilege hardening migration (separate owner decision).
 
 ## OPEN DECISIONS
 
@@ -112,7 +108,7 @@
 
 ## OPEN INFRASTRUCTURE WORK
 
-- `DEVELOP` instance (owner decision 2026-11-17): a second, ordinary Supabase project on the Free plan for development, preview and safe write tests; **created**, governed by `DB-ENV-09` in `DB_ENVIRONMENT_GOVERNANCE_V1_2.md`, planned in `docs/architecture/DEV_DB_CONCEPT.md`. Open: hardening H2 on Production (own GO) and the later steps of the concept (each with its own GO). Vercel Preview deployments of the branch `develop` use `DEVELOP`; Vercel Production uses the Production database.
+- `DEVELOP` instance (owner decision 2026-11-17): a second, ordinary Supabase project on the Free plan for development, preview and safe write tests; **created**, governed by `DB-ENV-09` in `DB_ENVIRONMENT_GOVERNANCE_V1_2.md`, planned in `docs/architecture/DEV_DB_CONCEPT.md`. The privilege hardening migration is recorded and already applied; its release to `main` is listed under NEXT. Later steps of the concept remain separate work. Vercel Preview deployments of the branch `develop` use `DEVELOP`; Vercel Production uses the Production database.
 - Separate Supabase contexts for `LIVE` and `PTU` (future Spur-B target, owner decision 2026-11-11, not started): **not** a current DB-environment contract and **not** FROZEN. The Free plan does not allow more than two active projects, so this stays a separate future package (concept section 9).
 
 ## RELEVANT CONTRACTS
