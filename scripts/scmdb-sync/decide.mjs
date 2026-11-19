@@ -16,14 +16,17 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { serializeObservation } from '../domain-precheck/observation.mjs'
-import { RESULT } from '../domain-precheck/precheck.mjs'
+import { RESULT, aggregate } from '../domain-precheck/precheck.mjs'
+import { DOMAIN_REGISTER } from '../domain-precheck/register.mjs'
 
 export const SYNC_BRANCH = 'automation/scmdb-sync'
 export const BASE_BRANCH = 'develop'
 export const UPSTREAM_REPOSITORY = 'KrovaxCode/SCMDB_DATA'
-// Proposed location of the append-only observation record (owner decision 21). Outside
+// Location of the append-only observation record (owner decision 21; path approved by the owner on 2026-11-19). Outside
 // data/scmdb/, so the mirror consumers and the data/scmdb/** path filters do not fire on it.
 export const OBSERVATION_FILE = 'data/scmdb-sync/observations.jsonl'
+// The mirror directory that a sync commit may change next to the observation record.
+export const MIRROR_PATH = 'data/scmdb/'
 
 export const OUTCOME = Object.freeze({ OBSERVE: 'OBSERVE', PUBLISH: 'PUBLISH', HELD: 'HELD' })
 export const MODE = Object.freeze({ DRY_RUN: 'dry-run', PUBLISH: 'publish' })
@@ -68,30 +71,64 @@ export function decide(precheck) {
   if (!isObject(precheck) || !isObject(precheck.channels)) {
     return finish(OUTCOME.HELD, [{ code: 'PRECHECK_MALFORMED' }], domains, changedChannels)
   }
-  const channels = Object.values(precheck.channels)
+  const channels = Object.entries(precheck.channels)
   if (channels.length === 0) reasons.push({ code: 'NO_CHANNEL_RESULT' })
 
-  for (const channel of channels) {
-    if (!isObject(channel) || !Array.isArray(channel.domains) || channel.domains.length === 0) {
-      reasons.push({ code: 'CHANNEL_WITHOUT_DOMAINS', channel: isObject(channel) ? channel.channel ?? null : null })
+  const allResults = []
+  let allResultsValid = true
+  for (const [key, channel] of channels) {
+    // Channel metadata: a channel of the register, stored under its own name (so it can occur only once).
+    const name = isObject(channel) ? channel.channel : undefined
+    if (typeof name !== 'string' || !DOMAIN_REGISTER.channels.includes(name) || key !== name) {
+      reasons.push({ code: 'CHANNEL_METADATA_INVALID', key })
       continue
     }
+    if (!Array.isArray(channel.domains) || channel.domains.length === 0) {
+      reasons.push({ code: 'CHANNEL_WITHOUT_DOMAINS', channel: name })
+      continue
+    }
+
+    // Domain metadata and completeness: exactly the domains the register lists for this channel.
+    const registered = DOMAIN_REGISTER.domains.filter(domain => domain.channels.includes(name)).map(domain => domain.id)
+    const seenDomains = new Set()
+    const channelResults = []
     let domainChanged = false
     for (const entry of channel.domains) {
-      const result = isObject(entry) ? entry.result : undefined
-      if (!RESULTS.has(result)) {
-        reasons.push({ code: 'RESULT_UNKNOWN', channel: channel.channel ?? null, domain: isObject(entry) ? entry.domain ?? null : null })
+      const domainName = isObject(entry) ? entry.domain : undefined
+      if (typeof domainName !== 'string' || domainName === '') {
+        reasons.push({ code: 'DOMAIN_METADATA_INVALID', channel: name })
+        allResultsValid = false
         continue
       }
+      if (!registered.includes(domainName)) reasons.push({ code: 'DOMAIN_UNKNOWN', channel: name, domain: domainName })
+      else if (seenDomains.has(domainName)) reasons.push({ code: 'DOMAIN_DUPLICATE', channel: name, domain: domainName })
+      seenDomains.add(domainName)
+
+      const result = entry.result
+      if (!RESULTS.has(result)) {
+        reasons.push({ code: 'RESULT_UNKNOWN', channel: name, domain: domainName })
+        allResultsValid = false
+        continue
+      }
+      channelResults.push(result)
+      allResults.push(result)
       domains.push({
-        channel: channel.channel,
-        domain: entry.domain,
+        channel: name,
+        domain: domainName,
         result,
         reason_codes: Array.isArray(entry.reasons) ? entry.reasons.map(reason => reason?.code ?? null) : [],
       })
       if (result === RESULT.CHANGED) domainChanged = true
-      if (result === RESULT.HELD_FOR_REVIEW) reasons.push({ code: 'DOMAIN_HELD', channel: channel.channel, domain: entry.domain })
+      if (result === RESULT.HELD_FOR_REVIEW) reasons.push({ code: 'DOMAIN_HELD', channel: name, domain: domainName })
     }
+    const missing = registered.filter(id => !seenDomains.has(id))
+    if (missing.length > 0) reasons.push({ code: 'DOMAIN_SET_INCOMPLETE', channel: name, missing })
+
+    // The channel result must be the aggregate of its own domain results.
+    if (allResultsValid && channelResults.length === channel.domains.length && channel.result !== aggregate(channelResults)) {
+      reasons.push({ code: 'CHANNEL_RESULT_CONFLICT', channel: name })
+    }
+
     // A channel changed when its build differs from the baseline build or at least one of its domains is CHANGED
     // (section 35.1 rule 5). A new build with only UNCHANGED domains is a build-only update; an equal build with
     // only UNCHANGED domains is not listed at all.
@@ -99,7 +136,7 @@ export function decide(precheck) {
     if (domainChanged || buildChanged) {
       const baseline = parseBuild(channel.baseline_build)
       changedChannels.push({
-        channel: channel.channel,
+        channel: name,
         kind: domainChanged ? 'DOMAIN_CHANGE' : 'BUILD_ONLY',
         build: channel.build ?? null,
         semantic_version: channel.semantic_version ?? null,
@@ -111,9 +148,12 @@ export function decide(precheck) {
     }
   }
 
-  // Defense in depth. The precheck already turns each of these into HELD_FOR_REVIEW domains.
+  // Top level: the stated result must be the aggregate of the domain results (HELD beats CHANGED beats UNCHANGED).
+  // Defense in depth: the precheck derives it the same way, so any conflict means the input cannot be trusted.
   if (!RESULTS.has(precheck.result)) reasons.push({ code: 'TOP_LEVEL_RESULT_UNKNOWN' })
-  else if (precheck.result === RESULT.HELD_FOR_REVIEW && !reasons.some(reason => reason.code === 'DOMAIN_HELD')) reasons.push({ code: 'TOP_LEVEL_HELD' })
+  else if (allResultsValid && precheck.result !== aggregate(allResults)) {
+    reasons.push({ code: 'TOP_LEVEL_RESULT_CONFLICT', stated: precheck.result, recomputed: aggregate(allResults) })
+  }
   const sha = precheck.source_export_revision?.upstream_commit_sha
   if (typeof sha !== 'string' || !COMMIT_SHA_PATTERN.test(sha)) reasons.push({ code: 'SOURCE_SHA_MISSING' })
   if (Array.isArray(precheck.findings) && precheck.findings.length > 0) {
@@ -187,7 +227,8 @@ export function buildCommitMessage(decision, precheck) {
     '',
     `Upstream: ${UPSTREAM_REPOSITORY} ${precheck.source_export_revision.upstream_commit_sha}`,
     `Precheck: ${decision.counts.CHANGED} CHANGED, ${decision.counts.UNCHANGED} UNCHANGED, ${decision.counts.HELD_FOR_REVIEW} HELD_FOR_REVIEW domain results.`,
-    'Observation record entries of this run are included. Proposed through a pull request only; no auto-merge.',
+    `Changed paths: ${MIRROR_PATH} (mirror) and ${OBSERVATION_FILE} (observation record, rides along).`,
+    'Proposed through a pull request only; no auto-merge.',
     '',
   ].join('\n')
 }
@@ -199,7 +240,7 @@ export function buildObservationCommitMessage(decision, precheck) {
     `chore(scmdb-sync): record ${label} observation ${shortSha(precheck)}`,
     '',
     `Upstream: ${UPSTREAM_REPOSITORY} ${precheck?.source_export_revision?.upstream_commit_sha ?? 'unknown'}`,
-    'Appends to the append-only observation record. No mirror change.',
+    `Changed path: ${OBSERVATION_FILE} (observation record, append-only) only. ${MIRROR_PATH} is not changed.`,
     '',
   ].join('\n')
 }
@@ -265,9 +306,10 @@ export function buildPrBody(decision, precheck, { runUrl = null, observationFile
     '',
     ...domainTable(precheck),
     '',
-    '### Observation record',
+    '### Paths in this pull request',
     '',
-    `The observation entries collected on the sync branch since the last merge ride along in \`${observationFile}\` (append-only).`,
+    `- \`${MIRROR_PATH}\`: the mirror change proposed above.`,
+    `- \`${observationFile}\`: the append-only observation record. The entries collected on the sync branch since the last merge ride along.`,
     '',
     '### Reviewer notes',
     '',
@@ -293,7 +335,7 @@ export function buildWithdrawalPr(decision, precheck, { runUrl = null, observati
     '',
     '**Mirror proposal withdrawn: upstream matches `develop` again; this pull request now carries observation records only.**',
     '',
-    `The mirror files on \`${SYNC_BRANCH}\` were set back to \`${BASE_BRANCH}\`. The owner can close this pull request, or merge it to bring the observation records (\`${observationFile}\`) into \`${BASE_BRANCH}\`. It is not closed and not merged automatically.`,
+    `The mirror files (\`${MIRROR_PATH}\`) on \`${SYNC_BRANCH}\` were set back to \`${BASE_BRANCH}\`; the only path that still differs is the observation record \`${observationFile}\`. The owner can close this pull request, or merge it to bring the observation records into \`${BASE_BRANCH}\`. It is not closed and not merged automatically.`,
     '',
     '### Latest run',
     '',

@@ -1,7 +1,7 @@
 # VECTOR Dataset Pipeline v1
 
 **Status:** PROPOSED\
-**Version:** 1.2 (revision 3, 2026-11-19: §31 and §42 items 2 and 5 updated for `MIRROR-WORKFLOW-V2`, status unchanged; revision base `161697b`. Revision 2, 2026-11-19: owner decisions 19 to 22 recorded in §43 and followed up in §35.3, §36.2, §38.3 and §40.1, status unchanged; revision base `80dc6e0`. Revision 1, 2026-11-18: DB governance reference moved to v1.2 by GOV-2, no content change; revision base `9bf3c7f`)\
+**Version:** 1.2 (revision 4, 2026-11-19: owner approval of the observation record path recorded in §31 and §38.3, status unchanged. Revision 3, 2026-11-19: §31 and §42 items 2 and 5 updated for `MIRROR-WORKFLOW-V2`, status unchanged; revision base `161697b`. Revision 2, 2026-11-19: owner decisions 19 to 22 recorded in §43 and followed up in §35.3, §36.2, §38.3 and §40.1, status unchanged; revision base `80dc6e0`. Revision 1, 2026-11-18: DB governance reference moved to v1.2 by GOV-2, no content change; revision base `9bf3c7f`)\
 **Base commit:** `8f504ef` (`develop`, merge of PR #93)\
 **Authority Scope:** DATASET_PIPELINE\
 **Approved By:** pending project_owner approval\
@@ -877,7 +877,7 @@ The former workflow committed and pushed `data/scmdb/` directly to the checked-o
 - The mode comes from the repository variable `SCMDB_SYNC_MODE`. `dry-run` is the default when it is unset. In `dry-run` everything is computed and reported, and nothing is pushed and no pull request is opened. A manual run can always force `dry-run`.
 - It records the commit SHA of the upstream clone (§33.2) and compares the working mirror against `origin/develop` with the domain precheck (§37). The decision is made by a tested script, not inside the workflow file: all domains `UNCHANGED` is an observation, a change without any `HELD_FOR_REVIEW` result is a mirror proposal, any `HELD_FOR_REVIEW` result records the observation, creates no mirror commit and no pull request, and fails the job so that it is visible.
 - Observations are appended to a continuous record on the rolling, unprotected branch `automation/scmdb-sync` (§38.3). That branch is created from `develop`, receives `develop` by merge at the start of each run, and is never rebased and never force-pushed. A real change is proposed as a pull request from that branch to `develop`. The pull request names the dataset identity per changed channel and the precheck result per domain (§35.1 rule 5). The owner reviews and merges it by hand.
-- The record location is proposed as `data/scmdb-sync/observations.jsonl`. It lies outside `data/scmdb/`, so no mirror consumer and no `data/scmdb/**` path filter fires on it. It is not part of the allowed paths of the restart handover, so its use needs an owner scope decision.
+- The record location is `data/scmdb-sync/observations.jsonl`, approved by the owner on 2026-11-19. It lies outside `data/scmdb/`, so no mirror consumer and no `data/scmdb/**` path filter fires on it. The extension of the allowed paths in the restart handover is recorded at the next checkpoint rotation (ROT-14), not in the package that introduces the workflow.
 - Pull requests that a workflow opens with the default token do not start `pull_request` workflows. The pull request text asks the reviewer to close and reopen it once to start the checks. No existing workflow is changed for this.
 
 ## 32. Acceptance Criteria
@@ -1275,6 +1275,8 @@ A no-material-change run is observation only:
 ### 38.3 Where observations live
 
 Owner decision 21 (§43) fixes the place. Observations ("nothing changed") are kept in one continuous, append-only observation record. The record is stored on a single rolling, unprotected sync branch. That branch is never force-pushed and never merged automatically. Each run also writes a summary into the workflow run. When a real change occurs, the pull request carries the earlier observations with it. The details belong to the later mirror workflow package (`MIRROR-WORKFLOW-V2`).
+
+The record path `data/scmdb-sync/observations.jsonl` was approved by the owner on 2026-11-19. The allowed scope of the restart handover is extended at the next checkpoint rotation (ROT-14).
 
 ## 39. Domain-level verification
 

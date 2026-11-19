@@ -5,9 +5,10 @@ import path from 'node:path'
 import test from 'node:test'
 import { run as runPrecheckCli } from '../scripts/domain-precheck.mjs'
 import { buildObservation } from '../scripts/domain-precheck/observation.mjs'
-import { runDomainPrecheck } from '../scripts/domain-precheck/precheck.mjs'
+import { aggregate, runDomainPrecheck } from '../scripts/domain-precheck/precheck.mjs'
+import { DOMAIN_REGISTER } from '../scripts/domain-precheck/register.mjs'
 import {
-  MODE, OBSERVATION_FILE, OUTCOME, SYNC_BRANCH, appendObservation, buildCommitMessage, buildObservationCommitMessage,
+  MIRROR_PATH, MODE, OBSERVATION_FILE, OUTCOME, SYNC_BRANCH, appendObservation, buildCommitMessage, buildObservationCommitMessage,
   buildOpenPrNote, buildPrBody, buildPrTitle, buildSummary, buildWithdrawalPr, decide, isAppendOnly, observationLines,
   parseBuild, resolveMode, run as runDecideCli,
 } from '../scripts/scmdb-sync/decide.mjs'
@@ -151,6 +152,108 @@ test('an independent channel does not hide a change: LIVE unchanged, PTU changed
   const decision = decide(precheckOutput(before, after))
   assert.equal(decision.outcome, OUTCOME.PUBLISH)
   assert.deepEqual(decision.changed_channels.map(channel => channel.channel), ['PTU'])
+})
+
+// --- the precheck input must be complete and consistent --------------------------------------------
+
+const registeredFor = channel => DOMAIN_REGISTER.domains.filter(domain => domain.channels.includes(channel)).map(domain => domain.id)
+const codesOf = decision => decision.reasons.map(reason => reason.code)
+/** A consistent precheck output, altered by `mutate`, must be HELD with the expected reason code. */
+function expectHeld(label, code, mutate, base = unchanged) {
+  const output = clone(base())
+  mutate(output)
+  const decision = decide(output)
+  assert.equal(decision.outcome, OUTCOME.HELD, label)
+  assert.ok(codesOf(decision).includes(code), `${label}: ${code} in ${codesOf(decision)}`)
+  assert.deepEqual(decision.changed_channels, [], `${label}: no proposal while held`)
+  return decision
+}
+
+test('the register decides which domains must be present: the real output matches it exactly', () => {
+  const output = unchanged()
+  for (const channel of Object.values(output.channels)) {
+    assert.deepEqual(channel.domains.map(entry => entry.domain).sort(), registeredFor(channel.channel).sort(), channel.channel)
+  }
+  assert.deepEqual(registeredFor('LIVE').length, 6)
+  assert.deepEqual(registeredFor('PTU').length, 4)
+})
+
+test('a missing registered domain is HELD (DOMAIN_SET_INCOMPLETE), even when every other domain is UNCHANGED', () => {
+  const decision = expectHeld('missing LOCATIONS', 'DOMAIN_SET_INCOMPLETE', output => {
+    output.channels.LIVE.domains = output.channels.LIVE.domains.filter(entry => entry.domain !== 'LOCATIONS')
+    output.observation.entries = output.observation.entries.filter(entry => !(entry.channel === 'LIVE' && entry.domain === 'LOCATIONS'))
+  })
+  assert.deepEqual(decision.reasons.find(reason => reason.code === 'DOMAIN_SET_INCOMPLETE').missing, ['LOCATIONS'])
+  expectHeld('whole channel emptied except one', 'DOMAIN_SET_INCOMPLETE', output => { output.channels.PTU.domains = output.channels.PTU.domains.slice(0, 1) })
+  expectHeld('missing in a changed run', 'DOMAIN_SET_INCOMPLETE', output => { output.channels.LIVE.domains.pop() }, liveChanged)
+})
+
+test('a duplicate domain is HELD (DOMAIN_DUPLICATE), also when the count would still look right', () => {
+  expectHeld('duplicate', 'DOMAIN_DUPLICATE', output => { output.channels.LIVE.domains.push(clone(output.channels.LIVE.domains[0])) })
+  const swapped = expectHeld('one domain twice instead of another', 'DOMAIN_DUPLICATE', output => { output.channels.LIVE.domains[1] = clone(output.channels.LIVE.domains[0]) })
+  assert.ok(codesOf(swapped).includes('DOMAIN_SET_INCOMPLETE'), 'the replaced domain is missing as well')
+})
+
+test('an unknown domain, or a domain of another channel, is HELD (DOMAIN_UNKNOWN)', () => {
+  expectHeld('unknown name', 'DOMAIN_UNKNOWN', output => { output.channels.LIVE.domains[0].domain = 'NOT_IN_THE_REGISTER' })
+  expectHeld('extra unknown domain', 'DOMAIN_UNKNOWN', output => { output.channels.PTU.domains.push({ ...clone(output.channels.PTU.domains[0]), domain: 'EXTRA' }) })
+  assert.ok(!registeredFor('PTU').includes('FABRICATOR') && registeredFor('LIVE').includes('FABRICATOR'))
+  expectHeld('LIVE-only domain under PTU', 'DOMAIN_UNKNOWN', output => { output.channels.PTU.domains.push({ ...clone(output.channels.PTU.domains[0]), domain: 'FABRICATOR' }) })
+  expectHeld('lower-case name', 'DOMAIN_UNKNOWN', output => { output.channels.LIVE.domains[0].domain = output.channels.LIVE.domains[0].domain.toLowerCase() })
+})
+
+test('a missing, empty or non-string domain name, or an entry that is no object, is HELD (DOMAIN_METADATA_INVALID)', () => {
+  for (const [label, name] of [['empty', ''], ['missing', undefined], ['null', null], ['number', 5], ['object', {}], ['array', ['LOCATIONS']]]) {
+    expectHeld(`domain name ${label}`, 'DOMAIN_METADATA_INVALID', output => {
+      if (name === undefined) delete output.channels.LIVE.domains[0].domain
+      else output.channels.LIVE.domains[0].domain = name
+    })
+  }
+  for (const [label, entry] of [['null', null], ['string', 'LOCATIONS'], ['array', []]]) {
+    expectHeld(`domain entry ${label}`, 'DOMAIN_METADATA_INVALID', output => { output.channels.LIVE.domains[0] = entry })
+  }
+})
+
+test('a missing, empty, unknown or mismatching channel name is HELD (CHANNEL_METADATA_INVALID)', () => {
+  for (const [label, name] of [['empty', ''], ['missing', undefined], ['null', null], ['number', 1], ['unknown', 'BETA'], ['lower case', 'live']]) {
+    expectHeld(`channel name ${label}`, 'CHANNEL_METADATA_INVALID', output => {
+      if (name === undefined) delete output.channels.LIVE.channel
+      else output.channels.LIVE.channel = name
+    })
+  }
+  expectHeld('channel stored under another key', 'CHANNEL_METADATA_INVALID', output => { output.channels.PTU = output.channels.LIVE; delete output.channels.LIVE })
+  expectHeld('channel entry no object', 'CHANNEL_METADATA_INVALID', output => { output.channels.LIVE = 'LIVE' })
+})
+
+test('the stated top-level result must equal the aggregate of the domain results (TOP_LEVEL_RESULT_CONFLICT)', () => {
+  const changed = decide(liveChanged())
+  assert.equal(changed.outcome, OUTCOME.PUBLISH)
+  const underClaimed = expectHeld('top level UNCHANGED over a CHANGED domain', 'TOP_LEVEL_RESULT_CONFLICT', output => { output.result = 'UNCHANGED' }, liveChanged)
+  assert.deepEqual([underClaimed.reasons[0].stated, underClaimed.reasons[0].recomputed], ['UNCHANGED', 'CHANGED'])
+  expectHeld('top level CHANGED over only UNCHANGED domains', 'TOP_LEVEL_RESULT_CONFLICT', output => { output.result = 'CHANGED' })
+  expectHeld('top level HELD over only UNCHANGED domains', 'TOP_LEVEL_RESULT_CONFLICT', output => { output.result = 'HELD_FOR_REVIEW' })
+  expectHeld('top level UNCHANGED over a HELD domain', 'TOP_LEVEL_RESULT_CONFLICT', output => { output.result = 'UNCHANGED' }, held)
+  expectHeld('top level CHANGED over a HELD domain', 'TOP_LEVEL_RESULT_CONFLICT', output => { output.result = 'CHANGED' }, held)
+  expectHeld('a domain flipped without the top level following', 'TOP_LEVEL_RESULT_CONFLICT', output => { output.channels.LIVE.domains[0].result = 'CHANGED' })
+  expectHeld('a CHANGED domain flipped to UNCHANGED', 'TOP_LEVEL_RESULT_CONFLICT', output => {
+    for (const entry of output.channels.LIVE.domains) if (entry.result === 'CHANGED') entry.result = 'UNCHANGED'
+  }, liveChanged)
+})
+
+test('the stated channel result must equal the aggregate of its domains (CHANNEL_RESULT_CONFLICT)', () => {
+  expectHeld('channel UNCHANGED over a CHANGED domain', 'CHANNEL_RESULT_CONFLICT', output => { output.channels.LIVE.result = 'UNCHANGED' }, liveChanged)
+  expectHeld('channel CHANGED over UNCHANGED domains', 'CHANNEL_RESULT_CONFLICT', output => { output.channels.PTU.result = 'CHANGED' })
+})
+
+test('consistent input is unaffected by the stricter checks: OBSERVE, PUBLISH and the mixed build-only case', () => {
+  for (const [make, expected] of [[unchanged, OUTCOME.OBSERVE], [liveChanged, OUTCOME.PUBLISH], [liveChangedPtuBuildOnly, OUTCOME.PUBLISH], [held, OUTCOME.HELD]]) {
+    const output = make()
+    const decision = decide(output)
+    assert.equal(decision.outcome, expected)
+    if (expected !== OUTCOME.HELD) assert.deepEqual(decision.reasons, [])
+    for (const channel of Object.values(output.channels)) assert.equal(channel.result, aggregate(channel.domains.map(entry => entry.result)))
+    assert.equal(output.result, aggregate(Object.values(output.channels).flatMap(channel => channel.domains.map(entry => entry.result))))
+  }
 })
 
 // --- observation record -------------------------------------------------------------------------
@@ -312,6 +415,25 @@ test('open pull request note: withdrawn, dry-run wording, held, nothing to say',
   assert.equal(buildOpenPrNote({ outcome: 'PUBLISH', mode: 'publish', prNumber: 'unknown' }), '')
 })
 
+test('texts name the paths a sync commit contains: mirror and observation record, or the record alone', () => {
+  const output = liveChanged()
+  const decision = decide(output)
+  const body = buildPrBody(decision, output)
+  assert.match(body, /### Paths in this pull request/)
+  assert.ok(body.includes(`- \`${MIRROR_PATH}\`: the mirror change proposed above.`))
+  assert.ok(body.includes(`- \`${OBSERVATION_FILE}\`: the append-only observation record.`))
+  assert.equal(MIRROR_PATH, 'data/scmdb/')
+  const mirrorMessage = buildCommitMessage(decision, output)
+  assert.ok(mirrorMessage.includes(MIRROR_PATH) && mirrorMessage.includes(OBSERVATION_FILE))
+  const clean = unchanged()
+  const observationOnly = buildCommitMessage(decide(clean), clean)
+  assert.ok(observationOnly.includes(OBSERVATION_FILE))
+  assert.ok(!observationOnly.includes('(mirror)') && !observationOnly.includes('Changed paths:'), 'a record-only commit names only the record')
+  const withdrawal = buildWithdrawalPr(decide(clean), clean).body
+  assert.ok(withdrawal.includes(`(\`${MIRROR_PATH}\`)`) && withdrawal.includes(`\`${OBSERVATION_FILE}\``))
+  assert.match(withdrawal, /only path that still differs is the observation record/)
+})
+
 test('pull request text is built for PUBLISH only', () => {
   for (const output of [unchanged(), held()]) assert.throws(() => buildPrBody(decide(output), output), /PR_BODY_ONLY_FOR_PUBLISH/)
 })
@@ -326,7 +448,10 @@ test('commit messages and title name identity and upstream commit', () => {
   const observe = buildCommitMessage(decide(unchanged()), unchanged())
   assert.match(observe.split('\n')[0], /record unchanged observation aaaaaaa$/)
   assert.match(buildObservationCommitMessage(decision, output).split('\n')[0], /record changed observation aaaaaaa$/)
-  assert.ok(buildObservationCommitMessage(decision, output).includes('No mirror change.'))
+  const observationMessage = buildObservationCommitMessage(decision, output)
+  assert.ok(observationMessage.includes(`Changed path: ${OBSERVATION_FILE} (observation record, append-only) only. data/scmdb/ is not changed.`))
+  assert.ok(!observationMessage.includes('(mirror)'), 'an observation commit does not claim a mirror path')
+  assert.ok(message.includes(`Changed paths: data/scmdb/ (mirror) and ${OBSERVATION_FILE} (observation record, rides along).`))
   assert.match(buildCommitMessage(decide(held()), held()).split('\n')[0], /record held observation unknown$/)
 })
 
@@ -393,6 +518,7 @@ test('CLI: OBSERVE writes the decision, observation lines, summary, commit messa
     const result = await decideCli(await precheckViaCli(base, docs, docs), base)
     assert.equal(result.code, 0, result.err)
     assert.equal(result.out, 'outcome=OBSERVE\n')
+    assert.deepEqual(JSON.parse(await readFile(path.join(base, 'out', 'decision.json'), 'utf8')).reasons, [], 'the real precheck output passes every consistency check')
     assert.deepEqual((await readdir(path.join(base, 'out'))).sort(), ['commit-message.txt', 'decision.json', 'observation-commit-message.txt', 'observation-lines.jsonl', 'pr-withdrawn-body.md', 'pr-withdrawn-title.txt', 'summary.md'])
     const lines = (await readFile(path.join(base, 'out', 'observation-lines.jsonl'), 'utf8')).trimEnd().split('\n').map(line => JSON.parse(line))
     assert.equal(lines[0].record_type, 'source_export_revision')
@@ -408,6 +534,7 @@ test('CLI: PUBLISH adds the pull request title and body', async () => {
     after.channels.live.crafting_blueprints.resources.reverse()
     const result = await decideCli(await precheckViaCli(base, before, after), base, 'publish')
     assert.equal(result.out, 'outcome=PUBLISH\n')
+    assert.deepEqual(JSON.parse(await readFile(path.join(base, 'out', 'decision.json'), 'utf8')).reasons, [], 'the real precheck output passes every consistency check')
     const files = await readdir(path.join(base, 'out'))
     assert.ok(files.includes('pr-body.md'))
     assert.ok(!files.some(name => name.startsWith('pr-withdrawn')), 'no withdrawal text for a proposal')
