@@ -82,6 +82,7 @@
 ## ACTIVE
 
 - UX series (owner priority: a usable, good-looking app for the owner and the first outside tester). Design mock-ups approved by the owner on 2026-11-13. Order, one work package per session: UX-1 (quality tiers) **DONE**, UX-2 (shell and branding) **DONE**, UX-3a (Mein Inventory / Crew Inventory split, Crew page read-only) **DONE**, UX-3b (material rows with average and range, depth indicator, KPI strip) **DONE**, UX-4 (Crew Inventory overview) **DONE**, UX-5 (global key set) **DONE**, UX-5b (key help) **DONE**, UX-5c (`B` key) **DONE**, UX-5d (Crew edit symbol with jump and return) **DONE**, UX-6a (Fabricator clarity pass, dataset label) **DONE**, UX-6b (dashboard polish) **DONE**. The series is complete as planned; remaining open points are listed under OPEN DECISIONS. Binding specification: `docs/frozen/INVENTORY_UX_V1_2.md`.
+
 ## PAUSED
 
 - None.
