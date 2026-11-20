@@ -4,10 +4,10 @@
 - **Purpose:** the shortest repository-verified answer to "where is VECTOR right now?", for restarts of the owner, the VECTOR Project Lead and engineering agents
 - **Repository:** `github.com/Kokizzle98/star-citizen-crafting`
 - **Expected primary working branch:** `develop`
-- **Document version:** v17 (counted up from v16; ROT-13 checkpoint rotation, base commit `a95dc9c47318f57da210b0e80ad8cf1feaa9f893`)
-- **State verified through commit:** `a95dc9c47318f57da210b0e80ad8cf1feaa9f893`
-- **Updated by work package:** ROT-13 (checkpoint rotation, documentation only, 2026-11-19). Repository facts and merged PRs were verified with `git` and GitHub against `origin` at the base commit above. Previous update: ROT-12 (checkpoint rotation after PR #95).
-- **Checkpoint date:** 2026-11-19
+- **Document version:** v18 (counted up from v17; ROT-14 checkpoint rotation, base commit `5bd0d5b726406f9336beea4a48f1ad042249c852`)
+- **State verified through commit:** `5bd0d5b726406f9336beea4a48f1ad042249c852`
+- **Updated by work package:** ROT-14 (checkpoint rotation, documentation only, 2026-11-20). Repository facts and merged PRs were verified with `git` against `origin` at the base commit above. Previous update: ROT-13 (checkpoint rotation after PR #101).
+- **Checkpoint date:** 2026-11-20
 
 ## How to read this file
 
@@ -72,13 +72,16 @@
 - Governance and evidence PRs #97–#98: `DB_ENVIRONMENT_GOVERNANCE_V1_2.md` became FROZEN, including DB-ENV-10 One-Time Production Execution and DB-ENV-11 security-hardening sequence exception; GOV-3 updated Project Lead evidence governance references to v1.2.
 - Release 3 `develop` -> `main`: **DONE**. PR #99 (merge commit, `main` = `9cc4b2a`, tag `release-2026-11-18`); governance documentation only.
 - Privilege hardening: **RECORDED** by PR #101 in `database/migrations/security/002_security_hardening_h2.sql`, with a contract test. The migration is already applied; it reaches `main` only with a separate next release.
+- Checkpoint rotation after PR #101: **DONE**. PR #102 (ROT-13), documentation only.
+- DOMAIN-PRECHECK-V1: **DONE**. PR #103 added the fail-closed domain precheck core, CLI and tests; unreadable mirror entries produce `HELD` instead of being dropped. The same PR records DATASET_PIPELINE_V1 v1.2 owner decisions 19 to 22 in `docs/proposed/DATASET_PIPELINE_V1.md`.
+- MIRROR-WORKFLOW-V2: **DONE**. PR #104 syncs SCMDB without direct push; the default mode is dry-run when `SCMDB_SYNC_MODE` is unset.
+- MIRROR-REVIEW-ACK: **DONE**. PR #105 added hash-bound reviewed acknowledgement for site-settings holds.
+- Production privilege hardening G6: **DONE** on 2026-11-18 under named per-step owner GOs; DB-ENV-11 is satisfied by PR #101. Evidence is private.
 - Governance / documentation after PR #52: **DONE**. #53 (`b28abe7`) checkpoint rotation and project identifier removed from the active docs; #54 (`2e20cf0`) public-repo rule in `AGENTS.md` and review-before-merge and runtime read access in `AI_OPERATING_MODEL` (v1.2); #55 (`79f7b30`) unofficial fan project notice in `README.md`; #56 (`6586108`) public-repo boundary clarification and checkpoint rotation. Documentation only, no Production mutation.
 
 ## ACTIVE
 
 - UX series (owner priority: a usable, good-looking app for the owner and the first outside tester). Design mock-ups approved by the owner on 2026-11-13. Order, one work package per session: UX-1 (quality tiers) **DONE**, UX-2 (shell and branding) **DONE**, UX-3a (Mein Inventory / Crew Inventory split, Crew page read-only) **DONE**, UX-3b (material rows with average and range, depth indicator, KPI strip) **DONE**, UX-4 (Crew Inventory overview) **DONE**, UX-5 (global key set) **DONE**, UX-5b (key help) **DONE**, UX-5c (`B` key) **DONE**, UX-5d (Crew edit symbol with jump and return) **DONE**, UX-6a (Fabricator clarity pass, dataset label) **DONE**, UX-6b (dashboard polish) **DONE**. The series is complete as planned; remaining open points are listed under OPEN DECISIONS. Binding specification: `docs/frozen/INVENTORY_UX_V1_2.md`.
-- Privilege hardening is recorded in the repository and already applied. Its release from `develop` to `main` is a separate package.
-
 ## PAUSED
 
 - None.
@@ -89,20 +92,17 @@
 
 ## NEXT
 
-- `DOMAIN-PRECHECK-V1`.
-- `MIRROR-WORKFLOW-V2` (depends on owner decisions 19 to 21 in `docs/proposed/DATASET_PIPELINE_V1.md` §43).
-- Release `develop` -> `main` for the recorded privilege hardening migration (separate owner decision).
+- Before switching the mirror workflow from dry-run (`SCMDB_SYNC_MODE` unset) to publish: structured independent review of the mirror workflow, owner-side GitHub Actions settings check, and owner-side dashboard checks.
+- Release `develop` -> `main` remains a separate owner decision; PRs #101–#105 are not on `main` yet.
 
 ## OPEN DECISIONS
 
 - Licence and redistribution of scunpacked-data (no licence file): unresolved. Option B keeps the index local and uncommitted until this is decided; a later move to option A or A′ needs its own owner decision. No other owner decision is pending for the current work package.
 - Later UX work package (not started): compact lot / location display in the Fabricator, grouping by player and location, further progressive disclosure (the collapsible recipe and quality sections are done in UX-6a), and a clear distinction between "available in the crew" and "available at one place".
-- Dataset pipeline v1.2 owner decisions 19 to 21 in section 43 of `docs/proposed/DATASET_PIPELINE_V1.md` remain open.
 - `SCMDB_SOURCE_AUTHORITY_V1` is absorbed by the FROZEN `VECTOR_SOURCE_AUTHORITY_V1`; `PROVIDER_AUTHORITY_V1` (user-state providers) stays PLANNED.
 - Known items that will need a decision later, none started: a later UX / design pass (blueprint thumbnails or images, component size, a calmer presentation of `Nicht bekannt`, the narrow app shell / sidebar on small screens); the known crew `active_group` inconsistency (`getCrewContext()` falls back to the first crew while the crew RPCs report `ACTIVE_GROUP_REQUIRED`), deliberately unchanged; the `Crew Security Hardening` work package (LOW to MEDIUM findings, due before the first user outside the current test group); archiving or removing the `data/audit*` folders (separate Cleanup Gate; the unused audit scripts `v2` and `v3` were removed and the V4 to V6 audit scripts moved to `scripts/audit/` in REPO-TIDY-1, V6 still imports V4 and V5); Rule Index remediation items R1, R2, R4 and R5; the later WP-AOM-01 gates (Security Finding Register, Backup Gate, Cleanup Gate), which stay separate future work.
 - Open points found before the release (2026-11-14, none started, none blocks the release):
   - **No crew invitation UI.** The database has `invite_group_member` and `respond_group_invite`, but no page or component calls them (only `set_active_group` and the read RPCs are used). Issuing an invitation (crew owner) and accepting it (invited user) are missing. The dashboard hint "Lass dich von deiner Crew einladen" therefore has no in-app path.
-  - **Data sync pushes directly to the default branch and is failing.** `.github/workflows/sync-scmdb-data.yml` (daily, `contents: write`) commits and pushes `data/scmdb` directly to the checked-out default branch (`develop`), outside the pull request flow. It is reported failing since 2026-10-29; the last data commit is from that day. The dataset package (see NEXT) takes this on.
   - **Dashboard milestone text is outdated.** `app/vector/page.tsx` still shows `NÄCHSTER MEILENSTEIN: Fabricator Quality & Stats`, although F3 is done.
   - **Empty states without a link.** Addressed in text by INV-EMPTY-1 (#85): the empty states now name the next action. They still contain no clickable link; a link would be a separate small package.
 
