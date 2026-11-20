@@ -2,7 +2,7 @@
 
 This document is operational and non-normative.
 
-- Document version: v17 (counted up from v16; ROT-13 checkpoint rotation, base commit `a95dc9c47318f57da210b0e80ad8cf1feaa9f893`)
+- Document version: v18 (counted up from v17; ROT-14 checkpoint rotation, base commit `5bd0d5b726406f9336beea4a48f1ad042249c852`)
 
 - Governed repository specifications remain authoritative according to their lifecycle and authority status.
 - This handover exists only to recover the current working state and to locate authoritative evidence.
@@ -13,17 +13,17 @@ This document is operational and non-normative.
 
 ### Current work package
 
-- Work package: `ROT-13: checkpoint rotation (documentation only)`. The anchor is the verified `origin/develop` head after PR #101. Since ROT-12, PR #97 made `DB_ENVIRONMENT_GOVERNANCE_V1_2` FROZEN with DB-ENV-10 and DB-ENV-11; #98 updated Project Lead evidence governance to v1.2; #99 completed Release 3 to `main`; and #101 recorded the privilege hardening migration as already applied. The migration reaches `main` only with a separate next release. `DATASET_PIPELINE_V1.md` v1.2 and `SCMDB_SOURCE_INVENTORY.md` v1.1 remain `PROPOSED`. Claude Code is Primary and default Engineer; GitHub Copilot is optional Secondary Engineer / Specialist and Independent Reviewer. ROT-12 described hardening as still pending; the newer PR #101 repository record supersedes that status. The next packages are listed under `NEXT STEP`.
-- Branch: `docs/checkpoint-rotation-13`
+- Work package: `ROT-14: checkpoint rotation (documentation only)`. The anchor is the verified `origin/develop` head after PR #105. PR #102 rotated the ROT-13 checkpoint; #103 completed DOMAIN-PRECHECK-V1 and recorded DATASET_PIPELINE_V1 v1.2 owner decisions 19 to 22; #104 completed MIRROR-WORKFLOW-V2; and #105 added hash-bound reviewed acknowledgement for site-settings holds. `DATASET_PIPELINE_V1.md` v1.2 and `SCMDB_SOURCE_INVENTORY.md` v1.1 remain `PROPOSED`. Production privilege hardening G6 was completed on 2026-11-18; its evidence is private. The next steps are listed under `NEXT STEP`.
+- Branch: `docs/checkpoint-rotation-14`
 - Base: `develop`
-- Checkpoint date: `2026-11-19`
-- Work-package base (historical): `a95dc9c47318f57da210b0e80ad8cf1feaa9f893`
-- Active checkpoint anchor: `a95dc9c47318f57da210b0e80ad8cf1feaa9f893`
+- Checkpoint date: `2026-11-20`
+- Work-package base: `5bd0d5b726406f9336beea4a48f1ad042249c852`
+- Active checkpoint anchor: `5bd0d5b726406f9336beea4a48f1ad042249c852`
 - Working-tree expectation: `CLEAN`
 - Active PR: none at rotation time (the rotation pull request itself is documentation only); every work package opens its own pull request against `develop`
 - PR base: `develop`
 
-The active anchor is the verified `develop` head after PR #101. The allowed scope below authorizes this documentation rotation, new or updated proposal documents, `database/migrations/blueprints/README.md`, and the paths of the UX series and its follow-ups; no migration change or execution, no Supabase or Vercel action, no Production mutation, no change to `data/`. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
+The active anchor is the verified `develop` head after PR #105. The allowed scope below authorizes this documentation rotation, new or updated proposal documents, `database/migrations/blueprints/README.md`, the paths of the UX series and its follow-ups, the SCMDB mirror workflow and precheck tooling, and the owner-approved observation path `data/scmdb-sync/`. Every other path under `data/` remains forbidden; no migration change or execution, no Supabase or Vercel action, and no Production mutation. Current HEAD may advance beyond that anchor only when all recovery invariants pass.
 
 Allowed scope after the active checkpoint anchor (exactly these paths):
 
@@ -43,6 +43,11 @@ Allowed scope after the active checkpoint anchor (exactly these paths):
 - `lib/keyboard/`
 - `lib/quality/`
 - `tests/`
+- `data/scmdb-sync/`
+- `.github/workflows/sync-scmdb-data.yml`
+- `scripts/domain-precheck.mjs`
+- `scripts/domain-precheck/`
+- `scripts/scmdb-sync/`
 
 Recovery control block:
 
@@ -172,7 +177,7 @@ Review evidence must always be associated with the exact commit actually reviewe
 
 ## 5. ACTIVE WORK PACKAGE
 
-`ROT-13` (2026-11-19, documentation only, checkpoint rotation). No feature work package is active. PRs #97, #98 and #101 are merged into `develop`; PR #99 completed Release 3 to `main` (merge commit `9cc4b2a`, tag `release-2026-11-18`). `DB_ENVIRONMENT_GOVERNANCE_V1_2` is FROZEN; the dataset pipeline v1.2 owner decisions 19 to 21 in section 43 remain open, and the pipeline and source inventory remain `PROPOSED`. The privilege hardening migration is recorded and already applied; its release from `develop` to `main` is a separate owner decision. `main` is not an ancestor of `develop`; it is ahead by the three release merge commits `e916f69` (#79), `66c531b` (#87) and `9cc4b2a` (#99). The back-merge was deliberately not done (optional, its own owner decision). The current merge base is `9dc753c`, so the next release merge retains the merge-commit lineage.
+`ROT-14` (2026-11-20, documentation only, checkpoint rotation). No feature work package is active. PRs #101 to #105 are merged into `develop` but not on `main`: #101 recorded the privilege hardening migration (already applied; production privilege hardening G6 was completed on 2026-11-18, its evidence is private), #102 rotated the ROT-13 checkpoint, #103 added the domain precheck and recorded the dataset pipeline owner decisions 19 to 22 in section 43 of `docs/proposed/DATASET_PIPELINE_V1.md`, #104 added the mirror workflow and #105 the hash-bound reviewed acknowledgement for site-settings holds. `DB_ENVIRONMENT_GOVERNANCE_V1_2` is FROZEN; the dataset pipeline and the source inventory remain `PROPOSED`. PR #99 completed Release 3 to `main` (merge commit `9cc4b2a`, tag `release-2026-11-18`; `main` = `9cc4b2a`). The release of the privilege hardening migration and of the mirror workflow from `develop` to `main` is a separate owner decision. `main` is not an ancestor of `develop`; it is ahead by the three release merge commits `e916f69` (#79), `66c531b` (#87) and `9cc4b2a` (#99). The back-merge was deliberately not done (optional, its own owner decision). The current merge base is `9dc753c`, so the next release merge retains the merge-commit lineage.
 
 Open, details with the owner: small follow-ups from the Copilot review of PR #79 (F2, F3 and F5 to F10, already classified as deferred). Backlog (each its own small package): return to the requested page after sign-in (`next` target in `requireUser`, auth change); dataset update (LIVE 4.10.3, PTU separate, workflow sync, only with an explicit owner GO); onboarding of player name / player account and the crew invitation UI; Fabricator / Inventory design according to the mock-ups. More details in `docs/PROJECT_STATE.md`.
 
@@ -475,6 +480,5 @@ See `docs/workflows/AI_ASSISTED_DEVELOPMENT_WORKFLOW.md`. Compact summary:
 
 ## 10. NEXT STEP
 
-- `DOMAIN-PRECHECK-V1`.
-- `MIRROR-WORKFLOW-V2` (depends on owner decisions 19 to 21 in `docs/proposed/DATASET_PIPELINE_V1.md` §43).
-- Release `develop` -> `main` for the recorded privilege hardening migration (separate owner decision).
+- Before switching the mirror workflow from dry-run (`SCMDB_SYNC_MODE` unset) to publish: structured independent review of the mirror workflow, owner-side GitHub Actions settings check, and owner-side dashboard checks.
+- Release `develop` -> `main` remains a separate owner decision; PRs #101–#105 are not on `main` yet.
